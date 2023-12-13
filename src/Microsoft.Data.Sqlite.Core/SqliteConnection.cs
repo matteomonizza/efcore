@@ -342,14 +342,17 @@ namespace Microsoft.Data.Sqlite
             for (var i = commands.Count - 1; i >= 0; i--)
             {
                 var reference = commands[i];
-                if (reference.TryGetTarget(out var command))
+                if (reference != null)
                 {
-                    // NB: Calls RemoveCommand()
-                    command.Dispose();
-                }
-                else
-                {
-                    _commands.Remove(reference);
+                    if (reference.TryGetTarget(out var command))
+                    {
+                        // NB: Calls RemoveCommand()
+                        command.Dispose();
+                    }
+                    else
+                    {
+                        _commands.Remove(reference);
+                    }
                 }
             }
 
@@ -450,10 +453,15 @@ namespace Microsoft.Data.Sqlite
         {
             for (var i = _commands.Count - 1; i >= 0; i--)
             {
-                if (_commands[i].TryGetTarget(out var item)
-                    && item == command)
+                try
                 {
-                    _commands.RemoveAt(i);
+                    if (_commands[i] == null || (_commands[i].TryGetTarget(out var item) && item == command))
+                    {
+                        _commands.RemoveAt(i);
+                    }
+                }
+                catch
+                {
                 }
             }
         }
