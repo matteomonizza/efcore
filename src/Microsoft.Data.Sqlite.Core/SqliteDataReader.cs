@@ -631,7 +631,7 @@ namespace Microsoft.Data.Sqlite
             var dataTypeNameColumn = new DataColumn("DataTypeName", typeof(string));
 
             var isLongColumn = new DataColumn(SchemaTableColumn.IsLong, typeof(bool));
-            var allowDbNullColumn = new DataColumn(SchemaTableColumn.AllowDBNull, typeof(bool));
+            var allowDBNullColumn = new DataColumn(SchemaTableColumn.AllowDBNull, typeof(bool));
 
             var isUniqueColumn = new DataColumn(SchemaTableColumn.IsUnique, typeof(bool));
             var isKeyColumn = new DataColumn(SchemaTableColumn.IsKey, typeof(bool));
@@ -662,7 +662,7 @@ namespace Microsoft.Data.Sqlite
             columns.Add(baseTableNameColumn);
             columns.Add(dataTypeColumn);
             columns.Add(dataTypeNameColumn);
-            columns.Add(allowDbNullColumn);
+            columns.Add(allowDBNullColumn);
             columns.Add(isAliasedColumn);
             columns.Add(isExpressionColumn);
             columns.Add(isAutoIncrementColumn);
@@ -737,7 +737,7 @@ namespace Microsoft.Data.Sqlite
                             SqliteException.ThrowExceptionForRC(rc, _command.Connection.Handle);
 
                             schemaRow[isKeyColumn] = primaryKey != 0;
-                            schemaRow[allowDbNullColumn] = notNull == 0;
+                            schemaRow[allowDBNullColumn] = notNull == 0;
                             schemaRow[isAutoIncrementColumn] = autoInc != 0;
                         }
                     }
