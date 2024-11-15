@@ -692,7 +692,8 @@ namespace Microsoft.Data.Sqlite
                 schemaRow[dataTypeColumn] = GetFieldType(i);
                 var dataTypeName = GetDataTypeName(i);
                 schemaRow[dataTypeNameColumn] = dataTypeName;
-                schemaRow[isAliasedColumn] = columnName != GetName(i);
+                var isAliased = columnName != GetName(i);
+                schemaRow[isAliasedColumn] = isAliased;
                 schemaRow[isExpressionColumn] = columnName == null;
                 schemaRow[isLongColumn] = DBNull.Value;
 
@@ -716,7 +717,6 @@ namespace Microsoft.Data.Sqlite
                     if (columnName != null)
                     {
                         schemaRow[isUniqueColumn] = dizionarioTabelleConColonneUniche[tableName].Contains(columnName);
-
                         schemaRow[dataTypeColumn] = SqliteDataRecord.GetFieldTypeFromSqliteType(SqliteDataRecord.Sqlite3AffinityType(dataTypeName));
 
                         if (!dizionarioVerificaEponymousVirtualTable.ContainsKey(tableName))

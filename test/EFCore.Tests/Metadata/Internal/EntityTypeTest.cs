@@ -187,7 +187,7 @@ public partial class EntityTypeTest
         Assert.Null(entityType.FindPrimaryKey());
         Assert.Equal(2, entityType.GetKeys().Count());
 
-        Assert.Null(entityType.SetPrimaryKey(Array.Empty<Property>()));
+        Assert.Null(entityType.SetPrimaryKey([]));
 
         Assert.Null(entityType.FindPrimaryKey());
         Assert.Equal(2, entityType.GetKeys().Count());
@@ -572,7 +572,7 @@ public partial class EntityTypeTest
 
         Assert.Same(fk2, orderType.FindForeignKeys(customerFk2).Single());
         Assert.Same(fk2, orderType.FindForeignKey(customerFk2, customerKey, customerType));
-        Assert.Equal(new[] { fk1, fk2 }, orderType.GetForeignKeys().ToArray());
+        Assert.Equal([fk1, fk2], orderType.GetForeignKeys().ToArray());
     }
 
     [ConditionalFact]
@@ -597,7 +597,7 @@ public partial class EntityTypeTest
 
         Assert.Equal(2, orderType.FindForeignKeys(customerFkProperty).Count());
         Assert.Same(fk2, orderType.FindForeignKey(customerFkProperty, customerKey2, customerType));
-        Assert.Equal(new[] { fk2, fk1 }, orderType.GetForeignKeys().ToArray());
+        Assert.Equal([fk2, fk1], orderType.GetForeignKeys().ToArray());
     }
 
 
@@ -721,7 +721,7 @@ public partial class EntityTypeTest
         Assert.NotEqual(fk1, fk2);
         Assert.Same(fk2, orderType.FindForeignKeys(customerFk2).Single());
         Assert.Same(fk2, orderType.FindForeignKey(customerFk2, customerKey, customerType));
-        Assert.Equal(new[] { fk1, fk2 }, orderType.GetForeignKeys().ToArray());
+        Assert.Equal([fk1, fk2], orderType.GetForeignKeys().ToArray());
     }
 
     private static IMutableModel BuildModel()
@@ -758,14 +758,14 @@ public partial class EntityTypeTest
 
         Assert.NotNull(((ForeignKey)fk1).Builder);
         Assert.NotNull(((ForeignKey)fk2).Builder);
-        Assert.Equal(new[] { fk1, fk2 }, orderType.GetForeignKeys().ToArray());
+        Assert.Equal([fk1, fk2], orderType.GetForeignKeys().ToArray());
         Assert.True(customerFk1.IsForeignKey());
         Assert.Same(fk1, customerFk1.GetContainingForeignKeys().Single());
 
         Assert.Same(fk1, orderType.RemoveForeignKey(fk1.Properties, fk1.PrincipalKey, fk1.PrincipalEntityType));
         Assert.Null(orderType.RemoveForeignKey(fk1.Properties, fk1.PrincipalKey, fk1.PrincipalEntityType));
 
-        Assert.Equal(new[] { fk2 }, orderType.GetForeignKeys().ToArray());
+        Assert.Equal([fk2], orderType.GetForeignKeys().ToArray());
         Assert.False(customerFk1.IsForeignKey());
         Assert.Empty(customerFk1.GetContainingForeignKeys());
 
@@ -1581,7 +1581,7 @@ public partial class EntityTypeTest
         Assert.Same(property1, index2.Properties[0]);
         Assert.Same(property2, index2.Properties[1]);
         Assert.True(property1.IsIndex());
-        Assert.Equal(new[] { index1, index2 }, property1.GetContainingIndexes().ToArray());
+        Assert.Equal([index1, index2], property1.GetContainingIndexes().ToArray());
 
         Assert.Equal(2, entityType.GetIndexes().Count());
         Assert.Same(index1, entityType.GetIndexes().First());
@@ -2858,9 +2858,7 @@ public partial class EntityTypeTest
         public SpecialistStaff Tester { get; set; }
     }
 
-    private class SpecialistStaff
-    {
-    }
+    private class SpecialistStaff;
 
     [ConditionalFact]
     public void All_properties_have_original_value_indexes_when_using_snapshot_change_tracking()
@@ -3111,9 +3109,7 @@ public partial class EntityTypeTest
         public string H { get; set; }
     }
 
-    private class D : C
-    {
-    }
+    private class D : C;
 
     private class Level1
     {
@@ -3175,9 +3171,7 @@ public partial class EntityTypeTest
         public IEnumerable<SpecialOrder> DerivedOrders { get; set; }
     }
 
-    private class VerySpecialCustomer : SpecialCustomer
-    {
-    }
+    private class VerySpecialCustomer : SpecialCustomer;
 
     private class Order : BaseType
     {
@@ -3203,9 +3197,7 @@ public partial class EntityTypeTest
         public SpecialCustomer DerivedCustomer { get; set; }
     }
 
-    private class VerySpecialOrder : SpecialOrder
-    {
-    }
+    private class VerySpecialOrder : SpecialOrder;
 
     private class OrderProduct
     {
@@ -3326,7 +3318,5 @@ public partial class EntityTypeTest
     private static IMutableModel CreateEmptyModel()
         => new Model();
 
-    private class A<T>
-    {
-    }
+    private class A<T>;
 }

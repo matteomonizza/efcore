@@ -15,6 +15,8 @@ using Microsoft.EntityFrameworkCore.TestModels.NullSemanticsModel;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixture>
     where TFixture : NullSemanticsQueryFixtureBase, new()
 {
@@ -404,7 +406,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_array_closure_with_null(bool async)
     {
-        string[] ids = { "Foo", null };
+        string[] ids = ["Foo", null];
 
         return AssertQueryScalar(
             async, ss => ss.Set<NullSemanticsEntity1>().Where(e => ids.Contains(e.NullableStringA)).Select(e => e.Id));
@@ -414,7 +416,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_array_closure_with_multiple_nulls(bool async)
     {
-        string[] ids = { null, "Foo", null, null };
+        string[] ids = [null, "Foo", null, null];
 
         return AssertQueryScalar(
             async, ss => ss.Set<NullSemanticsEntity1>().Where(e => ids.Contains(e.NullableStringA)).Select(e => e.Id));
@@ -424,7 +426,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_array_closure_false_with_null(bool async)
     {
-        string[] ids = { "Foo", null };
+        string[] ids = ["Foo", null];
 
         return AssertQueryScalar(
             async, ss => ss.Set<NullSemanticsEntity1>().Where(e => !ids.Contains(e.NullableStringA)).Select(e => e.Id));
@@ -434,7 +436,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_nullable_array_closure_negated(bool async)
     {
-        string[] ids = { "Foo" };
+        string[] ids = ["Foo"];
 
         return AssertQueryScalar(
             async, ss => ss.Set<NullSemanticsEntity1>().Where(e => !ids.Contains(e.NullableStringA)).Select(e => e.Id));
@@ -688,7 +690,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
     public virtual void Where_contains_on_parameter_empty_array_with_relational_null_semantics()
     {
         using var context = CreateContext(useRelationalNulls: true);
-        var names = new string[0];
+        string[] names = [];
         var result = context.Entities1
             .Where(e => names.Contains(e.NullableStringA))
             .Select(e => e.NullableStringA).ToList().Count;
@@ -1244,6 +1246,8 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
 
     #endregion Contains with subquery
 
+    // For more tests on Contains with parameterized collections, see PrimitiveCollectionsqueryTestBase
+
     #region Contains with inline collection
 
     [ConditionalTheory]
@@ -1260,7 +1264,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
-    public virtual async Task Null_semantics_contains_with_non_nullable_item_and_inline_non_nullable_values_with_null(bool async)
+    public virtual async Task Null_semantics_contains_with_non_nullable_item_and_inline_values_with_null(bool async)
     {
         await AssertQueryScalar(
             async, ss => ss.Set<NullSemanticsEntity1>()
@@ -1272,7 +1276,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
-    public virtual async Task Null_semantics_contains_with_non_nullable_item_and_inline_nullable_values(bool async)
+    public virtual async Task Null_semantics_contains_with_non_nullable_item_and_inline_values_with_nullable_column(bool async)
     {
         await AssertQueryScalar(
             async, ss => ss.Set<NullSemanticsEntity1>()
@@ -1284,7 +1288,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
-    public virtual async Task Null_semantics_contains_with_non_nullable_item_and_inline_nullable_values_with_null(bool async)
+    public virtual async Task Null_semantics_contains_with_non_nullable_item_and_inline_values_with_nullable_column_and_null(bool async)
     {
         await AssertQueryScalar(
             async, ss => ss.Set<NullSemanticsEntity1>()
@@ -1308,7 +1312,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
-    public virtual async Task Null_semantics_contains_with_nullable_item_and_inline_non_nullable_values_with_null(bool async)
+    public virtual async Task Null_semantics_contains_with_nullable_item_and_inline_values_with_null(bool async)
     {
         await AssertQueryScalar(
             async, ss => ss.Set<NullSemanticsEntity1>()
@@ -1320,7 +1324,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
-    public virtual async Task Null_semantics_contains_with_nullable_item_and_inline_nullable_values(bool async)
+    public virtual async Task Null_semantics_contains_with_nullable_item_and_inline_values_with_nullable_column(bool async)
     {
         await AssertQueryScalar(
             async, ss => ss.Set<NullSemanticsEntity1>()
@@ -1332,7 +1336,7 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
-    public virtual async Task Null_semantics_contains_with_nullable_item_and_inline_nullable_values_with_null(bool async)
+    public virtual async Task Null_semantics_contains_with_nullable_item_and_values_with_nullable_column_and_null(bool async)
     {
         await AssertQueryScalar(
             async, ss => ss.Set<NullSemanticsEntity1>()

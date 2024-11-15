@@ -14,31 +14,26 @@ namespace Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 /// </summary>
 public class LeftJoinExpression : PredicateJoinExpressionBase
 {
+    private static ConstructorInfo? _quotingConstructor;
+
     /// <summary>
     ///     Creates a new instance of the <see cref="LeftJoinExpression" /> class.
     /// </summary>
     /// <param name="table">A table source to LEFT JOIN with.</param>
     /// <param name="joinPredicate">A predicate to use for the join.</param>
-    public LeftJoinExpression(TableExpressionBase table, SqlExpression joinPredicate)
-        : this(table, joinPredicate, annotations: null)
+    /// <param name="prunable">Whether this join expression may be pruned if nothing references a column on it.</param>
+    public LeftJoinExpression(TableExpressionBase table, SqlExpression joinPredicate, bool prunable = false)
+        : this(table, joinPredicate, prunable, annotations: null)
     {
     }
 
     private LeftJoinExpression(
         TableExpressionBase table,
         SqlExpression joinPredicate,
-        IEnumerable<IAnnotation>? annotations)
-        : base(table, joinPredicate, annotations)
+        bool prunable,
+        IReadOnlyDictionary<string, IAnnotation>? annotations = null)
+        : base(table, joinPredicate, prunable, annotations)
     {
-    }
-
-    /// <inheritdoc />
-    protected override Expression VisitChildren(ExpressionVisitor visitor)
-    {
-        var table = (TableExpressionBase)visitor.Visit(Table);
-        var joinPredicate = (SqlExpression)visitor.Visit(JoinPredicate);
-
-        return Update(table, joinPredicate);
     }
 
     /// <summary>
@@ -50,7 +45,7 @@ public class LeftJoinExpression : PredicateJoinExpressionBase
     /// <returns>This expression if no children changed, or an expression with the updated children.</returns>
     public override LeftJoinExpression Update(TableExpressionBase table, SqlExpression joinPredicate)
         => table != Table || joinPredicate != JoinPredicate
-            ? new LeftJoinExpression(table, joinPredicate, GetAnnotations())
+            ? new LeftJoinExpression(table, joinPredicate, IsPrunable, Annotations)
             : this;
 
     /// <summary>
@@ -61,12 +56,21 @@ public class LeftJoinExpression : PredicateJoinExpressionBase
     /// <returns>This expression if no children changed, or an expression with the updated children.</returns>
     public override LeftJoinExpression Update(TableExpressionBase table)
         => table != Table
-            ? new LeftJoinExpression(table, JoinPredicate, GetAnnotations())
+            ? new LeftJoinExpression(table, JoinPredicate, IsPrunable, Annotations)
             : this;
 
     /// <inheritdoc />
-    protected override TableExpressionBase CreateWithAnnotations(IEnumerable<IAnnotation> annotations)
-        => new LeftJoinExpression(Table, JoinPredicate, annotations);
+    protected override LeftJoinExpression WithAnnotations(IReadOnlyDictionary<string, IAnnotation> annotations)
+        => new(Table, JoinPredicate, IsPrunable, annotations);
+
+    /// <inheritdoc />
+    public override Expression Quote()
+        => New(
+            _quotingConstructor ??= typeof(LeftJoinExpression).GetConstructor([typeof(TableExpressionBase), typeof(SqlExpression), typeof(bool), typeof(IReadOnlyDictionary<string, IAnnotation>)])!,
+            Table.Quote(),
+            JoinPredicate.Quote(),
+            Constant(IsPrunable),
+            RelationalExpressionQuotingUtilities.QuoteAnnotations(Annotations));
 
     /// <inheritdoc />
     protected override void Print(ExpressionPrinter expressionPrinter)

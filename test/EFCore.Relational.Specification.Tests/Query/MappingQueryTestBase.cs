@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class MappingQueryTestBase<TFixture> : IClassFixture<TFixture>
     where TFixture : MappingQueryTestBase<TFixture>.MappingQueryFixtureBase, new()
 {
@@ -86,7 +88,7 @@ public abstract class MappingQueryTestBase<TFixture> : IClassFixture<TFixture>
         Three
     }
 
-    public abstract class MappingQueryFixtureBase : SharedStoreFixtureBase<PoolableDbContext>
+    public abstract class MappingQueryFixtureBase : SharedStoreFixtureBase<PoolableDbContext>, ITestSqlLoggerFactory
     {
         protected abstract string DatabaseSchema { get; }
 

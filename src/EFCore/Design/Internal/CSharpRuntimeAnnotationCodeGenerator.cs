@@ -355,7 +355,7 @@ public class CSharpRuntimeAnnotationCodeGenerator : ICSharpRuntimeAnnotationCode
         ICSharpHelper codeHelper)
     {
         var mainBuilder = parameters.MainBuilder;
-        var constructor = converter.GetType().GetDeclaredConstructor(new[] { typeof(JsonValueReaderWriter) });
+        var constructor = converter.GetType().GetDeclaredConstructor([typeof(JsonValueReaderWriter)]);
         var jsonReaderWriterProperty = converter.GetType().GetProperty(nameof(CollectionToJsonStringConverter<object>.JsonReaderWriter));
         if (constructor == null
             || jsonReaderWriterProperty == null)
@@ -371,9 +371,11 @@ public class CSharpRuntimeAnnotationCodeGenerator : ICSharpRuntimeAnnotationCode
                 .Append(codeHelper.Reference(converter.ProviderClrType))
                 .AppendLine(">(")
                 .IncrementIndent()
-                .Append(codeHelper.Expression(converter.ConvertToProviderExpression, parameters.Namespaces))
+                .AppendLines(codeHelper.Expression(converter.ConvertToProviderExpression, parameters.Namespaces, null, null),
+                    skipFinalNewline: true)
                 .AppendLine(",")
-                .Append(codeHelper.Expression(converter.ConvertFromProviderExpression, parameters.Namespaces));
+                .AppendLines(codeHelper.Expression(converter.ConvertFromProviderExpression, parameters.Namespaces, null, null),
+                    skipFinalNewline: true);
 
             if (converter.ConvertsNulls)
             {
@@ -415,8 +417,8 @@ public class CSharpRuntimeAnnotationCodeGenerator : ICSharpRuntimeAnnotationCode
     {
         var mainBuilder = parameters.MainBuilder;
 
-        var constructor = comparer.GetType().GetDeclaredConstructor(new[] { typeof(ValueComparer) });
-        var elementComparerProperty = comparer.GetType().GetProperty(nameof(ListComparer<object>.ElementComparer));
+        var constructor = comparer.GetType().GetDeclaredConstructor([typeof(ValueComparer)]);
+        var elementComparerProperty = comparer.GetType().GetProperty(nameof(ListOfValueTypesComparer<object, int>.ElementComparer));
         if (constructor == null
             || elementComparerProperty == null)
         {
@@ -428,11 +430,14 @@ public class CSharpRuntimeAnnotationCodeGenerator : ICSharpRuntimeAnnotationCode
                 .Append(codeHelper.Reference(comparer.Type))
                 .AppendLine(">(")
                 .IncrementIndent()
-                .AppendLines(codeHelper.Expression(comparer.EqualsExpression, parameters.Namespaces), skipFinalNewline: true)
+                .AppendLines(codeHelper.Expression(comparer.EqualsExpression, parameters.Namespaces, null, null),
+                    skipFinalNewline: true)
                 .AppendLine(",")
-                .AppendLines(codeHelper.Expression(comparer.HashCodeExpression, parameters.Namespaces), skipFinalNewline: true)
+                .AppendLines(codeHelper.Expression(comparer.HashCodeExpression, parameters.Namespaces, null, null),
+                    skipFinalNewline: true)
                 .AppendLine(",")
-                .AppendLines(codeHelper.Expression(comparer.SnapshotExpression, parameters.Namespaces), skipFinalNewline: true)
+                .AppendLines(codeHelper.Expression(comparer.SnapshotExpression, parameters.Namespaces, null, null),
+                    skipFinalNewline: true)
                 .Append(")")
                 .DecrementIndent();
         }

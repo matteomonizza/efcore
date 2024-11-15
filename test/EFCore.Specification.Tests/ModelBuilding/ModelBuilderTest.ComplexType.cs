@@ -8,15 +8,12 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.ModelBuilding;
 
+#nullable disable
+
 public abstract partial class ModelBuilderTest
 {
-    public abstract class ComplexTypeTestBase : ModelBuilderTestBase
+    public abstract class ComplexTypeTestBase(ModelBuilderFixtureBase fixture) : ModelBuilderTestBase(fixture)
     {
-        public ComplexTypeTestBase(ModelBuilderFixtureBase fixture)
-            : base(fixture)
-        {
-        }
-
         [ConditionalFact]
         public virtual void Can_set_complex_property_annotation()
         {
@@ -481,7 +478,7 @@ public abstract partial class ModelBuilderTest
 
             var model = modelBuilder.FinalizeModel();
             AssertEqual(modelBuilder.Model, model);
-            
+
             var entityType = model.FindEntityType(typeof(ComplexProperties))!;
             Assert.Equal(PropertyAccessMode.Field, model.GetPropertyAccessMode());
 
@@ -502,6 +499,9 @@ public abstract partial class ModelBuilderTest
 
         [ConditionalFact]
         public virtual void Properties_can_have_provider_type_set()
+            => Properties_can_have_provider_type_set<byte[]>();
+
+        protected virtual void Properties_can_have_provider_type_set<TBytes>()
         {
             var modelBuilder = CreateModelBuilder();
 
@@ -532,7 +532,7 @@ public abstract partial class ModelBuilderTest
             var down = complexType.FindProperty("Down");
             Assert.Same(typeof(byte[]), down.GetProviderClrType());
             Assert.True(down.GetValueComparer().IsDefault());
-            Assert.IsType<ValueComparer<byte[]>>(down.GetProviderValueComparer());
+            Assert.True(down.GetProviderValueComparer() is ValueComparer<TBytes>);
 
             var charm = complexType.FindProperty("Charm");
             Assert.Same(typeof(long), charm.GetProviderClrType());
@@ -547,7 +547,7 @@ public abstract partial class ModelBuilderTest
             var top = complexType.FindProperty("Top");
             Assert.Same(typeof(string), top.GetProviderClrType());
             Assert.IsType<CustomValueComparer<string>>(top.GetValueComparer());
-            Assert.IsType<CustomValueComparer<string>>(top.GetProviderValueComparer());
+            Assert.True(top.GetProviderValueComparer() is ValueComparer<string>);
         }
 
         [ConditionalFact]
@@ -572,14 +572,17 @@ public abstract partial class ModelBuilderTest
             var model = modelBuilder.FinalizeModel();
             var complexType = model.FindEntityType(typeof(ComplexProperties)).GetComplexProperties().Single().ComplexType;
 
-            Assert.Null(complexType.FindProperty("Up").GetProviderClrType());
-            Assert.Same(typeof(byte[]), complexType.FindProperty("Down").GetProviderClrType());
-            Assert.Null(complexType.FindProperty("Charm").GetProviderClrType());
-            Assert.Same(typeof(byte[]), complexType.FindProperty("Strange").GetProviderClrType());
+            Assert.Null(complexType.FindProperty("Up")!.GetProviderClrType());
+            Assert.Same(typeof(byte[]), complexType.FindProperty("Down")!.GetProviderClrType());
+            Assert.Null(complexType.FindProperty("Charm")!.GetProviderClrType());
+            Assert.Same(typeof(byte[]), complexType.FindProperty("Strange")!.GetProviderClrType());
         }
 
         [ConditionalFact]
         public virtual void Properties_can_have_non_generic_value_converter_set()
+            => Properties_can_have_non_generic_value_converter_set<byte[]>();
+
+        protected virtual void Properties_can_have_non_generic_value_converter_set<TBytes>()
         {
             var modelBuilder = CreateModelBuilder();
 
@@ -609,7 +612,7 @@ public abstract partial class ModelBuilderTest
             var down = complexType.FindProperty("Down");
             Assert.Same(stringConverter, down.GetValueConverter());
             Assert.True(down.GetValueComparer().IsDefault());
-            Assert.IsType<ValueComparer<byte[]>>(down.GetProviderValueComparer());
+            Assert.True(down.GetProviderValueComparer() is ValueComparer<TBytes>);
 
             var charm = complexType.FindProperty("Charm");
             Assert.Same(intConverter, charm.GetValueConverter());
@@ -621,6 +624,9 @@ public abstract partial class ModelBuilderTest
 
         [ConditionalFact]
         public virtual void Properties_can_have_custom_type_value_converter_type_set()
+            => Properties_can_have_custom_type_value_converter_type_set<byte[]>();
+
+        protected virtual void Properties_can_have_custom_type_value_converter_type_set<TBytes>()
         {
             var modelBuilder = CreateModelBuilder();
 
@@ -634,7 +640,7 @@ public abstract partial class ModelBuilderTest
                     {
                         b.Property(e => e.Up).HasConversion<int, CustomValueComparer<int>>();
                         b.Property(e => e.Down)
-                            .HasConversion<UTF8StringToBytesConverter, CustomValueComparer<string>, CustomValueComparer<byte[]>>();
+                            .HasConversion<UTF8StringToBytesConverter, CustomValueComparer<string>, CustomValueComparer<TBytes>>();
                         b.Property<int>("Charm").HasConversion<CastingConverter<int, long>, CustomValueComparer<int>>();
                         b.Property<string>("Strange").HasConversion<UTF8StringToBytesConverter, CustomValueComparer<string>>();
                         b.Property<string>("Strange").HasConversion(null, null);
@@ -652,7 +658,7 @@ public abstract partial class ModelBuilderTest
             var down = complexType.FindProperty("Down");
             Assert.IsType<UTF8StringToBytesConverter>(down.GetValueConverter());
             Assert.IsType<CustomValueComparer<string>>(down.GetValueComparer());
-            Assert.IsType<CustomValueComparer<byte[]>>(down.GetProviderValueComparer());
+            Assert.True(down.GetProviderValueComparer() is ValueComparer<TBytes>);
 
             var charm = complexType.FindProperty("Charm");
             Assert.IsType<CastingConverter<int, long>>(charm.GetValueConverter());
@@ -665,7 +671,7 @@ public abstract partial class ModelBuilderTest
             Assert.True(strange.GetProviderValueComparer().IsDefault());
         }
 
-        private class UTF8StringToBytesConverter : StringToBytesConverter
+        protected  class UTF8StringToBytesConverter : StringToBytesConverter
         {
             public UTF8StringToBytesConverter()
                 : base(Encoding.UTF8)
@@ -673,7 +679,7 @@ public abstract partial class ModelBuilderTest
             }
         }
 
-        private class CustomValueComparer<T> : ValueComparer<T>
+        protected class CustomValueComparer<T> : ValueComparer<T>
         {
             public CustomValueComparer()
                 : base(false)
@@ -1432,16 +1438,13 @@ public abstract partial class ModelBuilderTest
                     () => complexType.FindProperty("Down").GetValueGeneratorFactory()(null, null)).Message);
         }
 
-        private class BadCustomValueGenerator1 : CustomValueGenerator
+#pragma warning disable CS9113 // Parameter 'foo' is unread
+        private class BadCustomValueGenerator1(string foo) : CustomValueGenerator
+#pragma warning restore CS9113
         {
-            public BadCustomValueGenerator1(string foo)
-            {
-            }
         }
 
-        private abstract class BadCustomValueGenerator2 : CustomValueGenerator
-        {
-        }
+        private abstract class BadCustomValueGenerator2 : CustomValueGenerator;
 
         protected class StringCollectionEntity
         {
@@ -2085,11 +2088,11 @@ public abstract partial class ModelBuilderTest
                     b =>
                     {
                         b.PrimitiveCollection(e => e.Up).HasSentinel(null);
-                        b.PrimitiveCollection(e => e.Down).HasSentinel(new ObservableCollection<string>());
-                        b.PrimitiveCollection<int[]>("Charm").HasSentinel(new int[0]);
-                        b.PrimitiveCollection<List<string>>("Strange").HasSentinel(new List<string> { });
-                        b.PrimitiveCollection<int[]>("Top").HasSentinel(new int[] { 77 });
-                        b.PrimitiveCollection<List<string>>("Bottom").HasSentinel(new List<string> { "" });
+                        b.PrimitiveCollection(e => e.Down).HasSentinel([]);
+                        b.PrimitiveCollection<int[]>("Charm").HasSentinel([]);
+                        b.PrimitiveCollection<List<string>>("Strange").HasSentinel([]);
+                        b.PrimitiveCollection<int[]>("Top").HasSentinel([77]);
+                        b.PrimitiveCollection<List<string>>("Bottom").HasSentinel([""]);
                     });
 
             var model = modelBuilder.FinalizeModel();
@@ -2098,7 +2101,7 @@ public abstract partial class ModelBuilderTest
             Assert.Equal(0, complexType.FindProperty(nameof(CollectionQuarks.Id))!.Sentinel);
             Assert.Null(complexType.FindProperty("Up")!.Sentinel);
             Assert.Equal(new ObservableCollection<string>(), complexType.FindProperty("Down")!.Sentinel);
-            Assert.Equal(new int[0], complexType.FindProperty("Charm")!.Sentinel);
+            Assert.Equal(Array.Empty<int>(), complexType.FindProperty("Charm")!.Sentinel);
             Assert.Equal(new List<string> { }, complexType.FindProperty("Strange")!.Sentinel);
             Assert.Equal(new int[] { 77 }, complexType.FindProperty("Top")!.Sentinel);
             Assert.Equal(new List<string> { "" }, complexType.FindProperty("Bottom")!.Sentinel);
@@ -2190,6 +2193,22 @@ public abstract partial class ModelBuilderTest
                 .Entity<ComplexProperties>()
                 .ComplexProperty(e => e.CollectionQuarks)
                 .PrimitiveCollection(e => e.Up)
+                .ElementType(t => t
+                    .HasAnnotation("B", "C")
+                    .HasConversion(typeof(long))
+                    .HasConversion(new CastingConverter<int, long>())
+                    .HasConversion(typeof(long), typeof(CustomValueComparer<int>))
+                    .HasConversion(typeof(long), new CustomValueComparer<int>())
+                    .HasConversion(new CastingConverter<int, long>())
+                    .HasConversion(new CastingConverter<int, long>(), new CustomValueComparer<int>())
+                    .HasConversion<long>()
+                    .HasConversion<long>(new CustomValueComparer<int>())
+                    .HasConversion<long, CustomValueComparer<int>>()
+                    .HasMaxLength(2)
+                    .HasPrecision(1)
+                    .HasPrecision(1, 2)
+                    .IsRequired()
+                    .IsUnicode())
                 .IsRequired()
                 .HasAnnotation("A", "V")
                 .IsConcurrencyToken()

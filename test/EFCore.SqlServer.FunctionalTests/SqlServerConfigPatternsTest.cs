@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public class SqlServerConfigPatternsTest
 {
     public class ImplicitServicesAndConfig
@@ -16,7 +18,7 @@ public class SqlServerConfigPatternsTest
         [ConditionalFact]
         public async Task Can_query_with_implicit_services_and_OnConfiguring()
         {
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 using var context = new NorthwindContext();
                 Assert.Equal(91, await context.Customers.CountAsync());
@@ -44,7 +46,7 @@ public class SqlServerConfigPatternsTest
         [ConditionalFact]
         public async Task Can_query_with_implicit_services_and_explicit_config()
         {
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 using var context = new NorthwindContext(
                     new DbContextOptionsBuilder()
@@ -55,13 +57,8 @@ public class SqlServerConfigPatternsTest
             }
         }
 
-        private class NorthwindContext : DbContext
+        private class NorthwindContext(DbContextOptions options) : DbContext(options)
         {
-            public NorthwindContext(DbContextOptions options)
-                : base(options)
-            {
-            }
-
             public DbSet<Customer> Customers { get; set; }
 
             protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -74,7 +71,7 @@ public class SqlServerConfigPatternsTest
         [ConditionalFact]
         public async Task Can_query_with_explicit_services_and_OnConfiguring()
         {
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 using var context = new NorthwindContext(
                     new DbContextOptionsBuilder().UseInternalServiceProvider(
@@ -85,13 +82,8 @@ public class SqlServerConfigPatternsTest
             }
         }
 
-        private class NorthwindContext : DbContext
+        private class NorthwindContext(DbContextOptions options) : DbContext(options)
         {
-            public NorthwindContext(DbContextOptions options)
-                : base(options)
-            {
-            }
-
             public DbSet<Customer> Customers { get; set; }
 
             protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -108,7 +100,7 @@ public class SqlServerConfigPatternsTest
         [ConditionalFact]
         public async Task Can_query_with_explicit_services_and_explicit_config()
         {
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 using var context = new NorthwindContext(
                     new DbContextOptionsBuilder()
@@ -121,13 +113,8 @@ public class SqlServerConfigPatternsTest
             }
         }
 
-        private class NorthwindContext : DbContext
+        private class NorthwindContext(DbContextOptions options) : DbContext(options)
         {
-            public NorthwindContext(DbContextOptions options)
-                : base(options)
-            {
-            }
-
             public DbSet<Customer> Customers { get; set; }
 
             protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -138,9 +125,9 @@ public class SqlServerConfigPatternsTest
     public class ExplicitServicesAndNoConfig
     {
         [ConditionalFact]
-        public void Throws_on_attempt_to_use_SQL_Server_without_providing_connection_string()
+        public async Task Throws_on_attempt_to_use_SQL_Server_without_providing_connection_string()
         {
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 Assert.Equal(
                     CoreStrings.NoProviderConfigured,
@@ -157,13 +144,8 @@ public class SqlServerConfigPatternsTest
             }
         }
 
-        private class NorthwindContext : DbContext
+        private class NorthwindContext(DbContextOptions options) : DbContext(options)
         {
-            public NorthwindContext(DbContextOptions options)
-                : base(options)
-            {
-            }
-
             public DbSet<Customer> Customers { get; set; }
 
             protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -174,9 +156,9 @@ public class SqlServerConfigPatternsTest
     public class NoServicesAndNoConfig
     {
         [ConditionalFact]
-        public void Throws_on_attempt_to_use_context_with_no_store()
+        public async Task Throws_on_attempt_to_use_context_with_no_store()
         {
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 Assert.Equal(
                     CoreStrings.NoProviderConfigured,
@@ -204,13 +186,13 @@ public class SqlServerConfigPatternsTest
     public class ImplicitConfigButNoServices
     {
         [ConditionalFact]
-        public void Throws_on_attempt_to_use_store_with_no_store_services()
+        public async Task Throws_on_attempt_to_use_store_with_no_store_services()
         {
             var serviceCollection = new ServiceCollection();
             new EntityFrameworkServicesBuilder(serviceCollection).TryAddCoreServices();
             var serviceProvider = serviceCollection.BuildServiceProvider(validateScopes: true);
 
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 Assert.Equal(
                     CoreStrings.NoProviderConfigured,
@@ -225,13 +207,8 @@ public class SqlServerConfigPatternsTest
             }
         }
 
-        private class NorthwindContext : DbContext
+        private class NorthwindContext(DbContextOptions options) : DbContext(options)
         {
-            public NorthwindContext(DbContextOptions options)
-                : base(options)
-            {
-            }
-
             public DbSet<Customer> Customers { get; set; }
 
             protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -255,7 +232,7 @@ public class SqlServerConfigPatternsTest
                 .AddSingleton(p => new DbContextOptionsBuilder().UseInternalServiceProvider(p).Options)
                 .BuildServiceProvider(validateScopes: true);
 
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 await serviceProvider.GetRequiredService<MyController>().TestAsync();
             }
@@ -309,7 +286,7 @@ public class SqlServerConfigPatternsTest
                         .UseSqlServer(SqlServerNorthwindTestStoreFactory.NorthwindConnectionString, b => b.ApplyConfiguration())
                         .Options).BuildServiceProvider(validateScopes: true);
 
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 await serviceProvider.GetRequiredService<MyController>().TestAsync();
             }
@@ -350,7 +327,7 @@ public class SqlServerConfigPatternsTest
         [ConditionalFact]
         public async Task Can_pass_context_options_to_constructor_and_use_in_builder()
         {
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 using var context = new NorthwindContext(
                     new DbContextOptionsBuilder()
@@ -361,13 +338,8 @@ public class SqlServerConfigPatternsTest
             }
         }
 
-        private class NorthwindContext : DbContext
+        private class NorthwindContext(DbContextOptions options) : DbContext(options)
         {
-            public NorthwindContext(DbContextOptions options)
-                : base(options)
-            {
-            }
-
             public DbSet<Customer> Customers { get; set; }
 
             protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -380,21 +352,16 @@ public class SqlServerConfigPatternsTest
         [ConditionalFact]
         public async Task Can_pass_connection_string_to_constructor_and_use_in_OnConfiguring()
         {
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 using var context = new NorthwindContext(SqlServerNorthwindTestStoreFactory.NorthwindConnectionString);
                 Assert.Equal(91, await context.Customers.CountAsync());
             }
         }
 
-        private class NorthwindContext : DbContext
+        private class NorthwindContext(string connectionString) : DbContext
         {
-            private readonly string _connectionString;
-
-            public NorthwindContext(string connectionString)
-            {
-                _connectionString = connectionString;
-            }
+            private readonly string _connectionString = connectionString;
 
             public DbSet<Customer> Customers { get; set; }
 
@@ -413,7 +380,7 @@ public class SqlServerConfigPatternsTest
         [ConditionalFact]
         public async Task Can_use_one_context_nested_inside_another_of_the_same_type()
         {
-            using (SqlServerTestStore.GetNorthwindStore())
+            using (await SqlServerTestStore.GetNorthwindStoreAsync())
             {
                 var serviceProvider = new ServiceCollection()
                     .AddEntityFrameworkSqlServer()
@@ -436,14 +403,9 @@ public class SqlServerConfigPatternsTest
             }
         }
 
-        private class NorthwindContext : DbContext
+        private class NorthwindContext(IServiceProvider serviceProvider) : DbContext
         {
-            private readonly IServiceProvider _serviceProvider;
-
-            public NorthwindContext(IServiceProvider serviceProvider)
-            {
-                _serviceProvider = serviceProvider;
-            }
+            private readonly IServiceProvider _serviceProvider = serviceProvider;
 
             public DbSet<Customer> Customers { get; set; }
 
@@ -469,14 +431,9 @@ public class SqlServerConfigPatternsTest
             Assert.IsType<SqlServerExecutionStrategy>(context.Database.CreateExecutionStrategy());
         }
 
-        private class NorthwindContext : DbContext
+        private class NorthwindContext(bool configured) : DbContext
         {
-            private readonly bool _azureConfigured;
-
-            public NorthwindContext(bool configured)
-            {
-                _azureConfigured = configured;
-            }
+            private readonly bool _azureConfigured = configured;
 
             public DbSet<Customer> Customers { get; set; }
 
@@ -516,14 +473,9 @@ public class SqlServerConfigPatternsTest
             }
         }
 
-        private class NorthwindContext : DbContext
+        private class NorthwindContext(bool azure) : DbContext
         {
-            private readonly bool _isAzure;
-
-            public NorthwindContext(bool azure)
-            {
-                _isAzure = azure;
-            }
+            private readonly bool _isAzure = azure;
 
             public DbSet<Customer> Customers { get; set; }
 

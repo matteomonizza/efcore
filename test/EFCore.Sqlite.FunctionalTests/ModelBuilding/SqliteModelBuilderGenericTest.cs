@@ -1,104 +1,62 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#nullable enable
-
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.ModelBuilding;
 
 public class SqliteModelBuilderGenericTest : SqliteModelBuilderTestBase
 {
-    public class SqlServerGenericNonRelationship : SqliteNonRelationship
+    public class SqliteGenericNonRelationship(SqliteModelBuilderFixture fixture) : SqliteNonRelationship(fixture)
     {
-        public SqlServerGenericNonRelationship(SqliteModelBuilderFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestModelBuilder CreateModelBuilder(
             Action<ModelConfigurationBuilder>? configure)
             => new GenericTestModelBuilder(Fixture, configure);
     }
 
-    public class SqlServerGenericComplexType : SqliteComplexType
+    public class SqliteGenericComplexType(SqliteModelBuilderFixture fixture) : SqliteComplexType(fixture)
     {
-        public SqlServerGenericComplexType(SqliteModelBuilderFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestModelBuilder CreateModelBuilder(
             Action<ModelConfigurationBuilder>? configure)
             => new GenericTestModelBuilder(Fixture, configure);
     }
 
-    public class SqlServerGenericInheritance : SqliteInheritance
+    public class SqliteGenericInheritance(SqliteModelBuilderFixture fixture) : SqliteInheritance(fixture)
     {
-        public SqlServerGenericInheritance(SqliteModelBuilderFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestModelBuilder CreateModelBuilder(
             Action<ModelConfigurationBuilder>? configure)
             => new GenericTestModelBuilder(Fixture, configure);
     }
 
-    public class SqlServerGenericOneToMany : SqliteOneToMany
+    public class SqliteGenericOneToMany(SqliteModelBuilderFixture fixture) : SqliteOneToMany(fixture)
     {
-        public SqlServerGenericOneToMany(SqliteModelBuilderFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestModelBuilder CreateModelBuilder(
             Action<ModelConfigurationBuilder>? configure)
             => new GenericTestModelBuilder(Fixture, configure);
     }
 
-    public class SqlServerGenericManyToOne : SqliteManyToOne
+    public class SqliteGenericManyToOne(SqliteModelBuilderFixture fixture) : SqliteManyToOne(fixture)
     {
-        public SqlServerGenericManyToOne(SqliteModelBuilderFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestModelBuilder CreateModelBuilder(
             Action<ModelConfigurationBuilder>? configure)
             => new GenericTestModelBuilder(Fixture, configure);
     }
 
-    public class SqlServerGenericOneToOne : SqliteOneToOne
+    public class SqliteGenericOneToOne(SqliteModelBuilderFixture fixture) : SqliteOneToOne(fixture)
     {
-        public SqlServerGenericOneToOne(SqliteModelBuilderFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestModelBuilder CreateModelBuilder(
             Action<ModelConfigurationBuilder>? configure)
             => new GenericTestModelBuilder(Fixture, configure);
     }
 
-    public class SqlServerGenericManyToMany : SqliteManyToMany
+    public class SqliteGenericManyToMany(SqliteModelBuilderFixture fixture) : SqliteManyToMany(fixture)
     {
-        public SqlServerGenericManyToMany(SqliteModelBuilderFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestModelBuilder CreateModelBuilder(
             Action<ModelConfigurationBuilder>? configure)
             => new GenericTestModelBuilder(Fixture, configure);
     }
 
-    public class SqlServerGenericOwnedTypes : SqliteOwnedTypes
+    public class SqliteGenericOwnedTypes(SqliteModelBuilderFixture fixture) : SqliteOwnedTypes(fixture)
     {
-        public SqlServerGenericOwnedTypes(SqliteModelBuilderFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestModelBuilder CreateModelBuilder(
             Action<ModelConfigurationBuilder>? configure)
             => new GenericTestModelBuilder(Fixture, configure);

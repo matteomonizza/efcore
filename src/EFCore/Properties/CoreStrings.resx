@@ -288,8 +288,14 @@
   <data name="ComparerPropertyMismatchElement" xml:space="preserve">
     <value>The comparer for element type '{type}' cannot be used for '{entityType}.{propertyName}' because its element type is '{elementType}'.</value>
   </data>
+  <data name="CompiledModelDuplicateAttribute" xml:space="preserve">
+    <value>More than a single DbContextModelAttribute was found in the assembly '{assemblyName}' corresponding to the context type '{contextType}'</value>
+  </data>
   <data name="CompiledModelIncompatibleTypeMapping" xml:space="preserve">
     <value>The type mapping used is incompatible with a compiled model. The mapping type must have a 'public static readonly {typeMapping} {typeMapping}.Default' property.</value>
+  </data>
+  <data name="CompiledModelMissingInstance" xml:space="preserve">
+    <value>'{modelType}' must declare a static property named 'Instance' that returns 'IModel'.</value>
   </data>
   <data name="CompiledQueryDifferentModel" xml:space="preserve">
     <value>The compiled query '{queryExpression}' was executed with a different model than it was compiled against. Compiled queries can only be used with a single model.</value>
@@ -480,14 +486,20 @@
   <data name="EFConstantInvoked" xml:space="preserve">
     <value>The EF.Constant&lt;T&gt; method may only be used within Entity Framework LINQ queries.</value>
   </data>
-  <data name="EFConstantWithNonEvaluableArgument" xml:space="preserve">
+  <data name="EFConstantWithNonEvaluatableArgument" xml:space="preserve">
     <value>The EF.Constant&lt;T&gt; method may only be used with an argument that can be evaluated client-side and does not contain any reference to database-side entities.</value>
   </data>
   <data name="EFParameterInvoked" xml:space="preserve">
     <value>The EF.Parameter&lt;T&gt; method may only be used within Entity Framework LINQ queries.</value>
   </data>
+  <data name="EFParameterWithNonEvaluatableArgument" xml:space="preserve">
+    <value>The EF.Parameter&lt;T&gt; method may only be used with an argument that can be evaluated client-side and does not contain any reference to database-side entities.</value>
+  </data>
   <data name="EmptyComplexType" xml:space="preserve">
     <value>Complex type '{complexType}' has no properties defines. Configure at least one property or don't include this type in the model.</value>
+  </data>
+  <data name="EmptyJsonString" xml:space="preserve">
+    <value>The empty string is not valid JSON.</value>
   </data>
   <data name="EntityEqualityOnCompositeKeyEntitySubqueryNotSupported" xml:space="preserve">
     <value>Cannot translate '{comparisonOperator}' on a subquery expression of entity type '{entityType}' because it has a composite primary key. See https://go.microsoft.com/fwlink/?linkid=2141942 for information on how to rewrite your query.</value>
@@ -1105,6 +1117,12 @@
   <data name="ManyToManyOneNav" xml:space="preserve">
     <value>The navigation '{entityType}.{navigation}' cannot be used for both sides of a many-to-many relationship. Many-to-many relationships must use two distinct navigation properties.</value>
   </data>
+  <data name="MemberListBindingNotSupported" xml:space="preserve">
+    <value>EF Core does not support MemberListBinding: 'new Blog { Posts = { new Post(), new Post() } }'.</value>
+  </data>
+  <data name="MemberMemberBindingNotSupported" xml:space="preserve">
+    <value>EF Core does not support MemberMemberBinding: 'new Blog { Data = { Name = "hello world" } }'.</value>
+  </data>
   <data name="MissingBackingField" xml:space="preserve">
     <value>The specified field '{field}' could not be found for property '{2_entityType}.{1_property}'.</value>
   </data>
@@ -1143,6 +1161,9 @@
   </data>
   <data name="NamedIndexWrongType" xml:space="preserve">
     <value>The index with name {indexName} cannot be removed from the entity type '{entityType}' because no such index exists on that entity type.</value>
+  </data>
+  <data name="NativeAotDesignTimeModel" xml:space="preserve">
+    <value>Design-time DbContext operations are not supported when publishing with NativeAOT.</value>
   </data>
   <data name="NativeAotNoCompiledModel" xml:space="preserve">
     <value>Model building is not supported when publishing with NativeAOT. Use a compiled model.</value>
@@ -1413,9 +1434,6 @@
   </data>
   <data name="QueryUnhandledQueryRootExpression" xml:space="preserve">
     <value>Query root of type '{type}' wasn't handled by provider code. This issue happens when using a provider specific method on a different provider where it is not supported.</value>
-  </data>
-  <data name="ReadOnlyListType" xml:space="preserve">
-    <value>The type '{givenType}' cannot be used as a primitive collection because it is read-only. Read-only collections of primitive types are not supported.</value>
   </data>
   <data name="RecursiveOnConfiguring" xml:space="preserve">
     <value>An attempt was made to use the context instance while it is being configured. A DbContext instance cannot be used inside 'OnConfiguring' since it is still being configured at this point. This can happen if a second operation is started on this context instance before a previous operation completed. Any instance members are not guaranteed to be thread safe.</value>

@@ -5,13 +5,11 @@ using Microsoft.EntityFrameworkCore.Sqlite.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
-public class ManyToManyNoTrackingSplitQuerySqliteTest
-    : ManyToManyNoTrackingQueryRelationalTestBase<ManyToManySplitQuerySqliteFixture>
+#nullable disable
+
+public class ManyToManyNoTrackingSplitQuerySqliteTest(ManyToManySplitQuerySqliteFixture fixture)
+    : ManyToManyNoTrackingQueryRelationalTestBase<ManyToManySplitQuerySqliteFixture>(fixture)
 {
-    public ManyToManyNoTrackingSplitQuerySqliteTest(ManyToManySplitQuerySqliteFixture fixture)
-        : base(fixture)
-    {
-    }
 
     // Sqlite does not support Apply operations
 

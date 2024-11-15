@@ -4,7 +4,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Storage.Json;
 
@@ -25,7 +24,6 @@ public class Property : PropertyBase, IMutableProperty, IConventionProperty, IPr
     private object? _sentinel;
     private ValueGenerated? _valueGenerated;
     private CoreTypeMapping? _typeMapping;
-    private IComparer<IUpdateEntry>? _currentValueComparer;
 
     private ConfigurationSource? _typeConfigurationSource;
     private ConfigurationSource? _isNullableConfigurationSource;
@@ -832,9 +830,10 @@ public class Property : PropertyBase, IMutableProperty, IConventionProperty, IPr
         bool throwOnValueConverterConflict = true,
         bool throwOnProviderClrTypeConflict = true)
     {
-        Queue<(Property CurrentProperty, Property CycleBreakingPropert, int CyclePosition, int MaxCycleLength)>? queue = null;
-        (Property CurrentProperty, Property CycleBreakingPropert, int CyclePosition, int MaxCycleLength)? currentNode =
+        Queue<(Property CurrentProperty, Property CycleBreakingProperty, int CyclePosition, int MaxCycleLength)>? queue = null;
+        (Property CurrentProperty, Property CycleBreakingProperty, int CyclePosition, int MaxCycleLength)? currentNode =
             (this, this, 0, 2);
+        HashSet<Property>? visitedProperties = null;
 
         ValueConverter? valueConverter = null;
         Type? valueConverterType = null;
@@ -843,11 +842,15 @@ public class Property : PropertyBase, IMutableProperty, IConventionProperty, IPr
         {
             var (property, cycleBreakingProperty, cyclePosition, maxCycleLength) = currentNode ?? queue!.Dequeue();
             currentNode = null;
-            if (cyclePosition >= ForeignKey.LongestFkChainAllowedLength)
+            if (cyclePosition >= ForeignKey.LongestFkChainAllowedLength
+                || (queue is not null
+                    && queue.Count >= ForeignKey.LongestFkChainAllowedLength))
             {
                 throw new InvalidOperationException(
                     CoreStrings.RelationshipCycle(DeclaringType.DisplayName(), Name, "ValueConverter"));
             }
+
+            visitedProperties?.Add(property);
 
             foreach (var foreignKey in property.GetContainingForeignKeys())
             {
@@ -879,6 +882,12 @@ public class Property : PropertyBase, IMutableProperty, IConventionProperty, IPr
                             useQueue = true;
                             queue = new();
                             queue.Enqueue(currentNode.Value);
+                            visitedProperties = new() { property };
+                        }
+
+                        if (visitedProperties?.Contains(principalProperty) == true)
+                        {
+                            break;
                         }
 
                         if (cyclePosition == maxCycleLength - 1)
@@ -1031,7 +1040,7 @@ public class Property : PropertyBase, IMutableProperty, IConventionProperty, IPr
             return annotationFound;
         }
     }
-    
+
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
     ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
@@ -1087,20 +1096,6 @@ public class Property : PropertyBase, IMutableProperty, IConventionProperty, IPr
     /// </summary>
     public virtual ConfigurationSource? GetTypeMappingConfigurationSource()
         => _typeMappingConfigurationSource;
-
-    /// <summary>
-    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-    ///     any release. You should only use it directly in your code with extreme caution and knowing that
-    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-    /// </summary>
-    public virtual IComparer<IUpdateEntry> CurrentValueComparer
-        => NonCapturingLazyInitializer.EnsureInitialized(
-            ref _currentValueComparer, this, static property =>
-            {
-                property.EnsureReadOnly();
-                return new CurrentValueComparerFactory().Create(property);
-            });
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -1182,7 +1177,7 @@ public class Property : PropertyBase, IMutableProperty, IConventionProperty, IPr
 
         if (checkedProperties == null)
         {
-            checkedProperties = new HashSet<Property>();
+            checkedProperties = [];
         }
         else if (checkedProperties.Contains(this))
         {
@@ -1289,7 +1284,7 @@ public class Property : PropertyBase, IMutableProperty, IConventionProperty, IPr
 
         if (checkedProperties == null)
         {
-            checkedProperties = new HashSet<Property>();
+            checkedProperties = [];
         }
         else if (checkedProperties.Contains(this))
         {
@@ -2036,16 +2031,6 @@ public class Property : PropertyBase, IMutableProperty, IConventionProperty, IPr
         => SetProviderClrType(
             providerClrType,
             fromDataAnnotation ? ConfigurationSource.DataAnnotation : ConfigurationSource.Convention);
-
-    /// <summary>
-    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-    ///     any release. You should only use it directly in your code with extreme caution and knowing that
-    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-    /// </summary>
-    [DebuggerStepThrough]
-    IComparer<IUpdateEntry> IProperty.GetCurrentValueComparer()
-        => CurrentValueComparer;
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to

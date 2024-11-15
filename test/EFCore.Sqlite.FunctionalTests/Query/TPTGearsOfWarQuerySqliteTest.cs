@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore.Sqlite.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public class TPTGearsOfWarQuerySqliteTest : TPTGearsOfWarQueryRelationalTestBase<TPTGearsOfWarQuerySqliteFixture>
 {
     public TPTGearsOfWarQuerySqliteTest(TPTGearsOfWarQuerySqliteFixture fixture, ITestOutputHelper testOutputHelper)
@@ -373,7 +375,6 @@ FROM "Squads" AS "s"
 WHERE (
     SELECT "g"."Nickname"
     FROM "Gears" AS "g"
-    LEFT JOIN "Officers" AS "o" ON "g"."Nickname" = "o"."Nickname" AND "g"."SquadId" = "o"."SquadId"
     WHERE "s"."Id" = "g"."SquadId"
     ORDER BY "g"."Nickname"
     LIMIT 1 OFFSET "s"."Id") = 'Cole Train'

@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract class ServiceProviderFixtureBase : FixtureBase
 {
     public IServiceProvider ServiceProvider { get; }
@@ -23,7 +25,6 @@ public abstract class ServiceProviderFixtureBase : FixtureBase
         => AddOptions(testStore.AddProviderOptions(new DbContextOptionsBuilder()))
             .EnableDetailedErrors()
             .UseInternalServiceProvider(ServiceProvider)
-            .EnableServiceProviderCaching(false)
             .Options;
 
     protected override IServiceCollection AddServices(IServiceCollection serviceCollection)
@@ -37,14 +38,9 @@ public abstract class ServiceProviderFixtureBase : FixtureBase
     protected virtual object GetAdditionalModelCacheKey(DbContext context)
         => null;
 
-    private class FuncCacheKeyFactory : IModelCacheKeyFactory
+    private class FuncCacheKeyFactory(Func<DbContext, object> getAdditionalKey) : IModelCacheKeyFactory
     {
-        private readonly Func<DbContext, object> _getAdditionalKey;
-
-        public FuncCacheKeyFactory(Func<DbContext, object> getAdditionalKey)
-        {
-            _getAdditionalKey = getAdditionalKey;
-        }
+        private readonly Func<DbContext, object> _getAdditionalKey = getAdditionalKey;
 
         public object Create(DbContext context)
             => Tuple.Create(context.GetType(), _getAdditionalKey(context));

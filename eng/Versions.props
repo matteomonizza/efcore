@@ -1,8 +1,8 @@
 <Project>
   <PropertyGroup Label="Version settings">
-    <VersionPrefix>9.0.0.3</VersionPrefix>
-    <PreReleaseVersionLabel>alpha</PreReleaseVersionLabel>
-    <PreReleaseVersionIteration>1</PreReleaseVersionIteration>
+    <VersionPrefix>9.0.0.4</VersionPrefix>
+    <PreReleaseVersionLabel>preview</PreReleaseVersionLabel>
+    <PreReleaseVersionIteration>4</PreReleaseVersionIteration>
     <IncludeSourceRevisionInInformationalVersion>False</IncludeSourceRevisionInInformationalVersion>
     <IsServicingBuild Condition="'$(PreReleaseVersionLabel)' == 'servicing'">true</IsServicingBuild>
     <!--
@@ -16,25 +16,26 @@
     <UsingToolXliff>False</UsingToolXliff>
   </PropertyGroup>
   <PropertyGroup Label="Dependencies from dotnet/runtime">
-    <MicrosoftExtensionsCachingMemoryVersion>9.0.0-alpha.1.23611.1</MicrosoftExtensionsCachingMemoryVersion>
-    <MicrosoftExtensionsConfigurationVersion>9.0.0-alpha.1.23611.1</MicrosoftExtensionsConfigurationVersion>
-    <MicrosoftExtensionsConfigurationAbstractionsVersion>9.0.0-alpha.1.23611.1</MicrosoftExtensionsConfigurationAbstractionsVersion>
-    <MicrosoftExtensionsConfigurationEnvironmentVariablesVersion>9.0.0-alpha.1.23611.1</MicrosoftExtensionsConfigurationEnvironmentVariablesVersion>
-    <MicrosoftExtensionsConfigurationJsonVersion>9.0.0-alpha.1.23611.1</MicrosoftExtensionsConfigurationJsonVersion>
-    <MicrosoftExtensionsDependencyInjectionVersion>9.0.0-alpha.1.23611.1</MicrosoftExtensionsDependencyInjectionVersion>
-    <MicrosoftExtensionsDependencyModelVersion>9.0.0-alpha.1.23611.1</MicrosoftExtensionsDependencyModelVersion>
-    <MicrosoftExtensionsHostFactoryResolverSourcesVersion>9.0.0-alpha.1.23611.1</MicrosoftExtensionsHostFactoryResolverSourcesVersion>
-    <MicrosoftExtensionsLoggingVersion>9.0.0-alpha.1.23611.1</MicrosoftExtensionsLoggingVersion>
-    <SystemTextJsonVersion>9.0.0-alpha.1.23611.1</SystemTextJsonVersion>
+    <MicrosoftExtensionsCachingMemoryVersion>9.0.0-preview.3.24126.1</MicrosoftExtensionsCachingMemoryVersion>
+    <MicrosoftExtensionsConfigurationVersion>9.0.0-preview.3.24126.1</MicrosoftExtensionsConfigurationVersion>
+    <MicrosoftExtensionsConfigurationAbstractionsVersion>9.0.0-preview.3.24126.1</MicrosoftExtensionsConfigurationAbstractionsVersion>
+    <MicrosoftExtensionsConfigurationEnvironmentVariablesVersion>9.0.0-preview.3.24126.1</MicrosoftExtensionsConfigurationEnvironmentVariablesVersion>
+    <MicrosoftExtensionsConfigurationJsonVersion>9.0.0-preview.3.24126.1</MicrosoftExtensionsConfigurationJsonVersion>
+    <MicrosoftExtensionsDependencyInjectionVersion>9.0.0-preview.3.24126.1</MicrosoftExtensionsDependencyInjectionVersion>
+    <MicrosoftExtensionsDependencyModelVersion>9.0.0-preview.3.24126.1</MicrosoftExtensionsDependencyModelVersion>
+    <MicrosoftExtensionsHostFactoryResolverSourcesVersion>9.0.0-preview.3.24126.1</MicrosoftExtensionsHostFactoryResolverSourcesVersion>
+    <MicrosoftExtensionsLoggingVersion>9.0.0-preview.3.24126.1</MicrosoftExtensionsLoggingVersion>
+    <SystemTextJsonVersion>9.0.0-preview.3.24126.1</SystemTextJsonVersion>
   </PropertyGroup>
   <PropertyGroup Label="Dependencies from dotnet/arcade">
-    <MicrosoftDotNetBuildTasksTemplatingVersion>9.0.0-beta.23607.2</MicrosoftDotNetBuildTasksTemplatingVersion>
+    <MicrosoftDotNetBuildTasksTemplatingVersion>9.0.0-beta.24179.6</MicrosoftDotNetBuildTasksTemplatingVersion>
   </PropertyGroup>
   <PropertyGroup Label="Other dependencies">
+    <MicrosoftBuildFrameworkVersion>17.9.5</MicrosoftBuildFrameworkVersion>
+    <MicrosoftBuildTasksCoreVersion>17.9.5</MicrosoftBuildTasksCoreVersion>
+    <MicrosoftBuildUtilitiesCoreVersion>17.9.5</MicrosoftBuildUtilitiesCoreVersion>
     <!-- NB: This version affects Visual Studio compatibility. See https://learn.microsoft.com/visualstudio/extensibility/roslyn-version-support -->
-    <MicrosoftCodeAnalysisVersion>4.5.0</MicrosoftCodeAnalysisVersion>
-    <MicrosoftCodeAnalysisTestingVersion>1.1.2-beta1.23371.1</MicrosoftCodeAnalysisTestingVersion>
-    <XUnitVersion>2.6.1</XUnitVersion>
-    <XUnitRunnerVisualstudioVersion>2.5.3</XUnitRunnerVisualstudioVersion>
+    <MicrosoftCodeAnalysisVersion>4.8.0</MicrosoftCodeAnalysisVersion>
+    <MicrosoftCodeAnalysisTestingVersion>1.1.2-beta1.24121.1</MicrosoftCodeAnalysisTestingVersion>
   </PropertyGroup>
 </Project>

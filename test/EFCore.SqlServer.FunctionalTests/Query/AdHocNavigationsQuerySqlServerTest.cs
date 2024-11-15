@@ -3,42 +3,143 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public class AdHocNavigationsQuerySqlServerTest : AdHocNavigationsQueryRelationalTestBase
 {
     protected override ITestStoreFactory TestStoreFactory
         => SqlServerTestStoreFactory.Instance;
+
+    #region 10447
+
+    [ConditionalFact]
+    public virtual async Task Nested_include_queries_do_not_populate_navigation_twice()
+    {
+        var contextFactory = await InitializeAsync<Context10447>(seed: c => c.SeedAsync());
+        using var context = contextFactory.CreateContext();
+        var query = context.Blogs.Include(b => b.Posts);
+
+        foreach (var blog in query)
+        {
+            query.ToList();
+        }
+
+        Assert.Collection(
+            query,
+            b => Assert.Equal(3, b.Posts.Count),
+            b => Assert.Equal(2, b.Posts.Count),
+            b => Assert.Single(b.Posts));
+
+        AssertSql(
+            """
+SELECT [b].[Id], [p].[Id], [p].[BlogId]
+FROM [Blogs] AS [b]
+LEFT JOIN [Post] AS [p] ON [b].[Id] = [p].[BlogId]
+ORDER BY [b].[Id]
+""",
+            //
+            """
+SELECT [b].[Id], [p].[Id], [p].[BlogId]
+FROM [Blogs] AS [b]
+LEFT JOIN [Post] AS [p] ON [b].[Id] = [p].[BlogId]
+ORDER BY [b].[Id]
+""",
+            //
+            """
+SELECT [b].[Id], [p].[Id], [p].[BlogId]
+FROM [Blogs] AS [b]
+LEFT JOIN [Post] AS [p] ON [b].[Id] = [p].[BlogId]
+ORDER BY [b].[Id]
+""",
+            //
+            """
+SELECT [b].[Id], [p].[Id], [p].[BlogId]
+FROM [Blogs] AS [b]
+LEFT JOIN [Post] AS [p] ON [b].[Id] = [p].[BlogId]
+ORDER BY [b].[Id]
+""",
+            //
+            """
+SELECT [b].[Id], [p].[Id], [p].[BlogId]
+FROM [Blogs] AS [b]
+LEFT JOIN [Post] AS [p] ON [b].[Id] = [p].[BlogId]
+ORDER BY [b].[Id]
+""");
+    }
+
+    protected class Context10447(DbContextOptions options) : DbContext(options)
+    {
+        public DbSet<Blog> Blogs { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+        }
+
+        public Task SeedAsync()
+        {
+            AddRange(
+                new Blog
+                {
+                    Posts =
+                    [
+                        new(),
+                        new(),
+                        new()
+                    ]
+                },
+                new Blog { Posts = [new(), new()] },
+                new Blog { Posts = [new()] });
+
+            return SaveChangesAsync();
+        }
+
+        public class Blog
+        {
+            public int Id { get; set; }
+            public List<Post> Posts { get; set; }
+        }
+
+        public class Post
+        {
+            public int Id { get; set; }
+
+            public Blog Blog { get; set; }
+        }
+    }
+
+    #endregion
 
     public override async Task ThenInclude_with_interface_navigations()
     {
         await base.ThenInclude_with_interface_navigations();
 
         AssertSql(
-"""
-SELECT [p].[Id], [t].[Id], [t].[ParentBackNavigationId], [t].[SelfReferenceBackNavigationId], [t].[Id0], [t].[ParentBackNavigationId0], [t].[SelfReferenceBackNavigationId0]
+            """
+SELECT [p].[Id], [s].[Id], [s].[ParentBackNavigationId], [s].[SelfReferenceBackNavigationId], [s].[Id0], [s].[ParentBackNavigationId0], [s].[SelfReferenceBackNavigationId0]
 FROM [Parents] AS [p]
 LEFT JOIN (
     SELECT [c].[Id], [c].[ParentBackNavigationId], [c].[SelfReferenceBackNavigationId], [c0].[Id] AS [Id0], [c0].[ParentBackNavigationId] AS [ParentBackNavigationId0], [c0].[SelfReferenceBackNavigationId] AS [SelfReferenceBackNavigationId0]
     FROM [Children] AS [c]
     LEFT JOIN [Children] AS [c0] ON [c].[Id] = [c0].[SelfReferenceBackNavigationId]
-) AS [t] ON [p].[Id] = [t].[ParentBackNavigationId]
-ORDER BY [p].[Id], [t].[Id]
+) AS [s] ON [p].[Id] = [s].[ParentBackNavigationId]
+ORDER BY [p].[Id], [s].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [c0].[Id], [c0].[ParentBackNavigationId], [c0].[SelfReferenceBackNavigationId], [p].[Id]
 FROM [Children] AS [c]
 LEFT JOIN [Children] AS [c0] ON [c].[SelfReferenceBackNavigationId] = [c0].[Id]
 LEFT JOIN [Parents] AS [p] ON [c0].[ParentBackNavigationId] = [p].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [c0].[Id], [c0].[ParentBackNavigationId], [c0].[SelfReferenceBackNavigationId], [p].[Id]
 FROM [Children] AS [c]
 LEFT JOIN [Children] AS [c0] ON [c].[SelfReferenceBackNavigationId] = [c0].[Id]
 LEFT JOIN [Parents] AS [p] ON [c0].[ParentBackNavigationId] = [p].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [c].[Id], [c].[ParentBackNavigationId], [c].[SelfReferenceBackNavigationId], [c0].[Id], [c0].[ParentBackNavigationId], [c0].[SelfReferenceBackNavigationId], [p].[Id]
 FROM [Children] AS [c]
 LEFT JOIN [Children] AS [c0] ON [c].[SelfReferenceBackNavigationId] = [c0].[Id]
@@ -51,28 +152,28 @@ LEFT JOIN [Parents] AS [p] ON [c0].[ParentBackNavigationId] = [p].[Id]
         await base.Customer_collections_materialize_properly();
 
         AssertSql(
-"""
+            """
 SELECT [c].[Id], [o].[Id], [o].[CustomerId1], [o].[CustomerId2], [o].[CustomerId3], [o].[CustomerId4], [o].[Name]
 FROM [Customers] AS [c]
 LEFT JOIN [Orders] AS [o] ON [c].[Id] = [o].[CustomerId1]
 ORDER BY [c].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [c].[Id], [o].[Id], [o].[CustomerId1], [o].[CustomerId2], [o].[CustomerId3], [o].[CustomerId4], [o].[Name]
 FROM [Customers] AS [c]
 LEFT JOIN [Orders] AS [o] ON [c].[Id] = [o].[CustomerId2]
 ORDER BY [c].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [c].[Id], [o].[Id], [o].[CustomerId1], [o].[CustomerId2], [o].[CustomerId3], [o].[CustomerId4], [o].[Name]
 FROM [Customers] AS [c]
 LEFT JOIN [Orders] AS [o] ON [c].[Id] = [o].[CustomerId3]
 ORDER BY [c].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [c].[Id], [o].[Id], [o].[CustomerId1], [o].[CustomerId2], [o].[CustomerId3], [o].[CustomerId4], [o].[Name]
 FROM [Customers] AS [c]
 LEFT JOIN [Orders] AS [o] ON [c].[Id] = [o].[CustomerId4]
@@ -85,7 +186,7 @@ ORDER BY [c].[Id]
         await base.Reference_include_on_derived_type_with_sibling_works();
 
         AssertSql(
-"""
+            """
 SELECT [p].[Id], [p].[Discriminator], [p].[LeaveStart], [p].[LeaveTypeId], [p0].[Id]
 FROM [Proposals] AS [p]
 LEFT JOIN [ProposalLeaveType] AS [p0] ON [p].[LeaveTypeId] = [p0].[Id]
@@ -98,8 +199,8 @@ WHERE [p].[Discriminator] = N'ProposalLeave'
         await base.Include_collection_optional_reference_collection();
 
         AssertSql(
-"""
-SELECT [p].[Id], [p].[Discriminator], [p].[FamilyId], [p].[Name], [p].[TeacherId], [t].[Id], [t].[Discriminator], [t].[FamilyId], [t].[Name], [t].[TeacherId], [t].[Grade], [t].[Id0], [t].[LastName], [t].[Id1], [t].[Discriminator0], [t].[FamilyId0], [t].[Name0], [t].[TeacherId0], [t].[Grade0]
+            """
+SELECT [p].[Id], [p].[Discriminator], [p].[FamilyId], [p].[Name], [p].[TeacherId], [s].[Id], [s].[Discriminator], [s].[FamilyId], [s].[Name], [s].[TeacherId], [s].[Grade], [s].[Id0], [s].[LastName], [s].[Id1], [s].[Discriminator0], [s].[FamilyId0], [s].[Name0], [s].[TeacherId0], [s].[Grade0]
 FROM [People] AS [p]
 LEFT JOIN (
     SELECT [p0].[Id], [p0].[Discriminator], [p0].[FamilyId], [p0].[Name], [p0].[TeacherId], [p0].[Grade], [f].[Id] AS [Id0], [f].[LastName], [p1].[Id] AS [Id1], [p1].[Discriminator] AS [Discriminator0], [p1].[FamilyId] AS [FamilyId0], [p1].[Name] AS [Name0], [p1].[TeacherId] AS [TeacherId0], [p1].[Grade] AS [Grade0]
@@ -107,13 +208,13 @@ LEFT JOIN (
     LEFT JOIN [Families] AS [f] ON [p0].[FamilyId] = [f].[Id]
     LEFT JOIN [People] AS [p1] ON [f].[Id] = [p1].[FamilyId]
     WHERE [p0].[Discriminator] = N'PersonKid9038'
-) AS [t] ON [p].[Id] = [t].[TeacherId]
+) AS [s] ON [p].[Id] = [s].[TeacherId]
 WHERE [p].[Discriminator] = N'PersonTeacher9038'
-ORDER BY [p].[Id], [t].[Id], [t].[Id0]
+ORDER BY [p].[Id], [s].[Id], [s].[Id0]
 """,
-                //
-                """
-SELECT [p].[Id], [p].[Discriminator], [p].[FamilyId], [p].[Name], [p].[TeacherId], [f].[Id], [f].[LastName], [p0].[Id], [p0].[Discriminator], [p0].[FamilyId], [p0].[Name], [p0].[TeacherId], [p0].[Grade], [t].[Id], [t].[Discriminator], [t].[FamilyId], [t].[Name], [t].[TeacherId], [t].[Grade]
+            //
+            """
+SELECT [p].[Id], [p].[Discriminator], [p].[FamilyId], [p].[Name], [p].[TeacherId], [f].[Id], [f].[LastName], [p0].[Id], [p0].[Discriminator], [p0].[FamilyId], [p0].[Name], [p0].[TeacherId], [p0].[Grade], [p2].[Id], [p2].[Discriminator], [p2].[FamilyId], [p2].[Name], [p2].[TeacherId], [p2].[Grade]
 FROM [People] AS [p]
 LEFT JOIN [Families] AS [f] ON [p].[FamilyId] = [f].[Id]
 LEFT JOIN [People] AS [p0] ON [f].[Id] = [p0].[FamilyId]
@@ -121,50 +222,9 @@ LEFT JOIN (
     SELECT [p1].[Id], [p1].[Discriminator], [p1].[FamilyId], [p1].[Name], [p1].[TeacherId], [p1].[Grade]
     FROM [People] AS [p1]
     WHERE [p1].[Discriminator] = N'PersonKid9038'
-) AS [t] ON [p].[Id] = [t].[TeacherId]
+) AS [p2] ON [p].[Id] = [p2].[TeacherId]
 WHERE [p].[Discriminator] = N'PersonTeacher9038'
 ORDER BY [p].[Id], [f].[Id], [p0].[Id]
-""");
-    }
-
-    public override async Task Nested_include_queries_do_not_populate_navigation_twice()
-    {
-        await base.Nested_include_queries_do_not_populate_navigation_twice();
-
-        AssertSql(
-"""
-SELECT [b].[Id], [p].[Id], [p].[BlogId]
-FROM [Blogs] AS [b]
-LEFT JOIN [Post] AS [p] ON [b].[Id] = [p].[BlogId]
-ORDER BY [b].[Id]
-""",
-                //
-                """
-SELECT [b].[Id], [p].[Id], [p].[BlogId]
-FROM [Blogs] AS [b]
-LEFT JOIN [Post] AS [p] ON [b].[Id] = [p].[BlogId]
-ORDER BY [b].[Id]
-""",
-                //
-                """
-SELECT [b].[Id], [p].[Id], [p].[BlogId]
-FROM [Blogs] AS [b]
-LEFT JOIN [Post] AS [p] ON [b].[Id] = [p].[BlogId]
-ORDER BY [b].[Id]
-""",
-                //
-                """
-SELECT [b].[Id], [p].[Id], [p].[BlogId]
-FROM [Blogs] AS [b]
-LEFT JOIN [Post] AS [p] ON [b].[Id] = [p].[BlogId]
-ORDER BY [b].[Id]
-""",
-                //
-                """
-SELECT [b].[Id], [p].[Id], [p].[BlogId]
-FROM [Blogs] AS [b]
-LEFT JOIN [Post] AS [p] ON [b].[Id] = [p].[BlogId]
-ORDER BY [b].[Id]
 """);
     }
 
@@ -173,14 +233,14 @@ ORDER BY [b].[Id]
         await base.Include_with_order_by_on_interface_key();
 
         AssertSql(
-"""
+            """
 SELECT [p].[Id], [p].[Name], [c].[Id], [c].[Name], [c].[Parent10635Id], [c].[ParentId]
 FROM [Parents] AS [p]
 LEFT JOIN [Children] AS [c] ON [p].[Id] = [c].[Parent10635Id]
 ORDER BY [p].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [p].[Id], [c].[Id], [c].[Name], [c].[Parent10635Id], [c].[ParentId]
 FROM [Parents] AS [p]
 LEFT JOIN [Children] AS [c] ON [p].[Id] = [c].[Parent10635Id]
@@ -193,7 +253,7 @@ ORDER BY [p].[Id]
         await base.Collection_without_setter_materialized_correctly();
 
         AssertSql(
-"""
+            """
 SELECT [b].[Id], [p].[Id], [p].[BlogId1], [p].[BlogId2], [p].[BlogId3], [p].[Name], [p0].[Id], [p0].[BlogId1], [p0].[BlogId2], [p0].[BlogId3], [p0].[Name], [p1].[Id], [p1].[BlogId1], [p1].[BlogId2], [p1].[BlogId3], [p1].[Name]
 FROM [Blogs] AS [b]
 LEFT JOIN [Posts] AS [p] ON [b].[Id] = [p].[BlogId1]
@@ -201,8 +261,8 @@ LEFT JOIN [Posts] AS [p0] ON [b].[Id] = [p0].[BlogId2]
 LEFT JOIN [Posts] AS [p1] ON [b].[Id] = [p1].[BlogId3]
 ORDER BY [b].[Id], [p].[Id], [p0].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT (
     SELECT TOP(1) (
         SELECT COUNT(*)
@@ -234,14 +294,14 @@ FROM [Blogs] AS [b]
         await base.Include_collection_works_when_defined_on_intermediate_type();
 
         AssertSql(
-"""
+            """
 SELECT [s].[Id], [s].[Discriminator], [s0].[Id], [s0].[SchoolId]
 FROM [Schools] AS [s]
 LEFT JOIN [Students] AS [s0] ON [s].[Id] = [s0].[SchoolId]
 ORDER BY [s].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [s].[Id], [s0].[Id], [s0].[SchoolId]
 FROM [Schools] AS [s]
 LEFT JOIN [Students] AS [s0] ON [s].[Id] = [s0].[SchoolId]
@@ -254,11 +314,11 @@ ORDER BY [s].[Id]
         await base.Let_multiple_references_with_reference_to_outer();
 
         AssertSql(
-"""
+            """
 SELECT (
     SELECT TOP(1) [c].[Id]
     FROM [CompetitionSeasons] AS [c]
-    WHERE [c].[StartDate] <= [a].[DateTime] AND [a].[DateTime] < [c].[EndDate]), [a].[Id], [a0].[Id], [t].[Id], [t].[ActivityTypeId], [t].[CompetitionSeasonId], [t].[Points], [t].[Id0]
+    WHERE [c].[StartDate] <= [a].[DateTime] AND [a].[DateTime] < [c].[EndDate]), [a].[Id], [a0].[Id], [s].[Id], [s].[ActivityTypeId], [s].[CompetitionSeasonId], [s].[Points], [s].[Id0]
 FROM [Activities] AS [a]
 INNER JOIN [ActivityType] AS [a0] ON [a].[ActivityTypeId] = [a0].[Id]
 OUTER APPLY (
@@ -269,11 +329,11 @@ OUTER APPLY (
         SELECT TOP(1) [c1].[Id]
         FROM [CompetitionSeasons] AS [c1]
         WHERE [c1].[StartDate] <= [a].[DateTime] AND [a].[DateTime] < [c1].[EndDate])
-) AS [t]
-ORDER BY [a].[Id], [a0].[Id], [t].[Id]
+) AS [s]
+ORDER BY [a].[Id], [a0].[Id], [s].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [a].[Id], [a].[ActivityTypeId], [a].[DateTime], [a].[Points], (
     SELECT TOP(1) [c].[Id]
     FROM [CompetitionSeasons] AS [c]
@@ -295,21 +355,21 @@ INNER JOIN [ActivityType] AS [a0] ON [a].[ActivityTypeId] = [a0].[Id]
         await base.Include_collection_with_OfType_base();
 
         AssertSql(
-"""
+            """
 SELECT [e].[Id], [e].[Name], [d].[Id], [d].[Device], [d].[EmployeeId]
 FROM [Employees] AS [e]
 LEFT JOIN [Devices] AS [d] ON [e].[Id] = [d].[EmployeeId]
 ORDER BY [e].[Id]
 """,
-                //
-                """
-SELECT [e].[Id], [t].[Id], [t].[Device], [t].[EmployeeId]
+            //
+            """
+SELECT [e].[Id], [d0].[Id], [d0].[Device], [d0].[EmployeeId]
 FROM [Employees] AS [e]
 LEFT JOIN (
     SELECT [d].[Id], [d].[Device], [d].[EmployeeId]
     FROM [Devices] AS [d]
     WHERE [d].[Device] <> N'foo' OR [d].[Device] IS NULL
-) AS [t] ON [e].[Id] = [t].[EmployeeId]
+) AS [d0] ON [e].[Id] = [d0].[EmployeeId]
 ORDER BY [e].[Id]
 """);
     }
@@ -319,7 +379,7 @@ ORDER BY [e].[Id]
         await base.Correlated_collection_correctly_associates_entities_with_byte_array_keys();
 
         AssertSql(
-"""
+            """
 SELECT [b].[Name], [c].[Id]
 FROM [Blogs] AS [b]
 LEFT JOIN [Comments] AS [c] ON [b].[Name] = [c].[BlogName]
@@ -332,7 +392,7 @@ ORDER BY [b].[Name]
         await base.Can_ignore_invalid_include_path_error();
 
         AssertSql(
-"""
+            """
 SELECT [b].[Id], [b].[Discriminator], [b].[SubAId]
 FROM [BaseClasses] AS [b]
 WHERE [b].[Discriminator] = N'ClassA'
@@ -344,28 +404,28 @@ WHERE [b].[Discriminator] = N'ClassA'
         await base.SelectMany_and_collection_in_projection_in_FirstOrDefault();
 
         AssertSql(
-"""
+            """
 @__referenceId_0='a' (Size = 4000)
 @__customerId_1='1115c816-6c4c-4016-94df-d8b60a22ffa1'
 
-SELECT [t].[Id], [t0].[Id], [t0].[Image], [t0].[Id0], [t0].[Id00]
+SELECT [o0].[Id], [s0].[Id], [s0].[Image], [s0].[Id0], [s0].[Id00]
 FROM (
     SELECT TOP(2) [o].[Id]
     FROM [Orders] AS [o]
     WHERE [o].[ExternalReferenceId] = @__referenceId_0 AND [o].[CustomerId] = @__customerId_1
-) AS [t]
+) AS [o0]
 OUTER APPLY (
-    SELECT [i].[Id], [t1].[Image], [t1].[Id] AS [Id0], [t1].[Id0] AS [Id00]
+    SELECT [i].[Id], [s].[Image], [s].[Id] AS [Id0], [s].[Id0] AS [Id00]
     FROM [IdentityDocument] AS [i]
     OUTER APPLY (
         SELECT [i1].[Image], [i0].[Id], [i1].[Id] AS [Id0]
         FROM [IdentityDocument] AS [i0]
         INNER JOIN [IdentityDocumentImage] AS [i1] ON [i0].[Id] = [i1].[IdentityDocumentId]
-        WHERE [t].[Id] = [i0].[OrderId]
-    ) AS [t1]
-    WHERE [t].[Id] = [i].[OrderId]
-) AS [t0]
-ORDER BY [t].[Id], [t0].[Id], [t0].[Id0]
+        WHERE [o0].[Id] = [i0].[OrderId]
+    ) AS [s]
+    WHERE [o0].[Id] = [i].[OrderId]
+) AS [s0]
+ORDER BY [o0].[Id], [s0].[Id], [s0].[Id0]
 """);
     }
 
@@ -374,7 +434,7 @@ ORDER BY [t].[Id], [t0].[Id], [t0].[Id0]
         await base.Using_explicit_interface_implementation_as_navigation_works();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) CASE
     WHEN EXISTS (
         SELECT 1
@@ -398,7 +458,7 @@ WHERE [b].[Id] = 1
         if (split)
         {
             AssertSql(
-"""
+                """
 SELECT [e].[Id]
 FROM [Entities] AS [e]
 ORDER BY [e].[Id]
@@ -428,54 +488,54 @@ ORDER BY [e].[Id]
         await base.Cycles_in_auto_include();
 
         AssertSql(
-"""
+            """
 SELECT [p].[Id], [d].[Id], [d].[PrincipalId]
 FROM [PrincipalOneToOne] AS [p]
 LEFT JOIN [DependentOneToOne] AS [d] ON [p].[Id] = [d].[PrincipalId]
 """,
-                //
-                """
+            //
+            """
 SELECT [d].[Id], [d].[PrincipalId], [p].[Id]
 FROM [DependentOneToOne] AS [d]
 INNER JOIN [PrincipalOneToOne] AS [p] ON [d].[PrincipalId] = [p].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [p].[Id], [d].[Id], [d].[PrincipalId]
 FROM [PrincipalOneToMany] AS [p]
 LEFT JOIN [DependentOneToMany] AS [d] ON [p].[Id] = [d].[PrincipalId]
 ORDER BY [p].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [d].[Id], [d].[PrincipalId], [p].[Id], [d0].[Id], [d0].[PrincipalId]
 FROM [DependentOneToMany] AS [d]
 INNER JOIN [PrincipalOneToMany] AS [p] ON [d].[PrincipalId] = [p].[Id]
 LEFT JOIN [DependentOneToMany] AS [d0] ON [p].[Id] = [d0].[PrincipalId]
 ORDER BY [d].[Id], [p].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [p].[Id]
 FROM [PrincipalManyToMany] AS [p]
 """,
-                //
-                """
+            //
+            """
 SELECT [d].[Id]
 FROM [DependentManyToMany] AS [d]
 """,
-                //
-                """
+            //
+            """
 SELECT [c].[Id], [c].[CycleCId]
 FROM [CycleA] AS [c]
 """,
-                //
-                """
+            //
+            """
 SELECT [c].[Id], [c].[CId], [c].[CycleAId]
 FROM [CycleB] AS [c]
 """,
-                //
-                """
+            //
+            """
 SELECT [c].[Id], [c].[BId]
 FROM [CycleC] AS [c]
 """);
@@ -500,16 +560,16 @@ FROM [CycleC] AS [c]
         await base.Walking_back_include_tree_is_not_allowed_3();
 
         AssertSql(
-"""
-SELECT [m].[Id], [m].[PrincipalId], [p].[Id], [t].[Id], [t].[PrincipalId], [t].[Id0], [t].[ManyDependentId], [t].[PrincipalId0]
+            """
+SELECT [m].[Id], [m].[PrincipalId], [p].[Id], [s0].[Id], [s0].[PrincipalId], [s0].[Id0], [s0].[ManyDependentId], [s0].[PrincipalId0]
 FROM [ManyDependent] AS [m]
 LEFT JOIN [Principal] AS [p] ON [m].[PrincipalId] = [p].[Id]
 LEFT JOIN (
     SELECT [m0].[Id], [m0].[PrincipalId], [s].[Id] AS [Id0], [s].[ManyDependentId], [s].[PrincipalId] AS [PrincipalId0]
     FROM [ManyDependent] AS [m0]
     LEFT JOIN [SingleDependent] AS [s] ON [m0].[Id] = [s].[ManyDependentId]
-) AS [t] ON [p].[Id] = [t].[PrincipalId]
-ORDER BY [m].[Id], [p].[Id], [t].[Id]
+) AS [s0] ON [p].[Id] = [s0].[PrincipalId]
+ORDER BY [m].[Id], [p].[Id], [s0].[Id]
 """);
     }
 
@@ -528,27 +588,27 @@ ORDER BY [m].[Id], [p].[Id], [t].[Id]
             """
 @__id_0='1'
 
-SELECT [t].[Id], [t].[Name], [t].[Surname], [t].[Birthday], [t].[Hometown], [t].[Bio], [t].[AvatarUrl], [t].[Id0], [t].[Id1], [p0].[Id], [p0].[ImageUrl], [p0].[Height], [p0].[Width], [t0].[Id], [t0].[Name], [t0].[PosterUrl], [t0].[Rating]
+SELECT [s].[Id], [s].[Name], [s].[Surname], [s].[Birthday], [s].[Hometown], [s].[Bio], [s].[AvatarUrl], [s].[Id0], [s].[Id1], [p0].[Id], [p0].[ImageUrl], [p0].[Height], [p0].[Width], [u].[Id], [u].[Name], [u].[PosterUrl], [u].[Rating]
 FROM (
     SELECT TOP(1) [p].[Id], [p].[Name], [p].[Surname], [p].[Birthday], [p].[Hometown], [p].[Bio], [p].[AvatarUrl], [a].[Id] AS [Id0], [d].[Id] AS [Id1]
     FROM [Persons] AS [p]
     LEFT JOIN [ActorEntity] AS [a] ON [p].[Id] = [a].[PersonId]
     LEFT JOIN [DirectorEntity] AS [d] ON [p].[Id] = [d].[PersonId]
     WHERE [p].[Id] = @__id_0
-) AS [t]
-LEFT JOIN [PersonImageEntity] AS [p0] ON [t].[Id] = [p0].[PersonId]
+) AS [s]
+LEFT JOIN [PersonImageEntity] AS [p0] ON [s].[Id] = [p0].[PersonId]
 OUTER APPLY (
     SELECT [m0].[Id], [m0].[Budget], [m0].[Description], [m0].[DurationInMins], [m0].[Name], [m0].[PosterUrl], [m0].[Rating], [m0].[ReleaseDate], [m0].[Revenue]
     FROM [MovieActorEntity] AS [m]
     INNER JOIN [MovieEntity] AS [m0] ON [m].[MovieId] = [m0].[Id]
-    WHERE [t].[Id0] IS NOT NULL AND [t].[Id0] = [m].[ActorId]
+    WHERE [s].[Id0] IS NOT NULL AND [s].[Id0] = [m].[ActorId]
     UNION
     SELECT [m2].[Id], [m2].[Budget], [m2].[Description], [m2].[DurationInMins], [m2].[Name], [m2].[PosterUrl], [m2].[Rating], [m2].[ReleaseDate], [m2].[Revenue]
     FROM [MovieDirectorEntity] AS [m1]
     INNER JOIN [MovieEntity] AS [m2] ON [m1].[MovieId] = [m2].[Id]
-    WHERE [t].[Id1] IS NOT NULL AND [t].[Id1] = [m1].[DirectorId]
-) AS [t0]
-ORDER BY [t].[Id], [t].[Id0], [t].[Id1], [p0].[Id]
+    WHERE [s].[Id1] IS NOT NULL AND [s].[Id1] = [m1].[DirectorId]
+) AS [u]
+ORDER BY [s].[Id], [s].[Id0], [s].[Id1], [p0].[Id]
 """);
     }
 
@@ -557,7 +617,7 @@ ORDER BY [t].[Id], [t].[Id0], [t].[Id1], [p0].[Id]
         await base.Count_member_over_IReadOnlyCollection_works(async);
 
         AssertSql(
-"""
+            """
 SELECT (
     SELECT COUNT(*)
     FROM [Books] AS [b]

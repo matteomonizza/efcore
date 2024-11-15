@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class FromSqlSprocQueryTestBase<TFixture> : IClassFixture<TFixture>
     where TFixture : NorthwindQueryRelationalFixture<NoopModelCustomizer>, new()
 {
@@ -514,10 +516,10 @@ public abstract class FromSqlSprocQueryTestBase<TFixture> : IClassFixture<TFixtu
         => Fixture.TestStore.NormalizeDelimitersInRawString(sql);
 
     protected virtual object[] GetTenMostExpensiveProductsParameters()
-        => Array.Empty<object>();
+        => [];
 
     protected virtual object[] GetCustomerOrderHistorySprocParameters()
-        => new[] { "ALFKI" };
+        => ["ALFKI"];
 
     protected NorthwindContext CreateContext()
         => Fixture.CreateContext();

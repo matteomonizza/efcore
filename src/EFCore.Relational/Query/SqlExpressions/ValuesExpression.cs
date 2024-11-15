@@ -14,8 +14,10 @@ namespace Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 ///         not used in application code.
 ///     </para>
 /// </summary>
-public class ValuesExpression : TableExpressionBase, IClonableTableExpressionBase
+public class ValuesExpression : TableExpressionBase
 {
+    private static ConstructorInfo? _quotingConstructor;
+
     /// <summary>
     ///     The row values for this table.
     /// </summary>
@@ -32,12 +34,32 @@ public class ValuesExpression : TableExpressionBase, IClonableTableExpressionBas
     /// <param name="alias">A string alias for the table source.</param>
     /// <param name="rowValues">The row values for this table.</param>
     /// <param name="columnNames">The names of the columns contained in this table.</param>
-    /// <param name="annotations">A collection of annotations associated with this expression.</param>
+    public ValuesExpression(
+        string? alias,
+        IReadOnlyList<RowValueExpression> rowValues,
+        IReadOnlyList<string> columnNames)
+        : base(alias, annotations: (IReadOnlyDictionary<string, IAnnotation>?)null)
+    {
+        Check.DebugAssert(
+            rowValues.All(rv => rv.Values.Count == columnNames.Count),
+            "All row values must have a value count matching the number of column names");
+
+        RowValues = rowValues;
+        ColumnNames = columnNames;
+    }
+
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    [EntityFrameworkInternal]
     public ValuesExpression(
         string? alias,
         IReadOnlyList<RowValueExpression> rowValues,
         IReadOnlyList<string> columnNames,
-        IEnumerable<IAnnotation>? annotations = null)
+        IReadOnlyDictionary<string, IAnnotation>? annotations)
         : base(alias, annotations)
     {
         Check.DebugAssert(
@@ -51,12 +73,8 @@ public class ValuesExpression : TableExpressionBase, IClonableTableExpressionBas
     /// <summary>
     ///     The alias assigned to this table source.
     /// </summary>
-    [NotNull]
-    public override string? Alias
-    {
-        get => base.Alias!;
-        internal set => base.Alias = value;
-    }
+    public override string Alias
+        => base.Alias!;
 
     /// <inheritdoc />
     protected override Expression VisitChildren(ExpressionVisitor visitor)
@@ -75,13 +93,40 @@ public class ValuesExpression : TableExpressionBase, IClonableTableExpressionBas
             : new ValuesExpression(Alias, rowValues, ColumnNames);
 
     /// <inheritdoc />
-    protected override TableExpressionBase CreateWithAnnotations(IEnumerable<IAnnotation> annotations)
-        => new ValuesExpression(Alias, RowValues, ColumnNames, annotations);
+    protected override ValuesExpression WithAnnotations(IReadOnlyDictionary<string, IAnnotation> annotations)
+        => new(Alias, RowValues, ColumnNames, annotations);
 
-    // TODO: Deep clone, see #30982
     /// <inheritdoc />
-    public virtual TableExpressionBase Clone()
-        => CreateWithAnnotations(GetAnnotations());
+    public override ValuesExpression WithAlias(string newAlias)
+        => new(newAlias, RowValues, ColumnNames, Annotations);
+
+    /// <inheritdoc />
+    public override Expression Quote()
+        => New(
+            _quotingConstructor ??= typeof(ValuesExpression).GetConstructor(
+            [
+                typeof(string),
+                typeof(IReadOnlyList<RowValueExpression>),
+                typeof(IReadOnlyList<string>),
+                typeof(IReadOnlyDictionary<string, IAnnotation>)
+            ])!,
+            Constant(Alias, typeof(string)),
+            NewArrayInit(typeof(RowValueExpression), RowValues.Select(rv => rv.Quote())),
+            NewArrayInit(typeof(string), ColumnNames.Select(Constant)),
+            RelationalExpressionQuotingUtilities.QuoteAnnotations(Annotations));
+
+    /// <inheritdoc />
+    public override TableExpressionBase Clone(string? alias, ExpressionVisitor cloningExpressionVisitor)
+    {
+        var newRowValues = new RowValueExpression[RowValues.Count];
+
+        for (var i = 0; i < newRowValues.Length; i++)
+        {
+            newRowValues[i] = (RowValueExpression)cloningExpressionVisitor.Visit(RowValues[i]);
+        }
+
+        return new ValuesExpression(alias, newRowValues, ColumnNames, Annotations);
+    }
 
     /// <inheritdoc />
     protected override void Print(ExpressionPrinter expressionPrinter)

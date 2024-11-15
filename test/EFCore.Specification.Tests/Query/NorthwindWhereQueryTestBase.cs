@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 // ReSharper disable ConvertToConstant.Local
 // ReSharper disable RedundantBoolCompare
 // ReSharper disable InconsistentNaming
@@ -1211,11 +1213,19 @@ public abstract class NorthwindWhereQueryTestBase<TFixture> : QueryTestBase<TFix
             ss => ss.Set<Customer>().Where(c => c.CustomerID == "ALFKI" && boolean),
             assertEmpty: true);
 
+        await AssertQuery(
+            async,
+            ss => ss.Set<Customer>().Where(c => c.CustomerID == "ALFKI" || boolean));
+
         boolean = true;
 
         await AssertQuery(
             async,
             ss => ss.Set<Customer>().Where(c => c.CustomerID == "ALFKI" && boolean));
+
+        await AssertQuery(
+            async,
+            ss => ss.Set<Customer>().Where(c => c.CustomerID == "ALFKI" || boolean));
     }
 
     [ConditionalTheory]
@@ -1641,7 +1651,7 @@ public abstract class NorthwindWhereQueryTestBase<TFixture> : QueryTestBase<TFix
                 c => c.Orders.OrderBy(o => o.OrderID).FirstOrDefault() == new Order { OrderID = 10276 }),
 
             ss => ss.Set<Customer>().Where(
-                c => c.Orders.OrderBy(o => o.OrderID).FirstOrDefault().OrderID == 10276 ));
+                c => c.Orders.OrderBy(o => o.OrderID).FirstOrDefault().OrderID == 10276));
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
@@ -2391,7 +2401,7 @@ public abstract class NorthwindWhereQueryTestBase<TFixture> : QueryTestBase<TFix
                 async,
                 ss => ss.Set<Customer>().Where(c => c.CustomerID == EF.Constant(c.CustomerID))));
 
-        Assert.Equal(CoreStrings.EFConstantWithNonEvaluableArgument, exception.Message);
+        Assert.Equal(CoreStrings.EFConstantWithNonEvaluatableArgument, exception.Message);
     }
 
     [ConditionalTheory]
@@ -2438,17 +2448,12 @@ public abstract class NorthwindWhereQueryTestBase<TFixture> : QueryTestBase<TFix
                 async,
                 ss => ss.Set<Customer>().Where(c => c.CustomerID == EF.Parameter(c.CustomerID))));
 
-        Assert.Equal(CoreStrings.EFConstantWithNonEvaluableArgument, exception.Message);
+        Assert.Equal(CoreStrings.EFParameterWithNonEvaluatableArgument, exception.Message);
     }
 
-    private class EntityWithImplicitCast
+    private class EntityWithImplicitCast(int value)
     {
-        private readonly int _value;
-
-        public EntityWithImplicitCast(int value)
-        {
-            _value = value;
-        }
+        private readonly int _value = value;
 
         public string Value
             => _value.ToString();

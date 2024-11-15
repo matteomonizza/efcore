@@ -3,8 +3,6 @@
 
 // ReSharper disable InconsistentNaming
 
-#nullable enable
-
 using System.Data;
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
@@ -18,19 +16,23 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
         => Test(
             modelBuilder => BuildBigModel(modelBuilder, jsonColumns: true),
             model => AssertBigModel(model, jsonColumns: true),
-            c =>
-            {
-                c.Set<PrincipalDerived<DependentBase<byte?>>>().Add(
-                    new PrincipalDerived<DependentBase<byte?>>
-                    {
-                        Id = 1,
-                        AlternateId = new Guid(),
-                        Dependent = new DependentBase<byte?>(1),
-                        Owned = new OwnedType(c)
-                    });
+            // Blocked by dotnet/runtime/issues/89439
+            //c =>
+            //{
+            //    c.Set<PrincipalDerived<DependentBase<byte?>>>().Add(
+            //        new PrincipalDerived<DependentBase<byte?>>
+            //        {
+            //            Id = 1,
+            //            AlternateId = new Guid(),
+            //            Dependent = new DependentDerived<byte?>(1, "one"),
+            //            Owned = new OwnedType(c)
+            //        });
 
-                c.SaveChanges();
-            },
+            //    c.SaveChanges();
+
+            //    var dependent = c.Set<PrincipalDerived<DependentBase<byte?>>>().Include(p => p.Dependent).Single().Dependent!;
+            //    Assert.Equal("one", ((DependentDerived<byte?>)dependent).GetData());
+            //},
             options: new CompiledModelCodeGenerationOptions { UseNullableReferenceTypes = true });
 
     protected override void BuildBigModel(ModelBuilder modelBuilder, bool jsonColumns)
@@ -87,7 +89,7 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                         }
                         else
                         {
-                            ob.ToTable("ManyOwned", t => t.ExcludeFromMigrations());
+                            ob.ToTable("ManyOwned");
                         }
                     });
 
@@ -95,8 +97,14 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                     .UsingEntity(
                         jb =>
                         {
-                            jb.ToTable(tb => tb.HasComment("Join table"));
+                            jb.ToTable(
+                                tb =>
+                                {
+                                    tb.HasComment("Join table");
+                                    tb.ExcludeFromMigrations();
+                                });
                             jb.Property<byte[]>("rowid")
+                                .IsRowVersion()
                                 .HasComment("RowVersion")
                                 .HasColumnOrder(1);
                         });
@@ -206,12 +214,6 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
 
         var referenceOwnership = referenceOwnedNavigation.ForeignKey;
         var ownedCollectionNavigation = principalDerived.GetDeclaredNavigations().Last();
-        var collectionOwnedType = ownedCollectionNavigation.TargetEntityType;
-        Assert.Null(collectionOwnedType[RelationalAnnotationNames.IsTableExcludedFromMigrations]);
-        Assert.Equal(
-            CoreStrings.RuntimeModelMissingData,
-            Assert.Throws<InvalidOperationException>(() => collectionOwnedType.IsTableExcludedFromMigrations()).Message);
-
         var collectionOwnership = ownedCollectionNavigation.ForeignKey;
 
         var tptForeignKey = principalDerived.GetForeignKeys().SingleOrDefault();
@@ -243,15 +245,19 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
         Assert.Null(joinType[RelationalAnnotationNames.Comment]);
         Assert.Equal(
             CoreStrings.RuntimeModelMissingData,
-            Assert.Throws<InvalidOperationException>(() => joinType.GetComment()).Message);
+            Assert.Throws<InvalidOperationException>(joinType.GetComment).Message);
         Assert.Null(joinType.GetQueryFilter());
+        Assert.Null(joinType[RelationalAnnotationNames.IsTableExcludedFromMigrations]);
+        Assert.Equal(
+            CoreStrings.RuntimeModelMissingData,
+            Assert.Throws<InvalidOperationException>(() => joinType.IsTableExcludedFromMigrations()).Message);
 
         var rowid = joinType.GetProperties().Single(p => !p.IsForeignKey());
         Assert.Equal("rowid", rowid.GetColumnName());
         Assert.Null(rowid[RelationalAnnotationNames.Comment]);
         Assert.Equal(
             CoreStrings.RuntimeModelMissingData,
-            Assert.Throws<InvalidOperationException>(() => rowid.GetComment()).Message);
+            Assert.Throws<InvalidOperationException>(rowid.GetComment).Message);
         Assert.Null(rowid[RelationalAnnotationNames.ColumnOrder]);
         Assert.Equal(
             CoreStrings.RuntimeModelMissingData,
@@ -265,6 +271,12 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
 
         var dependentBaseForeignKey = dependentBase.GetForeignKeys().Single(fk => fk != dependentForeignKey);
 
+        var joinTable = joinType.GetTableMappings().Single().Table;
+        Assert.Null(joinTable[RelationalAnnotationNames.Comment]);
+        Assert.Equal(
+            CoreStrings.RuntimeModelMissingData,
+            Assert.Throws<InvalidOperationException>(() => joinTable.Comment).Message);
+
         var dependentMoney = dependentDerived.GetDeclaredProperties().Last();
         Assert.Equal("Money", dependentMoney.GetColumnName());
         Assert.Null(dependentMoney.IsFixedLength());
@@ -272,15 +284,15 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
         if (jsonColumns)
         {
             Assert.Equal(
-            new[]
-            {
-                derivedSkipNavigation.ForeignKey,
-                referenceOwnership,
-                collectionOwnership,
-                dependentForeignKey,
-                derivedSkipNavigation.Inverse.ForeignKey
-            },
-            principalKey.GetReferencingForeignKeys());
+                new[]
+                {
+                    derivedSkipNavigation.ForeignKey,
+                    referenceOwnership,
+                    collectionOwnership,
+                    dependentForeignKey,
+                    derivedSkipNavigation.Inverse.ForeignKey
+                },
+                principalKey.GetReferencingForeignKeys());
 
             Assert.Equal(
                 new[] { dependentBaseForeignKey, referenceOwnership, derivedSkipNavigation.Inverse.ForeignKey },
@@ -289,16 +301,16 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
         else
         {
             Assert.Equal(
-            new[]
-            {
-                derivedSkipNavigation.ForeignKey,
-                tptForeignKey,
-                referenceOwnership,
-                collectionOwnership,
-                dependentForeignKey,
-                derivedSkipNavigation.Inverse.ForeignKey
-            },
-            principalKey.GetReferencingForeignKeys());
+                new[]
+                {
+                    derivedSkipNavigation.ForeignKey,
+                    tptForeignKey,
+                    referenceOwnership,
+                    collectionOwnership,
+                    dependentForeignKey,
+                    derivedSkipNavigation.Inverse.ForeignKey
+                },
+                principalKey.GetReferencingForeignKeys());
 
             Assert.Equal(
                 new[] { dependentBaseForeignKey, tptForeignKey, referenceOwnership, derivedSkipNavigation.Inverse.ForeignKey },
@@ -313,6 +325,7 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
         modelBuilder.Entity<PrincipalBase>(
             eb =>
             {
+                eb.Property("FlagsEnum2");
                 eb.ComplexProperty(
                     e => e.Owned, eb =>
                     {
@@ -362,8 +375,7 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                         .HasParameter("RefTypeEnumerable")
                         .HasOriginalValueParameter(p => p.Id));
                 eb.DeleteUsingStoredProcedure(
-                    s => s
-                        .HasRowsAffectedReturnValue()
+                    s => s.HasRowsAffectedParameter()
                         .HasOriginalValueParameter(p => p.Id));
             });
 
@@ -416,7 +428,6 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
         Assert.Equal("Deets", detailsProperty.GetColumnName(principalTable));
 
         var dbFunction = model.FindDbFunction("PrincipalBaseTvf")!;
-        Assert.Equal("dbo", dbFunction.Schema);
         Assert.False(dbFunction.IsNullable);
         Assert.False(dbFunction.IsScalar);
         Assert.False(dbFunction.IsBuiltIn);
@@ -440,13 +451,13 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
     }
 
     [ConditionalFact]
-    public virtual void Tpc()
+    public virtual void Tpc_Sprocs()
         => Test(
-            BuildTpcModel,
-            AssertTpc,
+            BuildTpcSprocsModel,
+            AssertTpcSprocs,
             options: new CompiledModelCodeGenerationOptions { UseNullableReferenceTypes = true });
 
-    protected virtual void BuildTpcModel(ModelBuilder modelBuilder)
+    protected virtual void BuildTpcSprocsModel(ModelBuilder modelBuilder)
     {
         modelBuilder.HasDefaultSchema("TPC");
 
@@ -454,6 +465,7 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
             eb =>
             {
                 eb.Ignore(e => e.Owned);
+                eb.Property("FlagsEnum2");
 
                 eb.UseTpcMappingStrategy();
 
@@ -498,11 +510,20 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                         .HasParameter("RefTypeEnumerable")
                         .HasOriginalValueParameter(p => p.Id));
                 eb.DeleteUsingStoredProcedure(
-                    s => s
-                        .HasRowsAffectedReturnValue()
-                        .HasOriginalValueParameter(p => p.Id));
+                    s =>
+                    {
+                        s.HasOriginalValueParameter(p => p.Id);
+                        if (UseSprocReturnValue)
+                        {
+                            s.HasRowsAffectedReturnValue();
+                        }
+                        else
+                        {
+                            s.HasRowsAffectedParameter(p => p.HasName("RowsAffected"));
+                        }
+                    });
 
-                eb.HasIndex(new[] { "PrincipalBaseId" }, "PrincipalIndex")
+                eb.HasIndex(["PrincipalBaseId"], "PrincipalIndex")
                     .IsUnique()
                     .HasDatabaseName("PIX")
                     .HasFilter("AlternateId <> NULL");
@@ -568,7 +589,10 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
             });
     }
 
-    protected virtual void AssertTpc(IModel model)
+    protected virtual bool UseSprocReturnValue
+        => false;
+
+    protected virtual void AssertTpcSprocs(IModel model)
     {
         Assert.Equal("TPC", model.GetDefaultSchema());
 
@@ -669,11 +693,18 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
         var deleteSproc = principalBase.GetDeleteStoredProcedure()!;
         Assert.Equal("PrincipalBase_Delete", deleteSproc.Name);
         Assert.Equal("TPC", deleteSproc.Schema);
-        Assert.Equal(new[] { "Id_Original" }, deleteSproc.Parameters.Select(p => p.Name));
+        if (UseSprocReturnValue)
+        {
+            Assert.Equal(["Id_Original"], deleteSproc.Parameters.Select(p => p.Name));
+        }
+        else
+        {
+            Assert.Equal(["Id_Original", "RowsAffected"], deleteSproc.Parameters.Select(p => p.Name));
+        }
+
         Assert.Empty(deleteSproc.ResultColumns);
-        Assert.True(deleteSproc.IsRowsAffectedReturned);
+        Assert.Equal(UseSprocReturnValue, deleteSproc.IsRowsAffectedReturned);
         Assert.Same(principalBase, deleteSproc.EntityType);
-        Assert.Equal("Id_Original", deleteSproc.Parameters.Last().Name);
         Assert.Null(id.FindOverrides(StoreObjectIdentifier.Create(principalBase, StoreObjectType.DeleteStoredProcedure)!.Value));
 
         Assert.Equal("PrincipalBase", principalBase.GetDiscriminatorValue());
@@ -885,7 +916,7 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
             });
 
     [ConditionalFact]
-    public virtual void DbFunctions()
+    public virtual Task DbFunctions()
         => Test<DbFunctionContext>(
             assertModel: model =>
             {
@@ -969,7 +1000,8 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                 Assert.Equal("date", isDateParameter.StoreFunctionParameter.Name);
                 Assert.Equal(isDateParameter.StoreType, isDateParameter.StoreFunctionParameter.StoreType);
 
-                var getData = model.FindDbFunction(typeof(DbFunctionContext)
+                var getData = model.FindDbFunction(
+                    typeof(DbFunctionContext)
                         .GetMethod("GetData", [typeof(int)])!)!;
                 Assert.Equal("GetData", getData.Name);
                 //Assert.Equal("dbo", getData.Schema);
@@ -1020,7 +1052,7 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                 var dataEntity = model.FindEntityType(typeof(Data))!;
                 Assert.Null(dataEntity.FindPrimaryKey());
                 var dataEntityFunctionMapping = dataEntity.GetFunctionMappings().Single(m => m.IsDefaultFunctionMapping);
-                Assert.True(dataEntityFunctionMapping.IncludesDerivedTypes);
+                Assert.Null(dataEntityFunctionMapping.IncludesDerivedTypes);
                 Assert.Null(dataEntityFunctionMapping.IsSharedTablePrincipal);
                 Assert.Null(dataEntityFunctionMapping.IsSplitEntityTypePrincipal);
                 Assert.Same(getDataParameterless, dataEntityFunctionMapping.DbFunction);
@@ -1030,7 +1062,7 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                 Assert.False(getDataStoreFunction.IsOptional(dataEntity));
 
                 var dataEntityOtherFunctionMapping = dataEntity.GetFunctionMappings().Single(m => !m.IsDefaultFunctionMapping);
-                Assert.True(dataEntityOtherFunctionMapping.IncludesDerivedTypes);
+                Assert.Null(dataEntityOtherFunctionMapping.IncludesDerivedTypes);
                 Assert.Null(dataEntityOtherFunctionMapping.IsSharedTablePrincipal);
                 Assert.Null(dataEntityOtherFunctionMapping.IsSplitEntityTypePrincipal);
                 Assert.Same(getData, dataEntityOtherFunctionMapping.DbFunction);
@@ -1059,19 +1091,14 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                 var objectEntity = model.FindEntityType(typeof(object))!;
                 Assert.Null(objectEntity.FindPrimaryKey());
                 var objectEntityFunctionMapping = objectEntity.GetFunctionMappings().Single(m => m.IsDefaultFunctionMapping);
-                Assert.True(objectEntityFunctionMapping.IncludesDerivedTypes);
+                Assert.Null(objectEntityFunctionMapping.IncludesDerivedTypes);
                 Assert.Null(objectEntityFunctionMapping.IsSharedTablePrincipal);
                 Assert.Null(objectEntityFunctionMapping.IsSplitEntityTypePrincipal);
                 Assert.Same(getBlobs, objectEntityFunctionMapping.DbFunction);
             });
 
-    public class DbFunctionContext : DbContext
+    public class DbFunctionContext(DbContextOptions<DbFunctionContext> options) : DbContext(options)
     {
-        public DbFunctionContext(DbContextOptions<DbFunctionContext> options)
-            : base(options)
-        {
-        }
-
         public static bool IsDateStatic(string date)
             => throw new NotImplementedException();
 
@@ -1099,7 +1126,7 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
             modelBuilder.HasDbFunction(typeof(DbFunctionContext).GetMethod(nameof(IsDateStatic))!).HasName("IsDate").IsBuiltIn()
                 .Metadata.SetAnnotation("MyGuid", new Guid());
 
-            modelBuilder.HasDbFunction(typeof(DbFunctionContext).GetMethod(nameof(GetData), new[] { typeof(int) })!);
+            modelBuilder.HasDbFunction(typeof(DbFunctionContext).GetMethod(nameof(GetData), [typeof(int)])!);
             modelBuilder.HasDbFunction(typeof(DbFunctionContext).GetMethod(nameof(GetData), new Type[0])!);
 
             modelBuilder.Entity<Data>().ToFunction(typeof(DbFunctionContext).FullName + ".GetData()", f => f.HasName("GetAllData"))
@@ -1110,7 +1137,7 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
     }
 
     [ConditionalFact]
-    public virtual void Custom_function_type_mapping()
+    public virtual Task Custom_function_type_mapping()
         => Test<FunctionTypeMappingContext>(
             assertModel: model =>
             {
@@ -1121,13 +1148,8 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                 Assert.Equal("varchar", typeMapping.StoreType);
             });
 
-    public class FunctionTypeMappingContext : DbContext
+    public class FunctionTypeMappingContext(DbContextOptions<FunctionTypeMappingContext> options) : DbContext(options)
     {
-        public FunctionTypeMappingContext(DbContextOptions<FunctionTypeMappingContext> options)
-            : base(options)
-        {
-        }
-
         public static string GetSqlFragmentStatic(string param)
             => throw new NotImplementedException();
 
@@ -1141,7 +1163,7 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
     }
 
     [ConditionalFact]
-    public virtual void Custom_function_parameter_type_mapping()
+    public virtual Task Custom_function_parameter_type_mapping()
         => Test<FunctionParameterTypeMappingContext>(
             assertModel: model =>
             {
@@ -1153,13 +1175,8 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
                 Assert.Equal("varchar", typeMapping.StoreType);
             });
 
-    public class FunctionParameterTypeMappingContext : DbContext
+    public class FunctionParameterTypeMappingContext(DbContextOptions<FunctionParameterTypeMappingContext> options) : DbContext(options)
     {
-        public FunctionParameterTypeMappingContext(DbContextOptions<FunctionParameterTypeMappingContext> options)
-            : base(options)
-        {
-        }
-
         public static string GetSqlFragmentStatic(string param)
             => throw new NotImplementedException();
 
@@ -1173,17 +1190,12 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
     }
 
     [ConditionalFact]
-    public virtual void Throws_for_custom_function_translation()
+    public virtual Task Throws_for_custom_function_translation()
         => Test<FunctionTranslationContext>(
             expectedExceptionMessage: RelationalStrings.CompiledModelFunctionTranslation("GetSqlFragmentStatic"));
 
-    public class FunctionTranslationContext : DbContext
+    public class FunctionTranslationContext(DbContextOptions<FunctionTranslationContext> options) : DbContext(options)
     {
-        public FunctionTranslationContext(DbContextOptions<FunctionTranslationContext> options)
-            : base(options)
-        {
-        }
-
         public static string GetSqlFragmentStatic()
             => throw new NotImplementedException();
 
@@ -1196,9 +1208,105 @@ public abstract class CompiledModelRelationalTestBase : CompiledModelTestBase
         }
     }
 
-    public class SpatialTypes : AbstractBase
+    [ConditionalFact]
+    public virtual void Dynamic_schema()
+        => Test(
+            modelBuilder => modelBuilder.Entity<Data>(
+                eb =>
+                {
+                    eb.Property<int>("Id");
+                    eb.HasKey("Id");
+                }),
+            model =>
+            {
+                Assert.Equal("custom", model.GetDefaultSchema());
+
+                var dataEntity = model.GetEntityTypes().Single();
+                Assert.Equal("custom", dataEntity.GetSchema());
+            },
+            additionalSourceFiles:
+            [
+                new()
+                {
+                    Path = "DbContextModelCustomizer.cs",
+                    Code = """
+using Microsoft.EntityFrameworkCore.Metadata;
+
+namespace TestNamespace;
+
+public partial class DbContextModel
+{
+    private string DefaultSchema { get; init; } = "custom";
+
+    partial void Customize()
     {
+        RemoveAnnotation("Relational:DefaultSchema");
+        AddAnnotation("Relational:DefaultSchema", DefaultSchema);
+        RemoveRuntimeAnnotation("Relational:RelationalModel");
+
+        foreach (RuntimeEntityType entityType in ((IModel)this).GetEntityTypes())
+        {
+            Customize(entityType);
+
+            foreach (var key in entityType.GetDeclaredKeys())
+            {
+                key.RemoveRuntimeAnnotation(RelationalAnnotationNames.UniqueConstraintMappings);
+            }
+
+            foreach (var index in entityType.GetDeclaredIndexes())
+            {
+                index.RemoveRuntimeAnnotation(RelationalAnnotationNames.TableIndexMappings);
+            }
+
+            foreach (var foreignKey in entityType.GetDeclaredForeignKeys())
+            {
+                foreignKey.RemoveRuntimeAnnotation(RelationalAnnotationNames.ForeignKeyMappings);
+            }
+
+            var tableName = entityType.FindAnnotation("Relational:TableName")?.Value as string;
+            if (string.IsNullOrEmpty(tableName))
+                continue;
+
+            entityType.SetAnnotation("Relational:Schema", DefaultSchema);
+        }
     }
+
+    private static void Customize(RuntimeTypeBase entityType)
+    {
+        entityType.RemoveRuntimeAnnotation(RelationalAnnotationNames.DefaultMappings);
+        entityType.RemoveRuntimeAnnotation(RelationalAnnotationNames.TableMappings);
+        entityType.RemoveRuntimeAnnotation(RelationalAnnotationNames.ViewMappings);
+        entityType.RemoveRuntimeAnnotation(RelationalAnnotationNames.SqlQueryMappings);
+        entityType.RemoveRuntimeAnnotation(RelationalAnnotationNames.FunctionMappings);
+        entityType.RemoveRuntimeAnnotation(RelationalAnnotationNames.InsertStoredProcedureMappings);
+        entityType.RemoveRuntimeAnnotation(RelationalAnnotationNames.DeleteStoredProcedureMappings);
+        entityType.RemoveRuntimeAnnotation(RelationalAnnotationNames.UpdateStoredProcedureMappings);
+
+        foreach (var property in entityType.GetDeclaredProperties())
+        {
+            property.RemoveRuntimeAnnotation(RelationalAnnotationNames.DefaultColumnMappings);
+            property.RemoveRuntimeAnnotation(RelationalAnnotationNames.TableColumnMappings);
+            property.RemoveRuntimeAnnotation(RelationalAnnotationNames.ViewColumnMappings);
+            property.RemoveRuntimeAnnotation(RelationalAnnotationNames.SqlQueryColumnMappings);
+            property.RemoveRuntimeAnnotation(RelationalAnnotationNames.FunctionColumnMappings);
+            property.RemoveRuntimeAnnotation(RelationalAnnotationNames.InsertStoredProcedureParameterMappings);
+            property.RemoveRuntimeAnnotation(RelationalAnnotationNames.DeleteStoredProcedureParameterMappings);
+            property.RemoveRuntimeAnnotation(RelationalAnnotationNames.UpdateStoredProcedureParameterMappings);
+            property.RemoveRuntimeAnnotation(RelationalAnnotationNames.InsertStoredProcedureResultColumnMappings);
+            property.RemoveRuntimeAnnotation(RelationalAnnotationNames.UpdateStoredProcedureResultColumnMappings);
+        }
+
+        foreach (var complexProperty in entityType.GetDeclaredComplexProperties())
+        {
+            Customize(complexProperty.ComplexType);
+        }
+    }
+}
+"""
+                }
+            ]);
+
+    public class SpatialTypes : AbstractBase;
 
     protected override BuildSource AddReferences(BuildSource build, [CallerFilePath] string filePath = "")
     {

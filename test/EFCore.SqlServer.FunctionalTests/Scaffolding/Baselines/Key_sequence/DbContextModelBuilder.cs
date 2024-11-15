@@ -56,7 +56,7 @@ namespace TestNamespace
             var idColumnBase = new ColumnBase<ColumnMappingBase>("Id", "int", microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase);
             microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase.Columns.Add("Id", idColumnBase);
             relationalModel.DefaultTables.Add("Microsoft.EntityFrameworkCore.Scaffolding.CompiledModelTestBase+Data", microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase);
-            var microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataMappingBase = new TableMappingBase<ColumnMappingBase>(data, microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase, true);
+            var microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataMappingBase = new TableMappingBase<ColumnMappingBase>(data, microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase, null);
             microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase.AddTypeMapping(microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataMappingBase, false);
             defaultTableMappings.Add(microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataMappingBase);
             RelationalModel.CreateColumnMapping((ColumnBase<ColumnMappingBase>)idColumnBase, data.FindProperty("Id")!, microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataMappingBase);
@@ -74,14 +74,14 @@ namespace TestNamespace
             dataTable.Columns.Add("Blob", blobColumn);
             var pK_Data = new UniqueConstraint("PK_Data", dataTable, new[] { idColumn });
             dataTable.PrimaryKey = pK_Data;
-            var pK_DataUc = RelationalModel.GetKey(this,
+            var pK_DataKey = RelationalModel.GetKey(this,
                 "Microsoft.EntityFrameworkCore.Scaffolding.CompiledModelTestBase+Data",
                 new[] { "Id" });
-            pK_Data.MappedKeys.Add(pK_DataUc);
-            RelationalModel.GetOrCreateUniqueConstraints(pK_DataUc).Add(pK_Data);
+            pK_Data.MappedKeys.Add(pK_DataKey);
+            RelationalModel.GetOrCreateUniqueConstraints(pK_DataKey).Add(pK_Data);
             dataTable.UniqueConstraints.Add("PK_Data", pK_Data);
             relationalModel.Tables.Add(("Data", null), dataTable);
-            var dataTableMapping = new TableMapping(data, dataTable, true);
+            var dataTableMapping = new TableMapping(data, dataTable, null);
             dataTable.AddTypeMapping(dataTableMapping, false);
             tableMappings.Add(dataTableMapping);
             RelationalModel.CreateColumnMapping(idColumn, data.FindProperty("Id")!, dataTableMapping);

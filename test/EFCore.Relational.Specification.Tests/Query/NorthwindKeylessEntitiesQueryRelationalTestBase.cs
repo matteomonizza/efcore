@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class NorthwindKeylessEntitiesQueryRelationalTestBase<TFixture> : NorthwindKeylessEntitiesQueryTestBase<TFixture>
     where TFixture : NorthwindQueryFixtureBase<NoopModelCustomizer>, new()
 {
@@ -12,9 +14,6 @@ public abstract class NorthwindKeylessEntitiesQueryRelationalTestBase<TFixture> 
         : base(fixture)
     {
     }
-
-    protected virtual bool CanExecuteQueryString
-        => false;
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
@@ -50,8 +49,6 @@ public abstract class NorthwindKeylessEntitiesQueryRelationalTestBase<TFixture> 
         Assert.Equal(RelationalStrings.InsufficientInformationToIdentifyElementOfCollectionJoin, message);
     }
 
-    [ConditionalTheory]
-    [MemberData(nameof(IsAsyncData))]
     public override async Task KeylessEntity_with_included_navs_multi_level(bool async)
     {
         var message = (await Assert.ThrowsAsync<InvalidOperationException>(
@@ -60,8 +57,6 @@ public abstract class NorthwindKeylessEntitiesQueryRelationalTestBase<TFixture> 
         Assert.Equal(RelationalStrings.InsufficientInformationToIdentifyElementOfCollectionJoin, message);
     }
 
-    [ConditionalTheory]
-    [MemberData(nameof(IsAsyncData))]
     public override async Task KeylessEntity_with_defining_query_and_correlated_collection(bool async)
     {
         var message = (await Assert.ThrowsAsync<InvalidOperationException>(
@@ -72,5 +67,5 @@ public abstract class NorthwindKeylessEntitiesQueryRelationalTestBase<TFixture> 
 
     protected override QueryAsserter CreateQueryAsserter(TFixture fixture)
         => new RelationalQueryAsserter(
-            fixture, RewriteExpectedQueryExpression, RewriteServerQueryExpression, canExecuteQueryString: CanExecuteQueryString);
+            fixture, RewriteExpectedQueryExpression, RewriteServerQueryExpression);
 }

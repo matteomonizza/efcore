@@ -159,7 +159,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for an arbitrary fragment.
+    /// </summary>
+    /// <param name="sqlFragmentExpression">The <see cref="SqlFragmentExpression" /> for which to generate SQL.</param>
     protected override Expression VisitSqlFragment(SqlFragmentExpression sqlFragmentExpression)
     {
         _relationalCommandBuilder.Append(sqlFragmentExpression.Sql);
@@ -182,24 +185,29 @@ public class QuerySqlGenerator : SqlExpressionVisitor
             && selectExpression.Projection.Count == setOperation.Source1.Projection.Count
             && selectExpression.Projection.Select(
                     (pe, index) => pe.Expression is ColumnExpression column
-                        && string.Equals(column.TableAlias, setOperation.Alias, StringComparison.Ordinal)
-                        && string.Equals(
-                            column.Name, setOperation.Source1.Projection[index].Alias, StringComparison.Ordinal))
+                        && column.TableAlias == setOperation.Alias
+                        && column.Name == setOperation.Source1.Projection[index].Alias)
                 .All(e => e);
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a DELETE expression
+    /// </summary>
+    /// <param name="deleteExpression">The <see cref="DeleteExpression" /> for which to generate SQL.</param>
     protected override Expression VisitDelete(DeleteExpression deleteExpression)
     {
         var selectExpression = deleteExpression.SelectExpression;
 
-        if (selectExpression.Offset == null
-            && selectExpression.Limit == null
-            && selectExpression.Having == null
-            && selectExpression.Orderings.Count == 0
-            && selectExpression.GroupBy.Count == 0
-            && selectExpression.Tables.Count == 1
-            && selectExpression.Tables[0] == deleteExpression.Table
-            && selectExpression.Projection.Count == 0)
+        if (selectExpression is
+            {
+                Tables: [var table],
+                GroupBy: [],
+                Having: null,
+                Projection: [],
+                Orderings: [],
+                Offset: null,
+                Limit: null
+            }
+            && table.Equals(deleteExpression.Table))
         {
             _relationalCommandBuilder.Append("DELETE FROM ");
             Visit(deleteExpression.Table);
@@ -217,7 +225,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
             RelationalStrings.ExecuteOperationWithUnsupportedOperatorInSqlGeneration(nameof(RelationalQueryableExtensions.ExecuteDelete)));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a SELECT expression.
+    /// </summary>
+    /// <param name="selectExpression">The <see cref="SelectExpression" /> for which to generate SQL.</param>
     protected override Expression VisitSelect(SelectExpression selectExpression)
     {
         IDisposable? subQueryIndent = null;
@@ -237,26 +248,8 @@ public class QuerySqlGenerator : SqlExpressionVisitor
             }
 
             GenerateTop(selectExpression);
-
-            if (selectExpression.Projection.Any())
-            {
-                GenerateList(selectExpression.Projection, e => Visit(e));
-            }
-            else
-            {
-                GenerateEmptyProjection(selectExpression);
-            }
-
-            if (selectExpression.Tables.Any())
-            {
-                _relationalCommandBuilder.AppendLine().Append("FROM ");
-
-                GenerateList(selectExpression.Tables, e => Visit(e), sql => sql.AppendLine());
-            }
-            else
-            {
-                GeneratePseudoFromClause();
-            }
+            GenerateProjection(selectExpression);
+            GenerateFrom(selectExpression);
 
             if (selectExpression.Predicate != null)
             {
@@ -334,20 +327,24 @@ public class QuerySqlGenerator : SqlExpressionVisitor
     }
 
     /// <summary>
-    ///     Generates a pseudo FROM clause. Required by some providers when a query has no actual FROM clause.
+    ///     Generates SQL for a pseudo FROM clause. This is required by some providers when a query has no actual FROM clause.
     /// </summary>
     protected virtual void GeneratePseudoFromClause()
     {
     }
 
     /// <summary>
-    ///     Generates empty projection for a SelectExpression.
+    ///     Generates SQL for an empty projection for a SELECT expression. This is typically a single <c>1</c> literal, but can be
+    ///     overridden for providers which require a different format.
     /// </summary>
     /// <param name="selectExpression">SelectExpression for which the empty projection will be generated.</param>
     protected virtual void GenerateEmptyProjection(SelectExpression selectExpression)
         => _relationalCommandBuilder.Append("1");
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a single projection in a SELECT expression.
+    /// </summary>
+    /// <param name="projectionExpression">The <see cref="ProjectionExpression" /> for which to generate SQL.</param>
     protected override Expression VisitProjection(ProjectionExpression projectionExpression)
     {
         Visit(projectionExpression.Expression);
@@ -363,7 +360,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return projectionExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a function invocation.
+    /// </summary>
+    /// <param name="sqlFunctionExpression">The <see cref="SqlFunctionExpression" /> for which to generate SQL.</param>
     protected override Expression VisitSqlFunction(SqlFunctionExpression sqlFunctionExpression)
     {
         if (sqlFunctionExpression.IsBuiltIn)
@@ -399,7 +399,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return sqlFunctionExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a table-valued function invocation.
+    /// </summary>
+    /// <param name="tableValuedFunctionExpression">The <see cref="TableValuedFunctionExpression" /> for which to generate SQL.</param>
     protected override Expression VisitTableValuedFunction(TableValuedFunctionExpression tableValuedFunctionExpression)
     {
         if (!string.IsNullOrEmpty(tableValuedFunctionExpression.Schema))
@@ -427,7 +430,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return tableValuedFunctionExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a column.
+    /// </summary>
+    /// <param name="columnExpression">The <see cref="ColumnExpression" /> for which to generate SQL.</param>
     protected override Expression VisitColumn(ColumnExpression columnExpression)
     {
         _relationalCommandBuilder
@@ -438,7 +444,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return columnExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a column.
+    /// </summary>
+    /// <param name="tableExpression">The <see cref="TableExpression" /> for which to generate SQL.</param>
     protected override Expression VisitTable(TableExpression tableExpression)
     {
         _relationalCommandBuilder
@@ -508,7 +517,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         _relationalCommandBuilder.AppendLines(sql);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a user-provided SQL query.
+    /// </summary>
+    /// <param name="fromSqlExpression">The <see cref="FromSqlExpression" /> for which to generate SQL.</param>
     protected override Expression VisitFromSql(FromSqlExpression fromSqlExpression)
     {
         _relationalCommandBuilder.AppendLine("(");
@@ -588,7 +600,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         throw new InvalidOperationException(RelationalStrings.FromSqlNonComposable);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a binary expression.
+    /// </summary>
+    /// <param name="sqlBinaryExpression">The <see cref="SqlBinaryExpression" /> for which to generate SQL.</param>
     protected override Expression VisitSqlBinary(SqlBinaryExpression sqlBinaryExpression)
     {
         var requiresParentheses = RequiresParentheses(sqlBinaryExpression, sqlBinaryExpression.Left);
@@ -624,7 +639,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return sqlBinaryExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a constant.
+    /// </summary>
+    /// <param name="sqlConstantExpression">The <see cref="SqlConstantExpression" /> for which to generate SQL.</param>
     protected override Expression VisitSqlConstant(SqlConstantExpression sqlConstantExpression)
     {
         _relationalCommandBuilder
@@ -633,7 +651,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return sqlConstantExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a parameter.
+    /// </summary>
+    /// <param name="sqlParameterExpression">The <see cref="SqlParameterExpression" /> for which to generate SQL.</param>
     protected override Expression VisitSqlParameter(SqlParameterExpression sqlParameterExpression)
     {
         var invariantName = sqlParameterExpression.Name;
@@ -693,7 +714,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a single ordering in a SELECT ORDER BY clause.
+    /// </summary>
+    /// <param name="orderingExpression">The <see cref="OrderingExpression" /> for which to generate SQL.</param>
     protected override Expression VisitOrdering(OrderingExpression orderingExpression)
     {
         if (orderingExpression.Expression is SqlConstantExpression or SqlParameterExpression)
@@ -713,7 +737,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return orderingExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a LIKE expression.
+    /// </summary>
+    /// <param name="likeExpression">The <see cref="LikeExpression" /> for which to generate SQL.</param>
     protected sealed override Expression VisitLike(LikeExpression likeExpression)
     {
         GenerateLike(likeExpression, negated: false);
@@ -724,7 +751,7 @@ public class QuerySqlGenerator : SqlExpressionVisitor
     /// <summary>
     ///     Generates SQL for the LIKE expression.
     /// </summary>
-    /// <param name="likeExpression">The expression to visit.</param>
+    /// <param name="likeExpression">The <see cref="LikeExpression" /> for which to generate SQL.</param>
     /// <param name="negated">Whether the given <paramref name="likeExpression" /> is negated.</param>
     protected virtual void GenerateLike(LikeExpression likeExpression, bool negated)
     {
@@ -746,7 +773,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a COLLATE expression.
+    /// </summary>
+    /// <param name="collateExpression">The <see cref="CollateExpression" /> for which to generate SQL.</param>
     protected override Expression VisitCollate(CollateExpression collateExpression)
     {
         Visit(collateExpression.Operand);
@@ -758,7 +788,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return collateExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a DISTINCT () clause in an aggregate function invocation.
+    /// </summary>
+    /// <param name="distinctExpression">The <see cref="DistinctExpression" /> for which to generate SQL.</param>
     protected override Expression VisitDistinct(DistinctExpression distinctExpression)
     {
         _relationalCommandBuilder.Append("DISTINCT (");
@@ -768,7 +801,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return distinctExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a CASE clause CASE/WHEN construct.
+    /// </summary>
+    /// <param name="caseExpression">The <see cref="CaseExpression" /> for which to generate SQL.</param>
     protected override Expression VisitCase(CaseExpression caseExpression)
     {
         _relationalCommandBuilder.Append("CASE");
@@ -807,7 +843,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return caseExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a unary expression.
+    /// </summary>
+    /// <param name="sqlUnaryExpression">The <see cref="SqlUnaryExpression" /> for which to generate SQL.</param>
     protected override Expression VisitSqlUnary(SqlUnaryExpression sqlUnaryExpression)
     {
         switch (sqlUnaryExpression.OperatorType)
@@ -937,7 +976,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return sqlUnaryExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for an EXISTS expression.
+    /// </summary>
+    /// <param name="existsExpression">The <see cref="ExistsExpression" /> for which to generate SQL.</param>
     protected sealed override Expression VisitExists(ExistsExpression existsExpression)
     {
         GenerateExists(existsExpression, negated: false);
@@ -946,9 +988,9 @@ public class QuerySqlGenerator : SqlExpressionVisitor
     }
 
     /// <summary>
-    ///     Generates SQL for the EXISTS expression.
+    ///     Generates SQL for an EXISTS expression.
     /// </summary>
-    /// <param name="existsExpression">The expression to visit.</param>
+    /// <param name="existsExpression">The <see cref="ExistsExpression" /> for which to generate SQL.</param>
     /// <param name="negated">Whether the given <paramref name="existsExpression" /> is negated.</param>
     protected virtual void GenerateExists(ExistsExpression existsExpression, bool negated)
     {
@@ -967,7 +1009,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         _relationalCommandBuilder.Append(")");
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for an IN expression.
+    /// </summary>
+    /// <param name="inExpression">The <see cref="InExpression" /> for which to generate SQL.</param>
     protected sealed override Expression VisitIn(InExpression inExpression)
     {
         GenerateIn(inExpression, negated: false);
@@ -976,9 +1021,9 @@ public class QuerySqlGenerator : SqlExpressionVisitor
     }
 
     /// <summary>
-    ///     Generates SQL for the IN expression.
+    ///     Generates SQL for an IN expression.
     /// </summary>
-    /// <param name="inExpression">The expression to visit.</param>
+    /// <param name="inExpression">The <see cref="InExpression" /> for which to generate SQL.</param>
     /// <param name="negated">Whether the given <paramref name="inExpression" /> is negated.</param>
     protected virtual void GenerateIn(InExpression inExpression, bool negated)
     {
@@ -1008,7 +1053,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         _relationalCommandBuilder.Append(")");
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for an AT TIME ZONE expression.
+    /// </summary>
+    /// <param name="atTimeZoneExpression">The <see cref="AtTimeZoneExpression" /> for which to generate SQL.</param>
     protected override Expression VisitAtTimeZone(AtTimeZoneExpression atTimeZoneExpression)
     {
         var requiresBrackets = RequiresParentheses(atTimeZoneExpression, atTimeZoneExpression.Operand);
@@ -1045,7 +1093,7 @@ public class QuerySqlGenerator : SqlExpressionVisitor
     }
 
     /// <summary>
-    ///     Gets a SQL operator for a SQL binary operation.
+    ///     Gets the SQL operator for a SQL binary operation.
     /// </summary>
     /// <param name="binaryExpression">A SQL binary operation.</param>
     /// <returns>A string representation of the binary operator.</returns>
@@ -1053,17 +1101,51 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         => OperatorMap[binaryExpression.OperatorType];
 
     /// <summary>
-    ///     Generates a TOP construct in the relational command
+    ///     Generates SQL for the TOP clause of the given SELECT expression.
     /// </summary>
-    /// <param name="selectExpression">A select expression to use.</param>
+    /// <param name="selectExpression">The <see cref="SelectExpression" /> for whose TOP clause to generate SQL.</param>
     protected virtual void GenerateTop(SelectExpression selectExpression)
     {
     }
 
     /// <summary>
-    ///     Generates an ORDER BY clause in the relational command
+    ///     Generates SQL for the projection clause of the given SELECT expression.
     /// </summary>
-    /// <param name="selectExpression">A select expression to use.</param>
+    /// <param name="selectExpression">The <see cref="SelectExpression" /> for whose projection to generate SQL.</param>
+    protected virtual void GenerateProjection(SelectExpression selectExpression)
+    {
+        if (selectExpression.Projection.Any())
+        {
+            GenerateList(selectExpression.Projection, e => Visit(e));
+        }
+        else
+        {
+            GenerateEmptyProjection(selectExpression);
+        }
+    }
+
+    /// <summary>
+    ///     Generates SQL for the FROM clause of the given SELECT expression.
+    /// </summary>
+    /// <param name="selectExpression">The <see cref="SelectExpression" /> for whose FROM clause to generate SQL.</param>
+    protected virtual void GenerateFrom(SelectExpression selectExpression)
+    {
+        if (selectExpression.Tables.Any())
+        {
+            _relationalCommandBuilder.AppendLine().Append("FROM ");
+
+            GenerateList(selectExpression.Tables, e => Visit(e), sql => sql.AppendLine());
+        }
+        else
+        {
+            GeneratePseudoFromClause();
+        }
+    }
+
+    /// <summary>
+    ///     Generates SQL for the ORDER BY clause of the given SELECT expression.
+    /// </summary>
+    /// <param name="selectExpression">The <see cref="SelectExpression" /> for whose ORDER BY clause to generate SQL.</param>
     protected virtual void GenerateOrderings(SelectExpression selectExpression)
     {
         if (selectExpression.Orderings.Any())
@@ -1087,9 +1169,9 @@ public class QuerySqlGenerator : SqlExpressionVisitor
     }
 
     /// <summary>
-    ///     Generates a LIMIT...OFFSET... construct in the relational command
+    ///     Generates SQL for the LIMIT/OFFSET clauses of the given SELECT expression.
     /// </summary>
-    /// <param name="selectExpression">A select expression to use.</param>
+    /// <param name="selectExpression">The <see cref="SelectExpression" /> for whose LIMIT/OFFSET clauses to generate SQL.</param>
     protected virtual void GenerateLimitOffset(SelectExpression selectExpression)
     {
         if (selectExpression.Offset != null)
@@ -1139,7 +1221,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a cross join.
+    /// </summary>
+    /// <param name="crossJoinExpression">The <see cref="CrossJoinExpression" /> for which to generate SQL.</param>
     protected override Expression VisitCrossJoin(CrossJoinExpression crossJoinExpression)
     {
         _relationalCommandBuilder.Append("CROSS JOIN ");
@@ -1148,7 +1233,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return crossJoinExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a cross apply.
+    /// </summary>
+    /// <param name="crossApplyExpression">The <see cref="CrossApplyExpression" /> for which to generate SQL.</param>
     protected override Expression VisitCrossApply(CrossApplyExpression crossApplyExpression)
     {
         _relationalCommandBuilder.Append("CROSS APPLY ");
@@ -1157,7 +1245,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return crossApplyExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for an outer apply.
+    /// </summary>
+    /// <param name="outerApplyExpression">The <see cref="OuterApplyExpression" /> for which to generate SQL.</param>
     protected override Expression VisitOuterApply(OuterApplyExpression outerApplyExpression)
     {
         _relationalCommandBuilder.Append("OUTER APPLY ");
@@ -1166,7 +1257,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return outerApplyExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for an inner join.
+    /// </summary>
+    /// <param name="innerJoinExpression">The <see cref="InnerJoinExpression" /> for which to generate SQL.</param>
     protected override Expression VisitInnerJoin(InnerJoinExpression innerJoinExpression)
     {
         _relationalCommandBuilder.Append("INNER JOIN ");
@@ -1177,7 +1271,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return innerJoinExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a left join.
+    /// </summary>
+    /// <param name="leftJoinExpression">The <see cref="LeftJoinExpression" /> for which to generate SQL.</param>
     protected override Expression VisitLeftJoin(LeftJoinExpression leftJoinExpression)
     {
         _relationalCommandBuilder.Append("LEFT JOIN ");
@@ -1188,7 +1285,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return leftJoinExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a scalar subquery.
+    /// </summary>
+    /// <param name="scalarSubqueryExpression">The <see cref="ScalarSubqueryExpression" /> for which to generate SQL.</param>
     protected override Expression VisitScalarSubquery(ScalarSubqueryExpression scalarSubqueryExpression)
     {
         _relationalCommandBuilder.AppendLine("(");
@@ -1202,7 +1302,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return scalarSubqueryExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a row number expression.
+    /// </summary>
+    /// <param name="rowNumberExpression">The <see cref="RowNumberExpression" /> for which to generate SQL.</param>
     protected override Expression VisitRowNumber(RowNumberExpression rowNumberExpression)
     {
         _relationalCommandBuilder.Append("ROW_NUMBER() OVER(");
@@ -1220,7 +1323,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return rowNumberExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a row value expression.
+    /// </summary>
+    /// <param name="rowValueExpression">The <see cref="RowValueExpression" /> for which to generate SQL.</param>
     protected override Expression VisitRowValue(RowValueExpression rowValueExpression)
     {
         Sql.Append("(");
@@ -1243,9 +1349,9 @@ public class QuerySqlGenerator : SqlExpressionVisitor
     }
 
     /// <summary>
-    ///     Generates a set operation in the relational command.
+    ///     Generates SQL for a set operation.
     /// </summary>
-    /// <param name="setOperation">A set operation to print.</param>
+    /// <param name="setOperation">The <see cref="SetOperationBase" /> for which to generate SQL.</param>
     protected virtual void GenerateSetOperation(SetOperationBase setOperation)
     {
         GenerateSetOperationOperand(setOperation, setOperation.Source1);
@@ -1266,10 +1372,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
     }
 
     /// <summary>
-    ///     Generates an operand for a given set operation in the relational command.
+    ///     Generates SQL for an operand within a set operation.
     /// </summary>
-    /// <param name="setOperation">A set operation to use.</param>
-    /// <param name="operand">A set operation operand to print.</param>
+    /// <param name="setOperation">The set operation containing the operand to be generated.</param>
+    /// <param name="operand">The operand for which to generate SQL.</param>
     protected virtual void GenerateSetOperationOperand(SetOperationBase setOperation, SelectExpression operand)
     {
         // INTERSECT has higher precedence over UNION and EXCEPT, but otherwise evaluation is left-to-right.
@@ -1305,7 +1411,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
             .Append(_sqlGenerationHelper.DelimitIdentifier(setOperation.Alias));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for an EXCEPT set operation.
+    /// </summary>
+    /// <param name="exceptExpression">The <see cref="ExceptExpression" /> for which to generate SQL.</param>
     protected override Expression VisitExcept(ExceptExpression exceptExpression)
     {
         GenerateSetOperationHelper(exceptExpression);
@@ -1313,7 +1422,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return exceptExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for an INTERSECT set operation.
+    /// </summary>
+    /// <param name="intersectExpression">The <see cref="IntersectExpression" /> for which to generate SQL.</param>
     protected override Expression VisitIntersect(IntersectExpression intersectExpression)
     {
         GenerateSetOperationHelper(intersectExpression);
@@ -1321,7 +1433,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return intersectExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a UNION set operation.
+    /// </summary>
+    /// <param name="unionExpression">The <see cref="UnionExpression" /> for which to generate SQL.</param>
     protected override Expression VisitUnion(UnionExpression unionExpression)
     {
         GenerateSetOperationHelper(unionExpression);
@@ -1329,17 +1444,23 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         return unionExpression;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for an UPDATE expression.
+    /// </summary>
+    /// <param name="updateExpression">The <see cref="UpdateExpression" /> for which to generate SQL.</param>
     protected override Expression VisitUpdate(UpdateExpression updateExpression)
     {
         var selectExpression = updateExpression.SelectExpression;
 
-        if (selectExpression.Offset == null
-            && selectExpression.Limit == null
-            && selectExpression.Having == null
-            && selectExpression.Orderings.Count == 0
-            && selectExpression.GroupBy.Count == 0
-            && selectExpression.Projection.Count == 0
+        if (selectExpression is
+            {
+                Offset: null,
+                Limit: null,
+                Having: null,
+                Orderings: [],
+                GroupBy: [],
+                Projection: [],
+            }
             && (selectExpression.Tables.Count == 1
                 || !ReferenceEquals(selectExpression.Tables[0], updateExpression.Table)
                 || selectExpression.Tables[1] is InnerJoinExpression
@@ -1421,7 +1542,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
             RelationalStrings.ExecuteOperationWithUnsupportedOperatorInSqlGeneration(nameof(RelationalQueryableExtensions.ExecuteUpdate)));
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a VALUES expression.
+    /// </summary>
+    /// <param name="valuesExpression">The <see cref="ValuesExpression" /> for which to generate SQL.</param>
     protected override Expression VisitValues(ValuesExpression valuesExpression)
     {
         _relationalCommandBuilder.Append("(");
@@ -1437,8 +1561,9 @@ public class QuerySqlGenerator : SqlExpressionVisitor
     }
 
     /// <summary>
-    ///     Generates a VALUES expression.
+    ///     Generates SQL for a VALUES expression.
     /// </summary>
+    /// <param name="valuesExpression">The <see cref="ValuesExpression" /> for which to generate SQL.</param>
     protected virtual void GenerateValues(ValuesExpression valuesExpression)
     {
         if (valuesExpression.RowValues.Count == 0)
@@ -1485,7 +1610,10 @@ public class QuerySqlGenerator : SqlExpressionVisitor
         }
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Generates SQL for a JSON scalar lookup expression.
+    /// </summary>
+    /// <param name="jsonScalarExpression">The <see cref="JsonScalarExpression" /> for which to generate SQL.</param>
     protected override Expression VisitJsonScalar(JsonScalarExpression jsonScalarExpression)
         => throw new InvalidOperationException(
             RelationalStrings.JsonNodeMustBeHandledByProviderSpecificVisitor);

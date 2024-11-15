@@ -3,8 +3,6 @@
 
 // ReSharper disable InconsistentNaming
 
-#nullable enable
-
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Net;
@@ -20,30 +18,93 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding;
 public abstract class CompiledModelTestBase : NonSharedModelTestBase
 {
     [ConditionalFact]
+    public virtual void SimpleModel()
+        => Test(
+            modelBuilder =>
+            {
+                modelBuilder.Ignore<DependentBase<int>>();
+                modelBuilder.Entity<DependentDerived<int>>(
+                    b =>
+                    {
+                        b.Ignore(e => e.Principal);
+                        b.Property(e => e.Id).ValueGeneratedNever();
+                        b.Property<string>("Data");
+                    });
+            },
+            model => Assert.Single(model.GetEntityTypes()),
+            // Blocked by dotnet/runtime/issues/89439
+            //c =>
+            //{
+            //    c.Add(new DependentDerived<int>(1, "one"));
+
+            //    c.SaveChanges();
+
+            //    var stored = c.Set<DependentDerived<int>>().Single();
+            //    Assert.Equal(0, stored.Id);
+            //    Assert.Equal(1, stored.GetId());
+            //    Assert.Equal("one", stored.GetData());
+            //},
+            options: new CompiledModelCodeGenerationOptions { UseNullableReferenceTypes = true },
+            additionalSourceFiles:
+            [
+                new()
+                {
+                    Path = "DbContextModelStub.cs",
+                    Code = """
+using Microsoft.EntityFrameworkCore.Metadata;
+using static TestNamespace.DbContextModel.Dummy;
+
+namespace TestNamespace
+{
+    public partial class DbContextModel
+    {
+        public static IModel GetModel()
+            => Instance;
+
+        public static class Dummy
+        {
+            public static IModel Instance => null!;
+        }
+    }
+}
+"""
+                }
+            ],
+            assertAssembly: assembly =>
+            {
+                var instanceProperty = assembly.GetType("TestNamespace.DbContextModel")!
+                    .GetMethod("GetModel", BindingFlags.Public | BindingFlags.Static)!;
+
+                var model = (IModel)instanceProperty.Invoke(null, [])!;
+                Assert.NotNull(model);
+            });
+
+    [ConditionalFact]
     public virtual void BigModel()
         => Test(
             modelBuilder => BuildBigModel(modelBuilder, jsonColumns: false),
             model => AssertBigModel(model, jsonColumns: false),
-            c =>
-            {
-                var principalDerived = new PrincipalDerived<DependentBase<byte?>>
-                {
-                    AlternateId = new Guid(),
-                    Dependent = new DependentBase<byte?>(1),
-                    Owned = new OwnedType(c)
-                };
+            // Blocked by dotnet/runtime/issues/89439
+            //c =>
+            //{
+            //    var principalDerived = new PrincipalDerived<DependentBase<byte?>>
+            //    {
+            //        AlternateId = new Guid(),
+            //        Dependent = new DependentBase<byte?>(1),
+            //        Owned = new OwnedType(c)
+            //    };
 
-                var principalBase = c.Model.FindEntityType(typeof(PrincipalBase))!;
-                var principalId = principalBase.FindProperty(nameof(PrincipalBase.Id))!;
-                if (principalId.ValueGenerated == ValueGenerated.Never)
-                {
-                    principalDerived.Id = 10;
-                }
+            //    var principalBase = c.Model.FindEntityType(typeof(PrincipalBase))!;
+            //    var principalId = principalBase.FindProperty(nameof(PrincipalBase.Id))!;
+            //    if (principalId.ValueGenerated == ValueGenerated.Never)
+            //    {
+            //        principalDerived.Id = 10;
+            //    }
 
-                c.Add(principalDerived);
+            //    c.Add(principalDerived);
 
-                c.SaveChanges();
-            },
+            //    c.SaveChanges();
+            //},
             options: new CompiledModelCodeGenerationOptions { UseNullableReferenceTypes = true });
 
     protected virtual void BuildBigModel(ModelBuilder modelBuilder, bool jsonColumns)
@@ -51,7 +112,8 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
         modelBuilder.Entity<PrincipalBase>(
             eb =>
             {
-                eb.Property(e => e.FlagsEnum2)
+                eb.Property("FlagsEnum2")
+                    .UsePropertyAccessMode(PropertyAccessMode.Property)
                     .HasSentinel(AFlagsEnum.C | AFlagsEnum.B);
 
                 eb.Property(e => e.AlternateId)
@@ -114,8 +176,6 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
                             jb.Property<byte[]>("rowid")
                                 .IsRowVersion();
                         });
-
-                eb.Navigation(e => e.Principals).AutoInclude().EnableLazyLoading(false);
             });
 
         modelBuilder.Entity<DependentBase<byte?>>(
@@ -417,8 +477,8 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
         Assert.Equal("<Principals>k__BackingField", derivedSkipNavigation.FieldInfo!.Name);
         Assert.Equal(typeof(ICollection<PrincipalBase>), derivedSkipNavigation.ClrType);
         Assert.True(derivedSkipNavigation.IsCollection);
-        Assert.True(derivedSkipNavigation.IsEagerLoaded);
-        Assert.False(derivedSkipNavigation.LazyLoadingEnabled);
+        Assert.False(derivedSkipNavigation.IsEagerLoaded);
+        Assert.True(derivedSkipNavigation.LazyLoadingEnabled);
         Assert.False(derivedSkipNavigation.IsOnDependent);
         Assert.Equal(principalDerived, derivedSkipNavigation.DeclaringEntityType);
         Assert.Equal("Deriveds", derivedSkipNavigation.Inverse.Name);
@@ -536,6 +596,8 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
                     });
 
                 //c.SaveChanges();
+
+                return Task.CompletedTask;
             },
             options: new CompiledModelCodeGenerationOptions { UseNullableReferenceTypes = true });
 
@@ -545,6 +607,9 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
             eb =>
             {
                 eb.Ignore(e => e.Owned);
+
+                eb.Property("FlagsEnum2");
+
                 eb.ComplexProperty(
                     e => e.Owned, eb =>
                     {
@@ -565,7 +630,11 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
                             .IsRowVersion()
                             .HasAnnotation("foo", "bar");
                         eb.Ignore(e => e.Context);
-                        eb.ComplexProperty(o => o.Principal).IsRequired();
+                        eb.ComplexProperty(o => o.Principal, cb =>
+                        {
+                            cb.IsRequired();
+                            cb.Property("FlagsEnum2");
+                        });
                     });
             });
 
@@ -666,6 +735,7 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
         {
         }
     }
+
     public abstract class AbstractBase
     {
         public int Id { get; set; }
@@ -973,6 +1043,32 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
         public EnumU32?[] NullableEnumU32AsStringArray { get; set; } = null!;
         public EnumU64?[] NullableEnumU64AsStringArray { get; set; } = null!;
 
+        public bool[][] BoolNestedCollection { get; set; } = null!;
+        public List<byte[]> UInt8NestedCollection { get; set; } = null!;
+        public sbyte[][][] Int8NestedCollection { get; set; } = null!;
+        public int[][] Int32NestedCollection { get; set; } = null!;
+        public IList<long[]>[] Int64NestedCollection { get; set; } = null!;
+        public char[][] CharNestedCollection { get; set; } = null!;
+        public ICollection<Guid[][]> GuidNestedCollection { get; set; } = null!;
+        public string[][] StringNestedCollection { get; set; } = null!;
+        public byte[][][] BytesNestedCollection { get; set; } = null!;
+
+        public byte?[][] NullableUInt8NestedCollection { get; set; } = null!;
+        public int?[][] NullableInt32NestedCollection { get; set; } = null!;
+        public List<long?[][]> NullableInt64NestedCollection { get; set; } = null!;
+        public Guid?[][] NullableGuidNestedCollection { get; set; } = null!;
+        public string?[][] NullableStringNestedCollection { get; set; } = null!;
+        public byte[]?[][] NullableBytesNestedCollection { get; set; } = null!;
+        public IEnumerable<PhysicalAddress?[][]> NullablePhysicalAddressNestedCollection { get; set; } = null!;
+
+        public Enum8[][] Enum8NestedCollection { get; set; } = null!;
+        public List<Enum32>[][] Enum32NestedCollection { get; set; } = null!;
+        public EnumU64[][] EnumU64NestedCollection { get; set; } = null!;
+
+        public Enum8?[][] NullableEnum8NestedCollection { get; set; } = null!;
+        public Enum32?[][][] NullableEnum32NestedCollection { get; set; } = null!;
+        public EnumU64?[][] NullableEnumU64NestedCollection { get; set; } = null!;
+
         public bool BoolToStringConverterProperty { get; set; }
         public bool BoolToTwoValuesConverterProperty { get; set; }
         public bool BoolToZeroOneConverterProperty { get; set; }
@@ -1023,6 +1119,7 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
     }
 
     public readonly record struct ManyTypesId(int Id);
+
     public class Data
     {
         public byte[]? Blob { get; set; }
@@ -1036,7 +1133,7 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
         public AnEnum Enum1 { get; set; }
         public AnEnum? Enum2 { get; set; }
         public AFlagsEnum FlagsEnum1 { get; set; }
-        public AFlagsEnum FlagsEnum2 { get; set; }
+        private AFlagsEnum FlagsEnum2 { get; set; }
 
         public List<short>? ValueTypeList { get; set; }
         public IList<byte>? ValueTypeIList { get; set; }
@@ -1060,26 +1157,28 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
         public ICollection<PrincipalBase> Principals { get; set; } = null!;
     }
 
-    public class DependentBase<TKey> : AbstractBase
+    public class DependentBase<TKey>(TKey id) : AbstractBase
     {
-        public DependentBase(TKey id)
-        {
-            Id = id;
-        }
+        private new TKey Id { get; } = id;
 
-        private new TKey Id { get; }
+        public TKey GetId()
+            => Id;
 
         public PrincipalDerived<DependentBase<TKey>>? Principal { get; set; }
     }
 
     public class DependentDerived<TKey> : DependentBase<TKey>
     {
-        public DependentDerived(TKey id)
+        public DependentDerived(TKey id, string data)
             : base(id)
         {
+            Data = data;
         }
 
         private string? Data { get; set; }
+
+        public string? GetData()
+            => Data;
     }
 
     public class OwnedType : INotifyPropertyChanged, INotifyPropertyChanging
@@ -1210,11 +1309,14 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
     }
 
     protected abstract TestHelpers TestHelpers { get; }
-    protected override string StoreName => "CompiledModelTest";
+
+    protected override string StoreName
+        => "CompiledModelTest";
 
     private string _filePath = "";
 
-    protected virtual BuildSource AddReferences(BuildSource build,
+    protected virtual BuildSource AddReferences(
+        BuildSource build,
         [CallerFilePath] string filePath = "")
     {
         _filePath = filePath;
@@ -1226,8 +1328,8 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
         build.References.Add(BuildReference.ByName("Microsoft.EntityFrameworkCore.Abstractions"));
         build.References.Add(BuildReference.ByName("Microsoft.EntityFrameworkCore.Proxies"));
         build.References.Add(BuildReference.ByName("Microsoft.EntityFrameworkCore.Specification.Tests"));
-        build.References.Add(BuildReference.ByName(typeof(CompiledModelTestBase).Assembly.GetName().Name));
-        build.References.Add(BuildReference.ByName(GetType().Assembly.GetName().Name));
+        build.References.Add(BuildReference.ByName(typeof(CompiledModelTestBase).Assembly.GetName().Name!));
+        build.References.Add(BuildReference.ByName(GetType().Assembly.GetName().Name!));
         return build;
     }
 
@@ -1235,14 +1337,16 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
     {
     }
 
-    protected virtual void Test(
+    protected virtual Task Test(
         Action<ModelBuilder> onModelCreating,
         Action<IModel>? assertModel = null,
-        Action<DbContext>? useContext = null,
+        Func<DbContext, Task>? useContext = null,
         Action<DbContextOptionsBuilder>? onConfiguring = null,
         CompiledModelCodeGenerationOptions? options = null,
         Func<IServiceCollection, IServiceCollection>? addServices = null,
         Func<IServiceCollection, IServiceCollection>? addDesignTimeServices = null,
+        IEnumerable<ScaffoldedFile>? additionalSourceFiles = null,
+        Action<Assembly>? assertAssembly = null,
         string? expectedExceptionMessage = null,
         [CallerMemberName] string testName = "")
         => Test<DbContext>(
@@ -1253,22 +1357,26 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
             options,
             addServices,
             addDesignTimeServices,
+            additionalSourceFiles,
+            assertAssembly,
             expectedExceptionMessage,
             testName);
 
-    protected virtual (TContext?, IModel?) Test<TContext>(
+    protected virtual async Task<(TContext?, IModel?)> Test<TContext>(
         Action<ModelBuilder>? onModelCreating = null,
         Action<IModel>? assertModel = null,
-        Action<TContext>? useContext = null,
+        Func<TContext, Task>? useContext = null,
         Action<DbContextOptionsBuilder>? onConfiguring = null,
         CompiledModelCodeGenerationOptions? options = null,
         Func<IServiceCollection, IServiceCollection>? addServices = null,
         Func<IServiceCollection, IServiceCollection>? addDesignTimeServices = null,
+        IEnumerable<ScaffoldedFile>? additionalSourceFiles = null,
+        Action<Assembly>? assertAssembly = null,
         string? expectedExceptionMessage = null,
         [CallerMemberName] string testName = "")
         where TContext : DbContext
     {
-        var contextFactory = CreateContextFactory<TContext>(
+        var contextFactory = await CreateContextFactory<TContext>(
             modelBuilder =>
             {
                 var model = modelBuilder.Model;
@@ -1278,7 +1386,7 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
             },
             onConfiguring,
             addServices);
-        var context = contextFactory.CreateContext();
+        using var context = contextFactory.CreateContext();
         var model = context.GetService<IDesignTimeModel>().Model;
 
         options ??= new CompiledModelCodeGenerationOptions();
@@ -1310,15 +1418,34 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
             model,
             options);
 
-        var compiledModel = CompileModel(scaffoldedFiles, options, context);
+        var filesToCompile = scaffoldedFiles;
+        if (additionalSourceFiles != null)
+        {
+            filesToCompile = scaffoldedFiles.Concat(additionalSourceFiles).ToArray();
+        }
+
+        var compiledModel = CompileModel(filesToCompile, options, context, assertAssembly);
         assertModel?.Invoke(compiledModel);
 
-        TestHelpers.ModelAsserter.AssertEqual(context.Model, compiledModel);
+        if (additionalSourceFiles == null)
+        {
+            TestHelpers.ModelAsserter.AssertEqual(context.Model, compiledModel);
+        }
 
         if (useContext != null)
         {
             ListLoggerFactory.Clear();
-            TestStore.Initialize(ServiceProvider, contextFactory.CreateContext, c => useContext((TContext)c));
+            await TestStore.InitializeAsync(ServiceProvider, contextFactory.CreateContext);
+
+            using var compiledModelContext = (await CreateContextFactory<TContext>(
+                    onConfiguring: options =>
+                    {
+                        onConfiguring?.Invoke(options);
+                        options.UseModel(compiledModel);
+                    },
+                    addServices: addServices))
+                .CreateContext();
+            await useContext(compiledModelContext);
         }
 
         AssertBaseline(scaffoldedFiles, testName);
@@ -1329,12 +1456,12 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
     private IModel CompileModel(
         IReadOnlyCollection<ScaffoldedFile> scaffoldedFiles,
         CompiledModelCodeGenerationOptions options,
-        DbContext context)
+        DbContext context,
+        Action<Assembly>? assertAssembly = null)
     {
         var build = new BuildSource
         {
-            Sources = scaffoldedFiles.ToDictionary(f => f.Path, f => f.Code),
-            NullableReferenceTypes = options.UseNullableReferenceTypes
+            Sources = scaffoldedFiles.ToDictionary(f => f.Path, f => f.Code), NullableReferenceTypes = options.UseNullableReferenceTypes
         };
         AddReferences(build);
 
@@ -1350,6 +1477,8 @@ public abstract class CompiledModelTestBase : NonSharedModelTestBase
 
         var modelRuntimeInitializer = context.GetService<IModelRuntimeInitializer>();
         compiledModel = modelRuntimeInitializer.Initialize(compiledModel, designTime: false);
+
+        assertAssembly?.Invoke(assembly);
         return compiledModel;
     }
 

@@ -21,8 +21,8 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
 {
     private const string RuntimeParameterPrefix = QueryCompilationContext.QueryParameterPrefix + "entity_equality_";
 
-    private static readonly List<MethodInfo> SingleResultMethodInfos = new()
-    {
+    private static readonly List<MethodInfo> SingleResultMethodInfos =
+    [
         QueryableMethods.FirstWithPredicate,
         QueryableMethods.FirstWithoutPredicate,
         QueryableMethods.FirstOrDefaultWithPredicate,
@@ -37,7 +37,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
         QueryableMethods.LastOrDefaultWithoutPredicate,
         QueryableMethods.ElementAt,
         QueryableMethods.ElementAtOrDefault
-    };
+    ];
 
     private static readonly MethodInfo ParameterValueExtractorMethod =
         typeof(RelationalSqlTranslatingExpressionVisitor).GetTypeInfo().GetDeclaredMethod(nameof(ParameterValueExtractor))!;
@@ -46,10 +46,10 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
         typeof(RelationalSqlTranslatingExpressionVisitor).GetTypeInfo().GetDeclaredMethod(nameof(ParameterListValueExtractor))!;
 
     private static readonly MethodInfo StringEqualsWithStringComparison
-        = typeof(string).GetRuntimeMethod(nameof(string.Equals), new[] { typeof(string), typeof(StringComparison) })!;
+        = typeof(string).GetRuntimeMethod(nameof(string.Equals), [typeof(string), typeof(StringComparison)])!;
 
     private static readonly MethodInfo StringEqualsWithStringComparisonStatic
-        = typeof(string).GetRuntimeMethod(nameof(string.Equals), new[] { typeof(string), typeof(string), typeof(StringComparison) })!;
+        = typeof(string).GetRuntimeMethod(nameof(string.Equals), [typeof(string), typeof(string), typeof(StringComparison)])!;
 
     private static readonly MethodInfo LeastMethodInfo
         = typeof(RelationalDbFunctionsExtensions).GetMethod(nameof(RelationalDbFunctionsExtensions.Least))!;
@@ -556,10 +556,10 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                 return match
                     ? _sqlExpressionFactory.Equal(
                         discriminatorColumn,
-                        _sqlExpressionFactory.Constant(derivedType.GetDiscriminatorValue()))
+                        _sqlExpressionFactory.Constant(derivedType.GetDiscriminatorValue()!))
                     : _sqlExpressionFactory.NotEqual(
                         discriminatorColumn,
-                        _sqlExpressionFactory.Constant(derivedType.GetDiscriminatorValue()));
+                        _sqlExpressionFactory.Constant(derivedType.GetDiscriminatorValue()!));
             }
 
             return QueryCompilationContext.NotTranslatedExpression;
@@ -623,7 +623,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
 
     /// <inheritdoc />
     protected override Expression VisitConstant(ConstantExpression constantExpression)
-        => new SqlConstantExpression(constantExpression, null);
+        => new SqlConstantExpression(constantExpression.Value, constantExpression.Type, typeMapping: null);
 
     /// <inheritdoc />
     protected override Expression VisitExtension(Expression extensionExpression)
@@ -760,38 +760,6 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
             ? sqlConstantExpression
             : QueryCompilationContext.NotTranslatedExpression;
 
-    /// <summary>
-    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-    ///     any release. You should only use it directly in your code with extreme caution and knowing that
-    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-    /// </summary>
-    [EntityFrameworkInternal]
-    public virtual bool TryTranslatePropertyAccess(
-        Expression expression,
-        [NotNullWhen(true)] out Expression? translatedExpression,
-        [NotNullWhen(true)] out IPropertyBase? property)
-    {
-        if (expression is MethodCallExpression methodCallExpression)
-        {
-            if (methodCallExpression.TryGetEFPropertyArguments(out var source, out var propertyName)
-                && TryBindMember(Visit(source), MemberIdentity.Create(propertyName), out translatedExpression, out property))
-            {
-                return true;
-            }
-
-            if (methodCallExpression.TryGetIndexerArguments(_model, out source, out propertyName)
-                && TryBindMember(Visit(source), MemberIdentity.Create(propertyName), out translatedExpression, out property))
-            {
-                return true;
-            }
-        }
-
-        translatedExpression = null;
-        property = null;
-        return false;
-    }
-
     /// <inheritdoc />
     protected override Expression VisitMethodCall(MethodCallExpression methodCallExpression)
     {
@@ -849,7 +817,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                 && right is SqlExpression rightSql)
             {
                 sqlObject = leftSql;
-                scalarArguments = new List<SqlExpression> { rightSql };
+                scalarArguments = [rightSql];
             }
             else
             {
@@ -884,7 +852,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
             if (left is SqlExpression leftSql
                 && right is SqlExpression rightSql)
             {
-                scalarArguments = new List<SqlExpression> { leftSql, rightSql };
+                scalarArguments = [leftSql, rightSql];
             }
             else
             {
@@ -907,7 +875,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
             if (enumerable is SqlExpression sqlEnumerable
                 && item is SqlExpression sqlItem)
             {
-                scalarArguments = new List<SqlExpression> { sqlEnumerable, sqlItem };
+                scalarArguments = [sqlEnumerable, sqlItem];
             }
             else
             {
@@ -931,7 +899,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                 && item is SqlExpression sqlItem)
             {
                 sqlObject = sqlEnumerable;
-                scalarArguments = new List<SqlExpression> { sqlItem };
+                scalarArguments = [sqlItem];
             }
             else
             {
@@ -995,7 +963,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                 goto SubqueryTranslation;
             }
 
-            scalarArguments = new List<SqlExpression>();
+            scalarArguments = [];
             if (!TryTranslateAsEnumerableExpression(methodCallExpression.Object, out enumerableExpression)
                 && TranslationFailed(methodCallExpression.Object, Visit(methodCallExpression.Object), out sqlObject))
             {
@@ -1182,10 +1150,12 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                 return concreteEntityTypes.Count == 1
                     ? _sqlExpressionFactory.Equal(
                         discriminatorColumn,
-                        _sqlExpressionFactory.Constant(concreteEntityTypes[0].GetDiscriminatorValue()))
+                        _sqlExpressionFactory.Constant(concreteEntityTypes[0].GetDiscriminatorValue(), discriminatorColumn.Type))
                     : _sqlExpressionFactory.In(
                         discriminatorColumn,
-                        concreteEntityTypes.Select(et => _sqlExpressionFactory.Constant(et.GetDiscriminatorValue())).ToArray());
+                        concreteEntityTypes
+                            .Select(et => _sqlExpressionFactory.Constant(et.GetDiscriminatorValue(), discriminatorColumn.Type))
+                            .ToArray());
             }
 
             return _sqlExpressionFactory.Constant(true);
@@ -1258,7 +1228,14 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
         [NotNullWhen(true)] out Expression? expression)
         => TryBindMember(source, member, out expression, out _);
 
-    private bool TryBindMember(
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    [EntityFrameworkInternal]
+    public virtual bool TryBindMember(
         Expression? source,
         MemberIdentity member,
         [NotNullWhen(true)] out Expression? expression,
@@ -1351,7 +1328,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                 if (allRequiredNonPkProperties.Count > 0)
                 {
                     condition = allRequiredNonPkProperties.Select(p => projection.BindProperty(p))
-                        .Select(c => (SqlExpression)_sqlExpressionFactory.NotEqual(c, _sqlExpressionFactory.Constant(null)))
+                        .Select(c => (SqlExpression)_sqlExpressionFactory.NotEqual(c, _sqlExpressionFactory.Constant(null, c.Type)))
                         .Aggregate((a, b) => _sqlExpressionFactory.AndAlso(a, b));
                 }
 
@@ -1361,7 +1338,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                     // If all non principal shared properties are nullable then we need additional condition
                     var atLeastOneNonNullValueInNullableColumnsCondition = nonPrincipalSharedNonPkProperties
                         .Select(p => projection.BindProperty(p))
-                        .Select(c => (SqlExpression)_sqlExpressionFactory.NotEqual(c, _sqlExpressionFactory.Constant(null)))
+                        .Select(c => (SqlExpression)_sqlExpressionFactory.NotEqual(c, _sqlExpressionFactory.Constant(null, c.Type)))
                         .Aggregate((a, b) => _sqlExpressionFactory.OrElse(a, b));
 
                     condition = condition == null
@@ -1496,7 +1473,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
                 if (!abortTranslation)
                 {
                     translation = TranslateAggregateMethod(
-                        enumerableExpression, methodCallExpression.Method, new List<SqlExpression>());
+                        enumerableExpression, methodCallExpression.Method, []);
 
                     return translation != null;
                 }
@@ -1693,12 +1670,11 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
         if (CanEvaluate(expression))
         {
             sqlConstantExpression = new SqlConstantExpression(
-                Expression.Constant(
-                    Expression.Lambda<Func<object>>(Expression.Convert(expression, typeof(object)))
-                        .Compile(preferInterpretation: true)
-                        .Invoke(),
-                    expression.Type),
-                null);
+                Expression.Lambda<Func<object>>(Expression.Convert(expression, typeof(object)))
+                    .Compile(preferInterpretation: true)
+                    .Invoke(),
+                expression.Type,
+                typeMapping: null);
             return true;
         }
 
@@ -2176,7 +2152,7 @@ public class RelationalSqlTranslatingExpressionVisitor : ExpressionVisitor
             IComplexProperty firstComplexProperty)
         {
             ParameterExpression = parameterExpression;
-            ComplexPropertyChain = new List<IComplexProperty> { firstComplexProperty };
+            ComplexPropertyChain = [firstComplexProperty];
         }
 
         public SqlParameterExpression ParameterExpression { get; }

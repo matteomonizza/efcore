@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract class FindSqlServerTest : FindTestBase<FindSqlServerTest.FindSqlServerFixture>
 {
     protected FindSqlServerTest(FindSqlServerFixture fixture)
@@ -11,33 +13,18 @@ public abstract class FindSqlServerTest : FindTestBase<FindSqlServerTest.FindSql
         fixture.TestSqlLoggerFactory.Clear();
     }
 
-    public class FindSqlServerTestSet : FindSqlServerTest
+    public class FindSqlServerTestSet(FindSqlServerFixture fixture) : FindSqlServerTest(fixture)
     {
-        public FindSqlServerTestSet(FindSqlServerFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestFinder Finder { get; } = new FindViaSetFinder();
     }
 
-    public class FindSqlServerTestContext : FindSqlServerTest
+    public class FindSqlServerTestContext(FindSqlServerFixture fixture) : FindSqlServerTest(fixture)
     {
-        public FindSqlServerTestContext(FindSqlServerFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestFinder Finder { get; } = new FindViaContextFinder();
     }
 
-    public class FindSqlServerTestNonGeneric : FindSqlServerTest
+    public class FindSqlServerTestNonGeneric(FindSqlServerFixture fixture) : FindSqlServerTest(fixture)
     {
-        public FindSqlServerTestNonGeneric(FindSqlServerFixture fixture)
-            : base(fixture)
-        {
-        }
-
         protected override TestFinder Finder { get; } = new FindViaNonGenericContextFinder();
     }
 

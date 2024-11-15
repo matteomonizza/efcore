@@ -139,7 +139,7 @@ public class SqlServerSequenceValueGeneratorTest
         for (var i = 0; i < tests.Length; i++)
         {
             var testNumber = i;
-            generatedValues[testNumber] = new List<long>();
+            generatedValues[testNumber] = [];
             tests[testNumber] = async () =>
             {
                 for (var j = 0; j < valueCount; j++)
@@ -196,33 +196,26 @@ public class SqlServerSequenceValueGeneratorTest
         return SqlServerTestHelpers.Instance.CreateContextServices(serviceProvider).GetRequiredService<ISqlServerConnection>();
     }
 
-    private class FakeRawSqlCommandBuilder : IRawSqlCommandBuilder
+    private class FakeRawSqlCommandBuilder(int blockSize) : IRawSqlCommandBuilder
     {
-        private readonly int _blockSize;
-        private long _current;
-
-        public FakeRawSqlCommandBuilder(int blockSize)
-        {
-            _blockSize = blockSize;
-            _current = -blockSize + 1;
-        }
+        private readonly int _blockSize = blockSize;
+        private long _current = -blockSize + 1;
 
         public IRelationalCommand Build(string sql)
             => new FakeRelationalCommand(this);
 
+        public RawSqlCommand Build(string sql, IEnumerable<object> parameters)
+            => throw new NotImplementedException();
+
         public RawSqlCommand Build(
             string sql,
-            IEnumerable<object> parameters)
+            IEnumerable<object> parameters,
+            IModel model)
             => new(new FakeRelationalCommand(this), new Dictionary<string, object>());
 
-        private class FakeRelationalCommand : IRelationalCommand
+        private class FakeRelationalCommand(FakeRawSqlCommandBuilder commandBuilder) : IRelationalCommand
         {
-            private readonly FakeRawSqlCommandBuilder _commandBuilder;
-
-            public FakeRelationalCommand(FakeRawSqlCommandBuilder commandBuilder)
-            {
-                _commandBuilder = commandBuilder;
-            }
+            private readonly FakeRawSqlCommandBuilder _commandBuilder = commandBuilder;
 
             public string CommandText
                 => throw new NotImplementedException();

@@ -1,22 +1,15 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#nullable enable
-
 using Microsoft.EntityFrameworkCore.TestModels.UpdatesModel;
 
 namespace Microsoft.EntityFrameworkCore.Update;
 
-public class UpdatesSqlServerTPTTest : UpdatesSqlServerTestBase<UpdatesSqlServerTPTTest.UpdatesSqlServerTPTFixture>
+public class UpdatesSqlServerTPTTest(UpdatesSqlServerTPTTest.UpdatesSqlServerTPTFixture fixture, ITestOutputHelper testOutputHelper) : UpdatesSqlServerTestBase<UpdatesSqlServerTPTTest.UpdatesSqlServerTPTFixture>(fixture, testOutputHelper)
 {
-    public UpdatesSqlServerTPTTest(UpdatesSqlServerTPTFixture fixture, ITestOutputHelper testOutputHelper)
-        : base(fixture, testOutputHelper)
+    public override async Task Save_with_shared_foreign_key()
     {
-    }
-
-    public override void Save_with_shared_foreign_key()
-    {
-        base.Save_with_shared_foreign_key();
+        await base.Save_with_shared_foreign_key();
 
         AssertContainsSql(
             @"@p0=NULL (Size = 8000) (DbType = Binary)
@@ -38,9 +31,9 @@ OUTPUT INSERTED.[Id]
 VALUES (@p0, @p1);");
     }
 
-    public override void Save_replaced_principal()
+    public override async Task Save_replaced_principal()
     {
-        base.Save_replaced_principal();
+        await base.Save_replaced_principal();
 
         AssertSql(
             """

@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public class NorthwindWhereQuerySqlServerTest : NorthwindWhereQueryRelationalTestBase<
     NorthwindQuerySqlServerFixture<NoopModelCustomizer>>
 {
@@ -14,9 +16,6 @@ public class NorthwindWhereQuerySqlServerTest : NorthwindWhereQueryRelationalTes
         ClearLog();
         Fixture.TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
     }
-
-    protected override bool CanExecuteQueryString
-        => true;
 
     [ConditionalFact]
     public virtual void Check_all_tests_overridden()
@@ -1209,12 +1208,12 @@ WHERE [c].[City] = N'London' AND [c].[Country] = N'UK' AND [e].[City] = N'London
             """
 @__p_0='9'
 
-SELECT [t].[EmployeeID]
+SELECT [e0].[EmployeeID]
 FROM (
     SELECT TOP(@__p_0) [e].[EmployeeID]
     FROM [Employees] AS [e]
-) AS [t]
-WHERE [t].[EmployeeID] = 5
+) AS [e0]
+WHERE [e0].[EmployeeID] = 5
 """);
     }
 
@@ -1857,14 +1856,14 @@ WHERE [o].[CustomerID] = N'QUICK' AND [o].[OrderDate] > '1998-01-01T00:00:00.000
 
         AssertSql(
             """
-SELECT [t].[CustomerID], [t].[Address], [t].[City], [t].[CompanyName], [t].[ContactName], [t].[ContactTitle], [t].[Country], [t].[Fax], [t].[Phone], [t].[PostalCode], [t].[Region], [o].[OrderID], [o].[CustomerID], [o].[EmployeeID], [o].[OrderDate]
+SELECT [c0].[CustomerID], [c0].[Address], [c0].[City], [c0].[CompanyName], [c0].[ContactName], [c0].[ContactTitle], [c0].[Country], [c0].[Fax], [c0].[Phone], [c0].[PostalCode], [c0].[Region], [o].[OrderID], [o].[CustomerID], [o].[EmployeeID], [o].[OrderDate]
 FROM (
     SELECT TOP(2) [c].[CustomerID], [c].[Address], [c].[City], [c].[CompanyName], [c].[ContactName], [c].[ContactTitle], [c].[Country], [c].[Fax], [c].[Phone], [c].[PostalCode], [c].[Region]
     FROM [Customers] AS [c]
     WHERE [c].[CustomerID] = N'ALFKI'
-) AS [t]
-LEFT JOIN [Orders] AS [o] ON [t].[CustomerID] = [o].[CustomerID]
-ORDER BY [t].[CustomerID]
+) AS [c0]
+LEFT JOIN [Orders] AS [o] ON [c0].[CustomerID] = [o].[CustomerID]
+ORDER BY [c0].[CustomerID]
 """,
             //
             """
@@ -2074,10 +2073,10 @@ WHERE [o].[OrderID] = 10274
 
 SELECT [c].[CustomerID], [c].[Address], [c].[City], [c].[CompanyName], [c].[ContactName], [c].[ContactTitle], [c].[Country], [c].[Fax], [c].[Phone], [c].[PostalCode], [c].[Region]
 FROM [Customers] AS [c]
-WHERE EXISTS (
-    SELECT 1
+WHERE [c].[City] IN (
+    SELECT [c0].[value]
     FROM OPENJSON(@__cities_0) WITH ([value] nvarchar(15) '$') AS [c0]
-    WHERE [c0].[value] = [c].[City] OR ([c0].[value] IS NULL AND [c].[City] IS NULL))
+)
 """);
     }
 
@@ -2104,7 +2103,7 @@ WHERE (
             """
 SELECT [o].[OrderID], [o].[CustomerID], [o].[EmployeeID], [o].[OrderDate]
 FROM [Orders] AS [o]
-WHERE CONVERT(varchar(11), [o].[OrderID]) LIKE N'%20%'
+WHERE CONVERT(varchar(11), [o].[OrderID]) LIKE '%20%'
 """);
     }
 
@@ -3074,14 +3073,14 @@ WHERE [c].[Region] IS NULL
             """
 @__p_0='5'
 
-SELECT [t].[EmployeeID], [t].[City], [t].[Country], [t].[FirstName], [t].[ReportsTo], [t].[Title]
+SELECT [e0].[EmployeeID], [e0].[City], [e0].[Country], [e0].[FirstName], [e0].[ReportsTo], [e0].[Title]
 FROM (
     SELECT TOP(@__p_0) [e].[EmployeeID], [e].[City], [e].[Country], [e].[FirstName], [e].[ReportsTo], [e].[Title]
     FROM [Employees] AS [e]
     ORDER BY [e].[EmployeeID]
-) AS [t]
-WHERE [t].[Title] = N'Sales Representative'
-ORDER BY [t].[EmployeeID]
+) AS [e0]
+WHERE [e0].[Title] = N'Sales Representative'
+ORDER BY [e0].[EmployeeID]
 """);
     }
 
@@ -3093,12 +3092,12 @@ ORDER BY [t].[EmployeeID]
             """
 @__p_0='9'
 
-SELECT [t].[EmployeeID], [t].[City], [t].[Country], [t].[FirstName], [t].[ReportsTo], [t].[Title]
+SELECT [e0].[EmployeeID], [e0].[City], [e0].[Country], [e0].[FirstName], [e0].[ReportsTo], [e0].[Title]
 FROM (
     SELECT TOP(@__p_0) [e].[EmployeeID], [e].[City], [e].[Country], [e].[FirstName], [e].[ReportsTo], [e].[Title]
     FROM [Employees] AS [e]
-) AS [t]
-WHERE [t].[EmployeeID] = 5
+) AS [e0]
+WHERE [e0].[EmployeeID] = 5
 """);
     }
 
@@ -3129,6 +3128,17 @@ WHERE 0 = 1
 SELECT [c].[CustomerID], [c].[Address], [c].[City], [c].[CompanyName], [c].[ContactName], [c].[ContactTitle], [c].[Country], [c].[Fax], [c].[Phone], [c].[PostalCode], [c].[Region]
 FROM [Customers] AS [c]
 WHERE [c].[CustomerID] = N'ALFKI'
+""",
+            //
+            """
+SELECT [c].[CustomerID], [c].[Address], [c].[City], [c].[CompanyName], [c].[ContactName], [c].[ContactTitle], [c].[Country], [c].[Fax], [c].[Phone], [c].[PostalCode], [c].[Region]
+FROM [Customers] AS [c]
+WHERE [c].[CustomerID] = N'ALFKI'
+""",
+            //
+            """
+SELECT [c].[CustomerID], [c].[Address], [c].[City], [c].[CompanyName], [c].[ContactName], [c].[ContactTitle], [c].[Country], [c].[Fax], [c].[Phone], [c].[PostalCode], [c].[Region]
+FROM [Customers] AS [c]
 """);
     }
 
@@ -3140,12 +3150,12 @@ WHERE [c].[CustomerID] = N'ALFKI'
             """
 @__p_0='9'
 
-SELECT [t].[EmployeeID], [t].[City], [t].[Country], [t].[FirstName], [t].[ReportsTo], [t].[Title]
+SELECT [e0].[EmployeeID], [e0].[City], [e0].[Country], [e0].[FirstName], [e0].[ReportsTo], [e0].[Title]
 FROM (
     SELECT TOP(@__p_0) [e].[EmployeeID], [e].[City], [e].[Country], [e].[FirstName], [e].[ReportsTo], [e].[Title]
     FROM [Employees] AS [e]
-) AS [t]
-WHERE [t].[EmployeeID] = 5
+) AS [e0]
+WHERE [e0].[EmployeeID] = 5
 """);
     }
 

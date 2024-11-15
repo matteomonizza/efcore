@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.BulkUpdates;
 
+#nullable disable
+
 public class NonSharedModelBulkUpdatesSqliteTest : NonSharedModelBulkUpdatesTestBase
 {
     protected override ITestStoreFactory TestStoreFactory
@@ -19,6 +21,24 @@ public class NonSharedModelBulkUpdatesSqliteTest : NonSharedModelBulkUpdatesTest
         AssertSql(
             """
 DELETE FROM "Owner" AS "o"
+""");
+    }
+
+    public override async Task Delete_with_owned_collection_and_non_natively_translatable_query(bool async)
+    {
+        await base.Delete_with_owned_collection_and_non_natively_translatable_query(async);
+
+        AssertSql(
+            """
+@__p_0='1'
+
+DELETE FROM "Owner" AS "o"
+WHERE "o"."Id" IN (
+    SELECT "o0"."Id"
+    FROM "Owner" AS "o0"
+    ORDER BY "o0"."Title"
+    LIMIT -1 OFFSET @__p_0
+)
 """);
     }
 
@@ -61,6 +81,19 @@ SET "Title" = COALESCE("o"."Title", '') || '_Suffix'
 """);
     }
 
+    public override async Task Update_non_owned_property_on_entity_with_owned_in_join(bool async)
+    {
+        await base.Update_non_owned_property_on_entity_with_owned_in_join(async);
+
+        AssertSql(
+            """
+UPDATE "Owner" AS "o"
+SET "Title" = 'NewValue'
+FROM "Owner" AS "o0"
+WHERE "o"."Id" = "o0"."Id"
+""");
+    }
+
     public override async Task Update_owned_and_non_owned_properties_with_table_sharing(bool async)
     {
         await base.Update_owned_and_non_owned_properties_with_table_sharing(async);
@@ -93,11 +126,25 @@ SET "CreationTimestamp" = '2020-01-01 00:00:00'
 UPDATE "BlogsPart1" AS "b0"
 SET "Rating" = length("b0"."Title"),
     "Title" = CAST("b0"."Rating" AS TEXT)
+FROM "Blogs" AS "b"
+WHERE "b"."Id" = "b0"."Id"
 """);
     }
 
-    public override Task Delete_entity_with_auto_include(bool async)
-        => Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => base.Delete_entity_with_auto_include(async));
+    public override async Task Delete_entity_with_auto_include(bool async)
+    {
+        await base.Delete_entity_with_auto_include(async);
+
+        AssertSql(
+            """
+DELETE FROM "Context30572_Principal" AS "c"
+WHERE "c"."Id" IN (
+    SELECT "c0"."Id"
+    FROM "Context30572_Principal" AS "c0"
+    LEFT JOIN "Context30572_Dependent" AS "c1" ON "c0"."DependentId" = "c1"."Id"
+)
+""");
+    }
 
     public override async Task Delete_predicate_based_on_optional_navigation(bool async)
     {

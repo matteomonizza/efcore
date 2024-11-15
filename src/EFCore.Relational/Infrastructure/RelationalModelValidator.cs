@@ -280,7 +280,7 @@ public class RelationalModelValidator : ModelValidator
 
             if (!storedProcedures.TryGetValue(sprocId.Value, out var mappedTypes))
             {
-                mappedTypes = new List<IEntityType>();
+                mappedTypes = [];
                 storedProcedures[sprocId.Value] = mappedTypes;
             }
 
@@ -879,7 +879,7 @@ public class RelationalModelValidator : ModelValidator
             var table = tableId.Value;
             if (!result.TryGetValue(table, out var mappedTypes))
             {
-                mappedTypes = new List<IEntityType>();
+                mappedTypes = [];
                 result[table] = mappedTypes;
             }
 
@@ -1057,7 +1057,7 @@ public class RelationalModelValidator : ModelValidator
             var view = StoreObjectIdentifier.View(viewsName, entityType.GetViewSchema());
             if (!views.TryGetValue(view, out var mappedTypes))
             {
-                mappedTypes = new List<IEntityType>();
+                mappedTypes = [];
                 views[view] = mappedTypes;
             }
 
@@ -1197,7 +1197,7 @@ public class RelationalModelValidator : ModelValidator
         if (concurrencyColumns != null
             && storeObject.StoreObjectType == StoreObjectType.Table)
         {
-            missingConcurrencyTokens = new HashSet<string>();
+            missingConcurrencyTokens = [];
         }
 
         var propertyMappings = new Dictionary<string, IProperty>();
@@ -1940,8 +1940,8 @@ public class RelationalModelValidator : ModelValidator
         IKey key,
         IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
     {
-        if (entityType.GetTableName() != null
-            && (string?)entityType[RelationalAnnotationNames.MappingStrategy] == RelationalAnnotationNames.TpcMappingStrategy)
+        if (entityType.GetMappingStrategy() == RelationalAnnotationNames.TpcMappingStrategy
+            && entityType.BaseType == null)
         {
             foreach (var storeGeneratedProperty in key.Properties.Where(p => (p.ValueGenerated & ValueGenerated.OnAdd) != 0))
             {

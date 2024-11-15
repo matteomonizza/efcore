@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public class ExecutionStrategyTest : IClassFixture<ExecutionStrategyTest.ExecutionStrategyFixture>
 {
     public ExecutionStrategyTest(ExecutionStrategyFixture fixture)
@@ -766,13 +768,8 @@ public class ExecutionStrategyTest : IClassFixture<ExecutionStrategyTest.Executi
         }
     }
 
-    protected class ExecutionStrategyContext : DbContext
+    protected class ExecutionStrategyContext(DbContextOptions options) : DbContext(options)
     {
-        public ExecutionStrategyContext(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<Product> Products { get; set; }
         public DbSet<Audit> Audits { get; set; }
     }

@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public class AdHocAdvancedMappingsQuerySqlServerTest : AdHocAdvancedMappingsQueryRelationalTestBase
 {
     protected override ITestStoreFactory TestStoreFactory
@@ -25,18 +27,18 @@ WHERE [t].[Nombre] LIKE '%lla%'
         await base.Projecting_correlated_collection_along_with_non_mapped_property();
 
         AssertSql(
-"""
-SELECT [b].[Id], [t].[Id], [t].[BlogId], [t].[Name]
+            """
+SELECT [b].[Id], [p0].[Id], [p0].[BlogId], [p0].[Name]
 FROM [Blogs] AS [b]
 LEFT JOIN (
     SELECT [p].[Id], [p].[BlogId], [p].[Name]
     FROM [Posts] AS [p]
     WHERE [p].[Name] LIKE N'%2%'
-) AS [t] ON [b].[Id] = [t].[BlogId]
+) AS [p0] ON [b].[Id] = [p0].[BlogId]
 ORDER BY [b].[Id]
 """,
-                //
-                """
+            //
+            """
 SELECT [b].[Id], (
     SELECT TOP(1) [p].[Name]
     FROM [Posts] AS [p]
@@ -222,15 +224,87 @@ WHERE ([d].[Id] IS NOT NULL OR [c].[Id] IS NOT NULL) AND [a].[Species] LIKE N'F%
 
         AssertSql(
             """
-SELECT [t].[Id], [t].[Species], [t].[Name], [t].[EdcuationLevel], [t].[FavoriteToy], [t].[Discriminator]
+SELECT [u].[Id], [u].[Species], [u].[Name], [u].[EdcuationLevel], [u].[FavoriteToy], [u].[Discriminator]
 FROM (
     SELECT [c].[Id], [c].[Species], [c].[Name], [c].[EdcuationLevel], NULL AS [FavoriteToy], N'Cat' AS [Discriminator]
     FROM [Cats] AS [c]
     UNION ALL
     SELECT [d].[Id], [d].[Species], [d].[Name], NULL AS [EdcuationLevel], [d].[FavoriteToy], N'Dog' AS [Discriminator]
     FROM [Dogs] AS [d]
-) AS [t]
-WHERE [t].[Species] LIKE N'F%'
+) AS [u]
+WHERE [u].[Species] LIKE N'F%'
+""");
+    }
+
+    public override async Task Two_similar_complex_properties_projected_with_split_query1()
+    {
+        await base.Two_similar_complex_properties_projected_with_split_query1();
+
+        AssertSql(
+"""
+SELECT [o].[Id]
+FROM [Offers] AS [o]
+ORDER BY [o].[Id]
+""",
+                //
+                """
+SELECT [s].[Id], [s].[NestedId], [s].[OfferId], [s].[payment_brutto], [s].[payment_netto], [s].[Id0], [s].[payment_brutto0], [s].[payment_netto0], [o].[Id]
+FROM [Offers] AS [o]
+INNER JOIN (
+    SELECT [v].[Id], [v].[NestedId], [v].[OfferId], [v].[payment_brutto], [v].[payment_netto], [n].[Id] AS [Id0], [n].[payment_brutto] AS [payment_brutto0], [n].[payment_netto] AS [payment_netto0]
+    FROM [Variation] AS [v]
+    LEFT JOIN [NestedEntity] AS [n] ON [v].[NestedId] = [n].[Id]
+) AS [s] ON [o].[Id] = [s].[OfferId]
+ORDER BY [o].[Id]
+""");
+    }
+
+    public override async Task Two_similar_complex_properties_projected_with_split_query2()
+    {
+        await base.Two_similar_complex_properties_projected_with_split_query2();
+
+        AssertSql(
+"""
+SELECT TOP(2) [o].[Id]
+FROM [Offers] AS [o]
+WHERE [o].[Id] = 1
+ORDER BY [o].[Id]
+""",
+                //
+                """
+SELECT [s].[Id], [s].[NestedId], [s].[OfferId], [s].[payment_brutto], [s].[payment_netto], [s].[Id0], [s].[payment_brutto0], [s].[payment_netto0], [o0].[Id]
+FROM (
+    SELECT TOP(1) [o].[Id]
+    FROM [Offers] AS [o]
+    WHERE [o].[Id] = 1
+) AS [o0]
+INNER JOIN (
+    SELECT [v].[Id], [v].[NestedId], [v].[OfferId], [v].[payment_brutto], [v].[payment_netto], [n].[Id] AS [Id0], [n].[payment_brutto] AS [payment_brutto0], [n].[payment_netto] AS [payment_netto0]
+    FROM [Variation] AS [v]
+    LEFT JOIN [NestedEntity] AS [n] ON [v].[NestedId] = [n].[Id]
+) AS [s] ON [o0].[Id] = [s].[OfferId]
+ORDER BY [o0].[Id]
+""");
+    }
+
+    public override async Task Projecting_one_of_two_similar_complex_types_picks_the_correct_one()
+    {
+        await base.Projecting_one_of_two_similar_complex_types_picks_the_correct_one();
+
+        AssertSql(
+"""
+@__p_0='10'
+
+SELECT [a].[Id], [s].[Info_Created0] AS [Created]
+FROM (
+    SELECT TOP(@__p_0) [c].[Id], [b].[AId], [b].[Info_Created] AS [Info_Created0]
+    FROM [Cs] AS [c]
+    INNER JOIN [Bs] AS [b] ON [c].[BId] = [b].[Id]
+    WHERE [b].[AId] = 1
+    ORDER BY [c].[Id]
+) AS [s]
+LEFT JOIN [As] AS [a] ON [s].[AId] = [a].[Id]
+ORDER BY [s].[Id]
 """);
     }
 }

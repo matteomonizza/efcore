@@ -123,8 +123,7 @@ public class ReverseEngineerScaffolderTest
         => new DesignTimeServicesBuilder(
                 typeof(ReverseEngineerScaffolderTest).Assembly,
                 typeof(ReverseEngineerScaffolderTest).Assembly,
-                new TestOperationReporter(),
-                new string[0])
+                new TestOperationReporter(), [])
             .CreateServiceCollection("Microsoft.EntityFrameworkCore.SqlServer")
             .BuildServiceProvider(validateScopes: true)
             .CreateScope()
@@ -139,8 +138,7 @@ public class ReverseEngineerScaffolderTest
         var scaffolder = new DesignTimeServicesBuilder(
                 typeof(ReverseEngineerScaffolderTest).Assembly,
                 typeof(ReverseEngineerScaffolderTest).Assembly,
-                new TestOperationReporter(),
-                new string[0])
+                new TestOperationReporter(), [])
             .CreateServiceCollection("Microsoft.EntityFrameworkCore.SqlServer")
             .AddSingleton<IDesignTimeConnectionStringResolver>(resolver)
             .AddScoped<IDatabaseModelFactory>(p => databaseModelFactory)
@@ -171,8 +169,7 @@ public class ReverseEngineerScaffolderTest
         var scaffolder = new DesignTimeServicesBuilder(
                 typeof(ReverseEngineerScaffolderTest).Assembly,
                 typeof(ReverseEngineerScaffolderTest).Assembly,
-                new TestOperationReporter(),
-                new string[0])
+                new TestOperationReporter(), [])
             .CreateServiceCollection("Microsoft.EntityFrameworkCore.SqlServer")
             .AddSingleton<IDesignTimeConnectionStringResolver>(resolver)
             .AddScoped<IDatabaseModelFactory>(p => databaseModelFactory)
@@ -193,14 +190,9 @@ public class ReverseEngineerScaffolderTest
         Assert.DoesNotContain(ScaffoldingAnnotationNames.ConnectionString, result.ContextFile.Code);
     }
 
-    private class TestNamedConnectionStringResolver : IDesignTimeConnectionStringResolver
+    private class TestNamedConnectionStringResolver(string resolvedConnectionString) : IDesignTimeConnectionStringResolver
     {
-        private readonly string _resolvedConnectionString;
-
-        public TestNamedConnectionStringResolver(string resolvedConnectionString)
-        {
-            _resolvedConnectionString = resolvedConnectionString;
-        }
+        private readonly string _resolvedConnectionString = resolvedConnectionString;
 
         public string ResolveConnectionString(string connectionString)
             => _resolvedConnectionString;

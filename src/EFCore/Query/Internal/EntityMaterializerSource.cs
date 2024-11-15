@@ -23,9 +23,15 @@ public class EntityMaterializerSource : IEntityMaterializerSource
     private readonly List<IInstantiationBindingInterceptor> _bindingInterceptors;
     private readonly IMaterializationInterceptor? _materializationInterceptor;
 
-    private static readonly MethodInfo PopulateListMethod
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    public static readonly MethodInfo PopulateListMethod
         = typeof(EntityMaterializerSource).GetMethod(
-            nameof(PopulateList), BindingFlags.NonPublic | BindingFlags.Static)!;
+            nameof(PopulateList), BindingFlags.Public | BindingFlags.Static)!;
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -108,15 +114,16 @@ public class EntityMaterializerSource : IEntityMaterializerSource
 
         var constructorExpression = constructorBinding.CreateConstructorExpression(bindingInfo);
 
-        if (_materializationInterceptor == null)
+        if (_materializationInterceptor == null
+            // TODO: This currently applies the materialization interceptor only on the root structural type - any contained complex types
+            // don't get intercepted.
+            || structuralType is not IEntityType)
         {
             return properties.Count == 0 && blockExpressions.Count == 0
                 ? constructorExpression
                 : CreateMaterializeExpression(blockExpressions, instanceVariable, constructorExpression, properties, bindingInfo);
         }
 
-        // TODO: This currently applies the materialization interceptor only on the root structural type - any contained complex types
-        // don't get intercepted.
         return CreateInterceptionMaterializeExpression(
             structuralType,
             properties,
@@ -166,22 +173,35 @@ public class EntityMaterializerSource : IEntityMaterializerSource
         {
             if (property is IProperty { IsPrimitiveCollection: true, ClrType.IsArray: false })
             {
-                var currentVariable = Expression.Variable(property.ClrType);
-                return Expression.Block(
-                    new[] { currentVariable },
-                    Expression.Assign(
-                        currentVariable,
-                        Expression.MakeMemberAccess(parameter, property.GetMemberInfo(forMaterialization: true, forSet: false))),
-                    Expression.IfThenElse(
-                        Expression.OrElse(
-                            Expression.ReferenceEqual(currentVariable, Expression.Constant(null)),
-                            Expression.ReferenceEqual(value, Expression.Constant(null))),
-                        Expression.MakeMemberAccess(parameter, memberInfo).Assign(value),
-                        Expression.Call(
-                            PopulateListMethod.MakeGenericMethod(property.ClrType.TryGetElementType(typeof(IEnumerable<>))!),
-                            value,
-                            currentVariable)
-                    ));
+                var elementType = property.ClrType.TryGetElementType(typeof(IEnumerable<>))!;
+                var iCollectionInterface = typeof(ICollection<>).MakeGenericType(elementType);
+                if (iCollectionInterface.IsAssignableFrom(property.ClrType))
+                {
+                    var genericMethod = PopulateListMethod.MakeGenericMethod(elementType);
+                    var currentVariable = Expression.Variable(property.ClrType);
+                    var convertedVariable = genericMethod.GetParameters()[1].ParameterType.IsAssignableFrom(currentVariable.Type)
+                        ? (Expression)currentVariable
+                        : Expression.Convert(currentVariable, genericMethod.GetParameters()[1].ParameterType);
+                    return Expression.Block(
+                        new[] { currentVariable },
+                        Expression.Assign(
+                            currentVariable,
+                            Expression.MakeMemberAccess(parameter, property.GetMemberInfo(forMaterialization: true, forSet: false))),
+                        Expression.IfThenElse(
+                            Expression.OrElse(
+                                Expression.OrElse(
+                                    Expression.ReferenceEqual(currentVariable, Expression.Constant(null)),
+                                    Expression.ReferenceEqual(value, Expression.Constant(null))),
+                                Expression.MakeMemberAccess(
+                                    currentVariable,
+                                    iCollectionInterface.GetProperty(nameof(ICollection<object>.IsReadOnly))!)),
+                            Expression.MakeMemberAccess(parameter, memberInfo).Assign(value),
+                            Expression.Call(
+                                genericMethod,
+                                value,
+                                convertedVariable)
+                        ));
+                }
             }
 
             return property.IsIndexerProperty()
@@ -193,7 +213,13 @@ public class EntityMaterializerSource : IEntityMaterializerSource
         }
     }
 
-    private static IList<T> PopulateList<T>(IList<T> buffer, IList<T> target)
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    public static IList<T> PopulateList<T>(IEnumerable<T> buffer, IList<T> target)
     {
         target.Clear();
         foreach (var value in buffer)
@@ -227,13 +253,12 @@ public class EntityMaterializerSource : IEntityMaterializerSource
 
     private static readonly ConstructorInfo MaterializationInterceptionDataConstructor
         = typeof(MaterializationInterceptionData).GetDeclaredConstructor(
-            new[]
-            {
-                typeof(MaterializationContext),
+        [
+            typeof(MaterializationContext),
                 typeof(IEntityType),
                 typeof(QueryTrackingBehavior?),
                 typeof(Dictionary<IPropertyBase, (object, Func<MaterializationContext, object?>)>)
-            })!;
+        ])!;
 
     private static readonly MethodInfo CreatingInstanceMethod
         = typeof(IMaterializationInterceptor).GetMethod(nameof(IMaterializationInterceptor.CreatingInstance))!;
@@ -259,11 +284,11 @@ public class EntityMaterializerSource : IEntityMaterializerSource
     private static readonly MethodInfo DictionaryAddMethod
         = typeof(Dictionary<IPropertyBase, (object, Func<MaterializationContext, object?>)>).GetMethod(
             nameof(Dictionary<IPropertyBase, object>.Add),
-            new[] { typeof(IPropertyBase), typeof((object, Func<MaterializationContext, object?>)) })!;
+            [typeof(IPropertyBase), typeof((object, Func<MaterializationContext, object?>))])!;
 
     private static readonly ConstructorInfo DictionaryConstructor
         = typeof(ValueTuple<object, Func<MaterializationContext, object?>>).GetConstructor(
-            new[] { typeof(object), typeof(Func<MaterializationContext, object?>) })!;
+            [typeof(object), typeof(Func<MaterializationContext, object?>)])!;
 
     private Expression CreateMaterializeExpression(
         List<Expression> blockExpressions,
@@ -540,7 +565,7 @@ public class EntityMaterializerSource : IEntityMaterializerSource
                             blockExpressions, instanceVariable, constructorExpression, properties, bindingInfo)
                     : CreateInterceptionMaterializeExpression(
                         entityType,
-                        new HashSet<IPropertyBase>(),
+                        [],
                         _materializationInterceptor,
                         bindingInfo,
                         constructorExpression,

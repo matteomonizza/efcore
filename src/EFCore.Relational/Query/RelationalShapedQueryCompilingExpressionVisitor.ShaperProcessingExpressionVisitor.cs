@@ -20,10 +20,10 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
         ///     Reading database values
         /// </summary>
         private static readonly MethodInfo IsDbNullMethod =
-            typeof(DbDataReader).GetRuntimeMethod(nameof(DbDataReader.IsDBNull), new[] { typeof(int) })!;
+            typeof(DbDataReader).GetRuntimeMethod(nameof(DbDataReader.IsDBNull), [typeof(int)])!;
 
         public static readonly MethodInfo GetFieldValueMethod =
-            typeof(DbDataReader).GetRuntimeMethod(nameof(DbDataReader.GetFieldValue), new[] { typeof(int) })!;
+            typeof(DbDataReader).GetRuntimeMethod(nameof(DbDataReader.GetFieldValue), [typeof(int)])!;
 
         /// <summary>
         ///     Coordinating results
@@ -44,38 +44,38 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             = typeof(object[]).GetProperty("Item")!;
 
         private static readonly ConstructorInfo JsonReaderDataConstructor
-            = typeof(JsonReaderData).GetConstructor(new[] { typeof(Stream) })!;
+            = typeof(JsonReaderData).GetConstructor([typeof(Stream)])!;
 
         private static readonly ConstructorInfo JsonReaderManagerConstructor
             = typeof(Utf8JsonReaderManager).GetConstructor(
-                new[] { typeof(JsonReaderData), typeof(IDiagnosticsLogger<DbLoggerCategory.Query>) })!;
+                [typeof(JsonReaderData), typeof(IDiagnosticsLogger<DbLoggerCategory.Query>)])!;
 
         private static readonly MethodInfo Utf8JsonReaderManagerMoveNextMethod
-            = typeof(Utf8JsonReaderManager).GetMethod(nameof(Utf8JsonReaderManager.MoveNext), Array.Empty<Type>())!;
+            = typeof(Utf8JsonReaderManager).GetMethod(nameof(Utf8JsonReaderManager.MoveNext), [])!;
 
         private static readonly MethodInfo Utf8JsonReaderManagerCaptureStateMethod
-            = typeof(Utf8JsonReaderManager).GetMethod(nameof(Utf8JsonReaderManager.CaptureState), Array.Empty<Type>())!;
+            = typeof(Utf8JsonReaderManager).GetMethod(nameof(Utf8JsonReaderManager.CaptureState), [])!;
 
         private static readonly FieldInfo Utf8JsonReaderManagerCurrentReaderField
             = typeof(Utf8JsonReaderManager).GetField(nameof(Utf8JsonReaderManager.CurrentReader))!;
 
         private static readonly MethodInfo Utf8JsonReaderManagerSkipMethod
-            = typeof(Utf8JsonReaderManager).GetMethod(nameof(Utf8JsonReaderManager.Skip), Array.Empty<Type>())!;
+            = typeof(Utf8JsonReaderManager).GetMethod(nameof(Utf8JsonReaderManager.Skip), [])!;
 
         private static readonly MethodInfo Utf8JsonReaderValueTextEqualsMethod
-            = typeof(Utf8JsonReader).GetMethod(nameof(Utf8JsonReader.ValueTextEquals), new[] { typeof(ReadOnlySpan<byte>) })!;
+            = typeof(Utf8JsonReader).GetMethod(nameof(Utf8JsonReader.ValueTextEquals), [typeof(ReadOnlySpan<byte>)])!;
 
         private static readonly MethodInfo Utf8JsonReaderTrySkipMethod
-            = typeof(Utf8JsonReader).GetMethod(nameof(Utf8JsonReader.TrySkip), Array.Empty<Type>())!;
+            = typeof(Utf8JsonReader).GetMethod(nameof(Utf8JsonReader.TrySkip), [])!;
 
         private static readonly PropertyInfo Utf8JsonReaderTokenTypeProperty
             = typeof(Utf8JsonReader).GetProperty(nameof(Utf8JsonReader.TokenType))!;
 
         private static readonly MethodInfo Utf8JsonReaderGetStringMethod
-            = typeof(Utf8JsonReader).GetMethod(nameof(Utf8JsonReader.GetString), Array.Empty<Type>())!;
+            = typeof(Utf8JsonReader).GetMethod(nameof(Utf8JsonReader.GetString), [])!;
 
         private static readonly MethodInfo EnumParseMethodInfo
-            = typeof(Enum).GetMethod(nameof(Enum.Parse), new[] { typeof(Type), typeof(string) })!;
+            = typeof(Enum).GetMethod(nameof(Enum.Parse), [typeof(Type), typeof(string)])!;
 
         private readonly RelationalShapedQueryCompilingExpressionVisitor _parentVisitor;
         private readonly ISet<string>? _tags;
@@ -106,19 +106,19 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
         /// <summary>
         ///     There are always entity variables to avoid materializing same entity twice
         /// </summary>
-        private readonly List<ParameterExpression> _variables = new();
+        private readonly List<ParameterExpression> _variables = [];
 
-        private readonly List<Expression> _expressions = new();
+        private readonly List<Expression> _expressions = [];
 
         /// <summary>
         ///     IncludeExpressions are added later in case they are using ValuesArray
         /// </summary>
-        private readonly List<Expression> _includeExpressions = new();
+        private readonly List<Expression> _includeExpressions = [];
 
         /// <summary>
         ///     Json entities are added after includes so that we can utilize tracking (includes will track all json entities)
         /// </summary>
-        private readonly List<Expression> _jsonEntityExpressions = new();
+        private readonly List<Expression> _jsonEntityExpressions = [];
 
         /// <summary>
         ///     If there is collection shaper then we need to construct ValuesArray to store values temporarily in ResultContext
@@ -339,8 +339,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             else
             {
                 _valuesArrayExpression = MakeMemberAccess(_resultContextParameter, ResultContextValuesMemberInfo);
-                _collectionPopulatingExpressions = new List<Expression>();
-                _valuesArrayInitializers = new List<Expression>();
+                _collectionPopulatingExpressions = [];
+                _valuesArrayInitializers = [];
 
                 var result = Visit(shaperExpression);
 
@@ -1312,7 +1312,8 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                 if (ownedNavigation.IsCollection)
                 {
                     var shaperEntityParameter = Parameter(ownedNavigation.DeclaringEntityType.ClrType);
-                    var shaperCollectionParameter = Parameter(ownedNavigation.ClrType);
+                    var ownedNavigationType = ownedNavigation.GetMemberInfo(forMaterialization: true, forSet: true).GetMemberType();
+                    var shaperCollectionParameter = Parameter(ownedNavigationType);
                     var expressions = new List<Expression>();
                     var expressionsForTracking = new List<Expression>();
 
@@ -1484,11 +1485,12 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
 
             if (navigation is { IsCollection: true })
             {
+                var collectionClrType = navigation.GetMemberInfo(forMaterialization: true, forSet: true).GetMemberType();
                 var materializeJsonEntityCollectionMethodCall =
                     Call(
                         MaterializeJsonEntityCollectionMethodInfo.MakeGenericMethod(
                             navigation.TargetEntityType.ClrType,
-                            navigation.ClrType),
+                            collectionClrType),
                         QueryCompilationContext.QueryContextParameter,
                         keyValuesParameter,
                         jsonReaderDataParameter,
@@ -1822,18 +1824,34 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                 Empty()));
                     }
 
+                    var switchCases = new List<SwitchCase>();
                     var testsCount = testExpressions.Count;
-                    var testExpression = IfThen(
-                        testExpressions[testsCount - 1],
-                        readExpressions[testsCount - 1]);
 
-                    for (var i = testsCount - 2; i >= 0; i--)
+                    // generate PropertyName switch-case code 
+                    if (testsCount > 0)
                     {
-                        testExpression = IfThenElse(
-                            testExpressions[i],
-                            readExpressions[i],
-                            testExpression);
+                        var testExpression = IfThen(
+                            testExpressions[testsCount - 1],
+                            readExpressions[testsCount - 1]);
+
+                        for (var i = testsCount - 2; i >= 0; i--)
+                        {
+                            testExpression = IfThenElse(
+                                testExpressions[i],
+                                readExpressions[i],
+                                testExpression);
+                        }
+
+                        switchCases.Add(
+                            SwitchCase(
+                                testExpression,
+                                Constant(JsonTokenType.PropertyName)));
                     }
+
+                    switchCases.Add(
+                        SwitchCase(
+                            Break(breakLabel),
+                            Constant(JsonTokenType.EndObject)));
 
                     var loopBody = Block(
                         Assign(tokenTypeVariable, Call(managerVariable, Utf8JsonReaderManagerMoveNextMethod)),
@@ -1842,12 +1860,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                             Block(
                                 Call(managerVariable, Utf8JsonReaderManagerSkipMethod),
                                 Default(typeof(void))),
-                            SwitchCase(
-                                testExpression,
-                                Constant(JsonTokenType.PropertyName)),
-                            SwitchCase(
-                                Break(breakLabel),
-                                Constant(JsonTokenType.EndObject))));
+                            switchCases.ToArray()));
 
                     return (Loop(loopBody, breakLabel), propertyAssignmentMap);
                 }
@@ -1998,7 +2011,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
             private sealed class ValueBufferTryReadValueMethodsFinder : ExpressionVisitor
             {
                 private readonly List<IProperty> _nonKeyProperties;
-                private readonly List<MethodCallExpression> _valueBufferTryReadValueMethods = new();
+                private readonly List<MethodCallExpression> _valueBufferTryReadValueMethods = [];
 
                 public ValueBufferTryReadValueMethodsFinder(IEntityType entityType)
                 {
@@ -2034,10 +2047,6 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
 
             private sealed class ValueBufferTryReadValueMethodsReplacer : ExpressionVisitor
             {
-                private static readonly MethodInfo PopulateListMethod
-                    = typeof(ValueBufferTryReadValueMethodsReplacer).GetMethod(
-                        nameof(PopulateList), BindingFlags.NonPublic | BindingFlags.Static)!;
-
                 private readonly Expression _instance;
                 private readonly Dictionary<IProperty, ParameterExpression> _propertyAssignmentMap;
 
@@ -2057,7 +2066,14 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                         if (property!.IsPrimitiveCollection
                             && !property.ClrType.IsArray)
                         {
+#pragma warning disable EF1001 // Internal EF Core API usage.
+                            var genericMethod = EntityMaterializerSource.PopulateListMethod.MakeGenericMethod(
+                                property.ClrType.TryGetElementType(typeof(IEnumerable<>))!);
+#pragma warning restore EF1001 // Internal EF Core API usage.
                             var currentVariable = Variable(parameter!.Type);
+                            var convertedVariable = genericMethod.GetParameters()[1].ParameterType.IsAssignableFrom(currentVariable.Type)
+                                ? (Expression)currentVariable
+                                : Convert(currentVariable, genericMethod.GetParameters()[1].ParameterType);
                             return Block(
                                 new[] { currentVariable },
                                 MakeMemberAccess(_instance, property.GetMemberInfo(forMaterialization: true, forSet: false))
@@ -2070,9 +2086,9 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                                         ? leftMemberExpression.Assign(parameter)
                                         : MakeBinary(node.NodeType, node.Left, parameter),
                                     Call(
-                                        PopulateListMethod.MakeGenericMethod(property.ClrType.TryGetElementType(typeof(IEnumerable<>))!),
+                                        genericMethod,
                                         parameter,
-                                        currentVariable)
+                                        convertedVariable)
                                 ));
                         }
 
@@ -2110,17 +2126,6 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
                     property = null;
                     parameter = null;
                     return false;
-                }
-
-                private static IList<T> PopulateList<T>(IList<T> buffer, IList<T> target)
-                {
-                    target.Clear();
-                    foreach (var value in buffer)
-                    {
-                        target.Add(value);
-                    }
-
-                    return target;
                 }
             }
         }
@@ -2594,7 +2599,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor
 
             var fromJsonMethod = jsonReaderWriterExpression.Type.GetMethod(
                 nameof(JsonValueReaderWriter<object>.FromJsonTyped),
-                new[] { typeof(Utf8JsonReaderManager).MakeByRefType(), typeof(object) })!;
+                [typeof(Utf8JsonReaderManager).MakeByRefType(), typeof(object)])!;
 
             Expression resultExpression = Convert(
                 Call(jsonReaderWriterExpression, fromJsonMethod, jsonReaderManagerParameter, Default(typeof(object))),

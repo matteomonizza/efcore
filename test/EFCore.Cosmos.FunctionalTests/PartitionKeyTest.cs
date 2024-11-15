@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public class PartitionKeyTest : IClassFixture<PartitionKeyTest.CosmosPartitionKeyFixture>
 {
     private const string DatabaseName = nameof(PartitionKeyTest);
@@ -188,14 +190,9 @@ OFFSET 0 LIMIT 1
             => (TestSqlLoggerFactory)ServiceProvider.GetRequiredService<ILoggerFactory>();
     }
 
-    public class PartitionKeyContext : DbContext
+    public class PartitionKeyContext(DbContextOptions dbContextOptions) : DbContext(dbContextOptions)
     {
         public virtual DbSet<Customer> Customers { get; set; }
-
-        public PartitionKeyContext(DbContextOptions dbContextOptions)
-            : base(dbContextOptions)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<Customer>(

@@ -77,7 +77,7 @@ public class DbContextOperations
         _rootNamespace = rootNamespace;
         _language = language;
         _nullable = nullable;
-        _args = args ?? Array.Empty<string>();
+        _args = args ?? [];
         _appServicesFactory = appServicesFactory;
         _servicesBuilder = new DesignTimeServicesBuilder(assembly, startupAssembly, reporter, _args);
     }
@@ -117,7 +117,7 @@ public class DbContextOperations
     ///     any release. You should only use it directly in your code with extreme caution and knowing that
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
-    public virtual void Optimize(string? outputDir, string? modelNamespace, string? contextTypeName)
+    public virtual IReadOnlyList<string> Optimize(string? outputDir, string? modelNamespace, string? contextTypeName, string? suffix)
     {
         using var context = CreateContext(contextTypeName);
         var contextType = context.GetType();
@@ -141,7 +141,7 @@ public class DbContextOperations
 
         var finalModelNamespace = modelNamespace ?? GetNamespaceFromOutputPath(outputDir) ?? "";
 
-        scaffolder.ScaffoldModel(
+        var scaffoldedFiles = scaffolder.ScaffoldModel(
             context.GetService<IDesignTimeModel>().Model,
             outputDir,
             new CompiledModelCodeGenerationOptions
@@ -149,7 +149,8 @@ public class DbContextOperations
                 ContextType = contextType,
                 ModelNamespace = finalModelNamespace,
                 Language = _language,
-                UseNullableReferenceTypes = _nullable
+                UseNullableReferenceTypes = _nullable,
+                Suffix = suffix
             });
 
         var fullName = contextType.ShortDisplayName() + "Model";
@@ -165,6 +166,8 @@ public class DbContextOperations
         {
             _reporter.WriteWarning(DesignStrings.CompiledModelCustomCacheKeyFactory(cacheKeyFactory.GetType().ShortDisplayName()));
         }
+
+        return scaffoldedFiles;
     }
 
     private string? GetNamespaceFromOutputPath(string directoryPath)
@@ -392,8 +395,8 @@ public class DbContextOperations
         _reporter.WriteVerbose(DesignStrings.UsingDbContextFactory(factory.ShortDisplayName()));
 
         return (DbContext)typeof(IDesignTimeDbContextFactory<>).MakeGenericType(contextType)
-            .GetMethod(nameof(IDesignTimeDbContextFactory<DbContext>.CreateDbContext), new[] { typeof(string[]) })!
-            .Invoke(Activator.CreateInstance(factory), new object[] { _args })!;
+            .GetMethod(nameof(IDesignTimeDbContextFactory<DbContext>.CreateDbContext), [typeof(string[])])!
+            .Invoke(Activator.CreateInstance(factory), [_args])!;
     }
 
     private KeyValuePair<Type, Func<DbContext>> FindContextType(string? name)

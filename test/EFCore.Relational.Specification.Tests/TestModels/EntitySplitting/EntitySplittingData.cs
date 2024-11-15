@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.TestModels.EntitySplitting;
 
+#nullable disable
+
 public class EntitySplittingData : ISetSource
 {
     public static readonly EntitySplittingData Instance = new();
@@ -64,8 +66,8 @@ public class EntitySplittingData : ISetSource
     }
 
     private static EntityOne[] CreateEntityOnes()
-        => new EntityOne[]
-        {
+        =>
+        [
             new()
             {
                 Id = 1,
@@ -125,32 +127,32 @@ public class EntitySplittingData : ISetSource
                 StringValue2 = "V52",
                 StringValue3 = "V53",
                 StringValue4 = "V54"
-            },
-        };
+            }
+        ];
 
     private static EntityTwo[] CreateEntityTwos()
-        => new EntityTwo[]
-        {
+        =>
+        [
             new() { Id = 1, Name = "Two1" },
             new() { Id = 2, Name = "Two2" },
             new() { Id = 3, Name = "Two3" },
             new() { Id = 4, Name = "Two4" },
-            new() { Id = 5, Name = "Two5" },
-        };
+            new() { Id = 5, Name = "Two5" }
+        ];
 
     private static EntityThree[] CreateEntityThrees()
-        => new EntityThree[]
-        {
+        =>
+        [
             new() { Id = 1, Name = "Three1" },
             new() { Id = 2, Name = "Three2" },
             new() { Id = 3, Name = "Three3" },
             new() { Id = 4, Name = "Three4" },
-            new() { Id = 5, Name = "Three5" },
-        };
+            new() { Id = 5, Name = "Three5" }
+        ];
 
     private static BaseEntity[] CreateHierarchyEntities()
-        => new BaseEntity[]
-        {
+        =>
+        [
             new() { Id = 1, BaseValue = 1 },
             new MiddleEntity
             {
@@ -171,7 +173,7 @@ public class EntitySplittingData : ISetSource
                 MiddleValue = 22,
                 LeafValue = 301
             }
-        };
+        ];
 
     private void WireUp()
     {
@@ -274,7 +276,7 @@ public class EntitySplittingData : ISetSource
         }
     }
 
-    public void Seed(EntitySplittingContext context)
+    public Task Seed(EntitySplittingContext context)
     {
         // Seed data cannot contain any store generated value,
         // or recreate instances when calling AddRange
@@ -283,6 +285,6 @@ public class EntitySplittingData : ISetSource
         context.AddRange(_entityThrees);
         context.AddRange(_baseEntities);
 
-        context.SaveChanges();
+        return context.SaveChangesAsync();
     }
 }

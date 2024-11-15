@@ -5,13 +5,10 @@ using Microsoft.EntityFrameworkCore.Sqlite.Storage.Internal;
 
 namespace Microsoft.EntityFrameworkCore;
 
-public class SqliteApiConsistencyTest : ApiConsistencyTestBase<SqliteApiConsistencyTest.SqliteApiConsistencyFixture>
-{
-    public SqliteApiConsistencyTest(SqliteApiConsistencyFixture fixture)
-        : base(fixture)
-    {
-    }
+#nullable disable
 
+public class SqliteApiConsistencyTest(SqliteApiConsistencyTest.SqliteApiConsistencyFixture fixture) : ApiConsistencyTestBase<SqliteApiConsistencyTest.SqliteApiConsistencyFixture>(fixture)
+{
     protected override void AddServices(ServiceCollection serviceCollection)
         => serviceCollection.AddEntityFrameworkSqlite();
 
@@ -20,13 +17,13 @@ public class SqliteApiConsistencyTest : ApiConsistencyTestBase<SqliteApiConsiste
 
     public class SqliteApiConsistencyFixture : ApiConsistencyFixtureBase
     {
-        public override HashSet<Type> FluentApiTypes { get; } = new()
-        {
+        public override HashSet<Type> FluentApiTypes { get; } =
+        [
             typeof(SqliteServiceCollectionExtensions),
             typeof(SqliteDbContextOptionsBuilderExtensions),
             typeof(SqliteDbContextOptionsBuilder),
-            typeof(SqlitePropertyBuilderExtensions),
-        };
+            typeof(SqlitePropertyBuilderExtensions)
+        ];
 
         public override
             Dictionary<Type,

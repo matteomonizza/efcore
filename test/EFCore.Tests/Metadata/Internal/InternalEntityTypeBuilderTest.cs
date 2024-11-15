@@ -3,6 +3,7 @@
 
 using System.Collections;
 using Microsoft.EntityFrameworkCore.Diagnostics.Internal;
+using Microsoft.EntityFrameworkCore.Internal;
 
 // ReSharper disable UnusedMember.Global
 // ReSharper disable InconsistentNaming
@@ -3465,13 +3466,9 @@ public class InternalEntityTypeBuilderTest
         public string Specialty { get; set; }
     }
 
-    private class ExtraSpecialOrder : SpecialOrder
-    {
-    }
+    private class ExtraSpecialOrder : SpecialOrder;
 
-    private class BackOrder : Order
-    {
-    }
+    private class BackOrder : Order;
 
     private class Customer
     {
@@ -3514,13 +3511,9 @@ public class InternalEntityTypeBuilderTest
         public virtual ICollection<Order> Orders { get; set; }
     }
 
-    private class SpecialProduct : Product
-    {
-    }
+    private class SpecialProduct : Product;
 
-    private class ExtraSpecialProduct : SpecialProduct
-    {
-    }
+    private class ExtraSpecialProduct : SpecialProduct;
 
     private class Splot
     {
@@ -3529,13 +3522,9 @@ public class InternalEntityTypeBuilderTest
         public int? Splowed { get; set; }
     }
 
-    private class Splow : Splot
-    {
-    }
+    private class Splow : Splot;
 
-    private class Splod : Splow
-    {
-    }
+    private class Splod : Splow;
 
     private class IndexedClass
     {

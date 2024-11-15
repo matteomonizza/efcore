@@ -12,13 +12,7 @@ using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage.Json;
 
-public class GlobalNamespaceContext : DbContext
-{
-    public GlobalNamespaceContext(DbContextOptions<GlobalNamespaceContext> options)
-        : base(options)
-    {
-    }
-}
+public class GlobalNamespaceContext(DbContextOptions<GlobalNamespaceContext> options) : DbContext(options);
 
 namespace Microsoft.EntityFrameworkCore.Scaffolding
 {
@@ -35,7 +29,7 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                 });
 
         [ConditionalFact]
-        public virtual void Global_namespace()
+        public virtual Task Global_namespace()
             => Test<GlobalNamespaceContext>(
                 modelBuilder => modelBuilder.Entity("1", e =>
                 {
@@ -49,7 +43,7 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                 options: new CompiledModelCodeGenerationOptions { ModelNamespace = string.Empty });
 
         [ConditionalFact]
-        public virtual void Self_referential_property()
+        public virtual Task Self_referential_property()
             => Test(
                 modelBuilder =>
                     modelBuilder.Entity<SelfReferentialEntity>(
@@ -63,15 +57,10 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                 }
             );
 
-        public class SelfReferentialPropertyValueConverter : ValueConverter<SelfReferentialProperty?, string?>
+        public class SelfReferentialPropertyValueConverter(ConverterMappingHints hints) : ValueConverter<SelfReferentialProperty?, string?>(v => null, v => null, hints)
         {
             public SelfReferentialPropertyValueConverter()
                 : this(new ConverterMappingHints())
-            {
-            }
-
-            public SelfReferentialPropertyValueConverter(ConverterMappingHints hints)
-                : base(v => null, v => null, hints)
             {
             }
         }
@@ -83,9 +72,7 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
             public SelfReferentialProperty? Collection { get; set; }
         }
 
-        public class SelfReferentialProperty : List<SelfReferentialProperty>
-        {
-        }
+        public class SelfReferentialProperty : List<SelfReferentialProperty>;
 
         [ConditionalFact]
         public virtual void Throws_for_constructor_binding()
@@ -97,7 +84,7 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                         e.HasKey("Id");
                         ((EntityType)e.Metadata).ConstructorBinding = new ConstructorBinding(
                             typeof(object).GetConstructor(Type.EmptyTypes)!,
-                            Array.Empty<ParameterBinding>());
+                            []);
                     }),
                 expectedExceptionMessage: DesignStrings.CompiledModelConstructorBinding("Lazy", "Customize()", "LazyEntityType"));
 
@@ -135,14 +122,9 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                     Assert.Contains(lazyPropertyDelegateEntity!.GetServiceProperties(), p => p.ClrType == typeof(Action<object, string>));
                 });
 
-        public class LazyConstructorEntity
+        public class LazyConstructorEntity(ILazyLoader loader)
         {
-            private readonly ILazyLoader _loader;
-
-            public LazyConstructorEntity(ILazyLoader loader)
-            {
-                _loader = loader;
-            }
+            private readonly ILazyLoader _loader = loader;
 
             public int Id { get; set; }
 
@@ -182,8 +164,59 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                     Assert.Equal(
                         typeof(ILazyLoader), model.FindEntityType(typeof(LazyProxiesEntity1))!.GetServiceProperties().Single().ClrType);
                 },
-                onConfiguring: options => options.UseLazyLoadingProxies(),
-                addServices: services => services.AddEntityFrameworkProxies());
+                async c =>
+                {
+                    var principal = new LazyProxiesEntity2
+                    {
+                        Id = 1,
+                        CollectionNavigation = new List<LazyProxiesEntity1> { new LazyProxiesEntity1 { Id = 1 } }
+                    };
+                    c.Set<LazyProxiesEntity2>().Add(principal);
+
+                    await c.SaveChangesAsync();
+
+                    c.ChangeTracker.Clear();
+
+                    principal = c.Set<LazyProxiesEntity2>().Single();
+
+                    Assert.Same(principal, principal.CollectionNavigation!.Single().ReferenceNavigation);
+                },
+                options => options.UseLazyLoadingProxies(),
+                new CompiledModelCodeGenerationOptions { UseNullableReferenceTypes = true },
+                services => services.AddEntityFrameworkProxies());
+
+        [ConditionalFact]
+        public virtual void Lazy_loading_manual()
+            => Test(
+                b =>
+                {
+                    b.Entity<LazyProxiesEntity3>().Property(b => b.Id).ValueGeneratedNever();
+                    b.Entity<LazyProxiesEntity4>().Property(b => b.Id).ValueGeneratedNever();
+                },
+                m =>
+                {
+                    var blog = m.FindEntityType(typeof(LazyProxiesEntity3))!;
+                    Assert.Equal(
+                        blog.FindServiceProperty("LazyLoader")!,
+                        blog.ConstructorBinding!.ParameterBindings.Single().ConsumedProperties.Single());
+                },
+                async c =>
+                {
+                    var principal = new LazyProxiesEntity3
+                    {
+                        Id = 1,
+                        CollectionNavigation = new List<LazyProxiesEntity4> { new LazyProxiesEntity4 { Id = 1 } }
+                    };
+                    c.Set<LazyProxiesEntity3>().Add(principal);
+
+                    await c.SaveChangesAsync();
+
+                    c.ChangeTracker.Clear();
+
+                    principal = c.Set<LazyProxiesEntity3>().Single();
+
+                    Assert.Same(principal, principal.CollectionNavigation.Single().ReferenceNavigation);
+                });
 
         public class LazyProxiesEntity1
         {
@@ -200,6 +233,57 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
             public virtual ICollection<LazyProxiesEntity1>? CollectionNavigation { get; set; }
         }
 
+        public class LazyProxiesEntity3
+        {
+            private ICollection<LazyProxiesEntity4> _collectionNavigation = null!;
+
+            public LazyProxiesEntity3()
+            {
+            }
+
+            protected LazyProxiesEntity3(ILazyLoader lazyLoader)
+            {
+                LazyLoader = lazyLoader;
+            }
+
+            private ILazyLoader? LazyLoader { get; set; }
+
+            public int Id { get; set; }
+            public string? Name { get; set; }
+
+            public ICollection<LazyProxiesEntity4> CollectionNavigation
+            {
+                get => LazyLoader.Load(this, ref _collectionNavigation!)!;
+                set => _collectionNavigation = value;
+            }
+        }
+
+        public class LazyProxiesEntity4
+        {
+            private LazyProxiesEntity3 _referenceNavigation = null!;
+
+            public int Id { get; set; }
+            public string? Title { get; set; }
+            public string? Content { get; set; }
+
+            public LazyProxiesEntity4()
+            {
+            }
+
+            protected LazyProxiesEntity4(Action<object, string> lazyLoader)
+            {
+                LazyLoader = lazyLoader;
+            }
+
+            private Action<object, string>? LazyLoader { get; set; }
+
+            public virtual LazyProxiesEntity3 ReferenceNavigation
+            {
+                get => LazyLoader?.Load(this, ref _referenceNavigation)!;
+                set => _referenceNavigation = value;
+            }
+        }
+
         [ConditionalFact]
         public virtual void Throws_for_query_filter()
             => Test(
@@ -213,17 +297,12 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                 expectedExceptionMessage: DesignStrings.CompiledModelQueryFilter("QueryFilter"));
 
         [ConditionalFact]
-        public virtual void Throws_for_defining_query()
+        public virtual Task Throws_for_defining_query()
             => Test<DefiningQueryContext>(
                 expectedExceptionMessage: DesignStrings.CompiledModelDefiningQuery("object"));
 
-        public class DefiningQueryContext : DbContext
+        public class DefiningQueryContext(DbContextOptions<DefiningQueryContext> options) : DbContext(options)
         {
-            public DefiningQueryContext(DbContextOptions<DefiningQueryContext> options)
-                : base(options)
-            {
-            }
-
             protected override void OnModelCreating(ModelBuilder modelBuilder)
             {
                 base.OnModelCreating(modelBuilder);
@@ -341,7 +420,7 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
                 });
 
         [ConditionalFact]
-        public virtual void Fully_qualified_model()
+        public virtual Task Fully_qualified_model()
             => Test<DbContext>(
                 modelBuilder => {
                     modelBuilder.Entity<Index>();
@@ -429,17 +508,10 @@ namespace Microsoft.EntityFrameworkCore.Scaffolding
             public Guid Id { get; set; }
         }
 
-        public class IdentityUser : TestModels.AspNetIdentity.IdentityUser
-        {
-        }
+        public class IdentityUser : TestModels.AspNetIdentity.IdentityUser;
 
-        private class FullyQualifiedCSharpHelper : CSharpHelper
+        private class FullyQualifiedCSharpHelper(ITypeMappingSource typeMappingSource) : CSharpHelper(typeMappingSource)
         {
-            public FullyQualifiedCSharpHelper(ITypeMappingSource typeMappingSource)
-                : base(typeMappingSource)
-            {
-            }
-
             protected override bool ShouldUseFullName(Type type)
                 => base.ShouldUseFullName(type);
 

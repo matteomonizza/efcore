@@ -5,15 +5,16 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public class ReloadTest
 {
-    public static IEnumerable<object[]> IsAsyncData = new[] { new object[] { true }, new object[] { false } };
+    public static IEnumerable<object[]> IsAsyncData = new object[][] { [false], [true] };
 
-    [ConditionalTheory]
-    [MemberData(nameof(IsAsyncData))]
-    public async Task Entity_reference_can_be_reloaded(bool async)
+    [ConditionalFact]
+    public async Task Entity_reference_can_be_reloaded()
     {
-        await using var testDatabase = CosmosTestStore.CreateInitialized("ReloadTest");
+        await using var testDatabase = await CosmosTestStore.CreateInitializedAsync("ReloadTest");
 
         using var context = new ReloadTestContext(testDatabase);
         await context.Database.EnsureCreatedAsync();
@@ -25,31 +26,17 @@ public class ReloadTest
         var itemJson = entry.Property<JObject>("__jObject").CurrentValue;
         itemJson["unmapped"] = 2;
 
-        if (async)
-        {
-            await entry.ReloadAsync();
-        }
-        else
-        {
-            entry.Reload();
-        }
+        await entry.ReloadAsync();
 
         itemJson = entry.Property<JObject>("__jObject").CurrentValue;
         Assert.Null(itemJson["unmapped"]);
     }
 
-    public class ReloadTestContext : DbContext
+    public class ReloadTestContext(CosmosTestStore testStore) : DbContext
     {
-        private readonly string _connectionUri;
-        private readonly string _authToken;
-        private readonly string _name;
-
-        public ReloadTestContext(CosmosTestStore testStore)
-        {
-            _connectionUri = testStore.ConnectionUri;
-            _authToken = testStore.AuthToken;
-            _name = testStore.Name;
-        }
+        private readonly string _connectionUri = testStore.ConnectionUri;
+        private readonly string _authToken = testStore.AuthToken;
+        private readonly string _name = testStore.Name;
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
             => optionsBuilder

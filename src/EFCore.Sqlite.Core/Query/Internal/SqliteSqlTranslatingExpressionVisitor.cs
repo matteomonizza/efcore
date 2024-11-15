@@ -20,10 +20,10 @@ public class SqliteSqlTranslatingExpressionVisitor : RelationalSqlTranslatingExp
     private readonly ISqlExpressionFactory _sqlExpressionFactory;
 
     private static readonly MethodInfo StringStartsWithMethodInfo
-        = typeof(string).GetRuntimeMethod(nameof(string.StartsWith), new[] { typeof(string) })!;
+        = typeof(string).GetRuntimeMethod(nameof(string.StartsWith), [typeof(string)])!;
 
     private static readonly MethodInfo StringEndsWithMethodInfo
-        = typeof(string).GetRuntimeMethod(nameof(string.EndsWith), new[] { typeof(string) })!;
+        = typeof(string).GetRuntimeMethod(nameof(string.EndsWith), [typeof(string)])!;
 
     private static readonly MethodInfo EscapeLikePatternParameterMethod =
         typeof(SqliteSqlTranslatingExpressionVisitor).GetTypeInfo().GetDeclaredMethod(nameof(ConstructLikePatternParameter))!;
@@ -292,7 +292,9 @@ public class SqliteSqlTranslatingExpressionVisitor : RelationalSqlTranslatingExp
                     // simple LIKE
                     translation = patternConstant.Value switch
                     {
-                        null => _sqlExpressionFactory.Like(translatedInstance, _sqlExpressionFactory.Constant(null, stringTypeMapping)),
+                        null => _sqlExpressionFactory.Like(
+                            translatedInstance,
+                            _sqlExpressionFactory.Constant(null, typeof(string), stringTypeMapping)),
 
                         // In .NET, all strings start with/end with/contain the empty string, but SQL LIKE return false for empty patterns.
                         // Return % which always matches instead.

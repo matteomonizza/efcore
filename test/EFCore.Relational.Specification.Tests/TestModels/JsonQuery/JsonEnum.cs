@@ -3,9 +3,11 @@
 
 namespace Microsoft.EntityFrameworkCore.TestModels.JsonQuery;
 
+#nullable disable
+
 public enum JsonEnum
 {
-    One,
-    Two,
-    Three
+    One = -1,
+    Two = 2,
+    Three = -3
 }

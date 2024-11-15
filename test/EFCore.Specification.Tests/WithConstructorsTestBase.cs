@@ -12,6 +12,8 @@ using Microsoft.EntityFrameworkCore.ChangeTracking.Internal;
 #pragma warning disable IDE0052 // Remove unread private members
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract class WithConstructorsTestBase<TFixture> : IClassFixture<TFixture>
     where TFixture : WithConstructorsTestBase<TFixture>.WithConstructorsFixtureBase, new()
 {
@@ -30,10 +32,9 @@ public abstract class WithConstructorsTestBase<TFixture> : IClassFixture<TFixtur
     }
 
     [ConditionalFact]
-    public virtual void Query_and_update_using_constructors_with_property_parameters()
-        => TestHelpers.ExecuteWithStrategyInTransaction(
-            CreateContext, UseTransaction,
-            context =>
+    public virtual Task Query_and_update_using_constructors_with_property_parameters()
+        => TestHelpers.ExecuteWithStrategyInTransactionAsync(
+            CreateContext, UseTransaction, async context =>
             {
                 var blog = context.Set<Blog>().Include(e => e.Posts).Single();
 
@@ -56,11 +57,10 @@ public abstract class WithConstructorsTestBase<TFixture> : IClassFixture<TFixtur
                 var newBlog = context.Add(new Blog("Cats", 100)).Entity;
                 newBlog.AddPost(new Post("Baxter is a cat.", "With dog friends."));
 
-                context.SaveChanges();
-            },
-            context =>
+                await context.SaveChangesAsync();
+            }, async context =>
             {
-                var blogs = context.Set<Blog>().Include(e => e.Posts).OrderBy(e => e.Title).ToList();
+                var blogs = await context.Set<Blog>().Include(e => e.Posts).OrderBy(e => e.Title).ToListAsync();
 
                 Assert.Equal(2, blogs.Count);
 
@@ -775,18 +775,12 @@ public abstract class WithConstructorsTestBase<TFixture> : IClassFixture<TFixtur
             => ((List<Post>)Posts).Add(post);
     }
 
-    protected class BlogQuery
+    protected class BlogQuery(
+        string title,
+        int? monthlyRevenue)
     {
-        public BlogQuery(
-            string title,
-            int? monthlyRevenue)
-        {
-            Title = title;
-            MonthlyRevenue = monthlyRevenue;
-        }
-
-        public string Title { get; }
-        public int? MonthlyRevenue { get; set; }
+        public string Title { get; } = title;
+        public int? MonthlyRevenue { get; set; } = monthlyRevenue;
     }
 
     protected class Post
@@ -1585,17 +1579,9 @@ public abstract class WithConstructorsTestBase<TFixture> : IClassFixture<TFixtur
         public int? MonthlyRevenue { get; init; }
     }
 
-    public class OtherContext : DbContext
-    {
-    }
+    public class OtherContext : DbContext;
 
-    public class WithConstructorsContext : PoolableDbContext
-    {
-        public WithConstructorsContext(DbContextOptions options)
-            : base(options)
-        {
-        }
-    }
+    public class WithConstructorsContext(DbContextOptions options) : PoolableDbContext(options);
 
     public abstract class WithConstructorsFixtureBase : SharedStoreFixtureBase<WithConstructorsContext>
     {
@@ -1660,7 +1646,7 @@ public abstract class WithConstructorsTestBase<TFixture> : IClassFixture<TFixtur
             modelBuilder.Entity<LazyFieldPost>();
         }
 
-        protected override void Seed(WithConstructorsContext context)
+        protected override Task SeedAsync(WithConstructorsContext context)
         {
             var blog = new Blog("Puppies");
 
@@ -1761,7 +1747,7 @@ public abstract class WithConstructorsTestBase<TFixture> : IClassFixture<TFixtur
 
             context.Add(lazyPcsBlog);
 
-            context.SaveChanges();
+            return context.SaveChangesAsync();
         }
     }
 }

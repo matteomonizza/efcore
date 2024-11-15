@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class OwnedQueryRelationalTestBase<TFixture> : OwnedQueryTestBase<TFixture>
     where TFixture : OwnedQueryRelationalTestBase<TFixture>.RelationalOwnedQueryFixture, new()
 {
@@ -111,14 +113,11 @@ public abstract class OwnedQueryRelationalTestBase<TFixture> : OwnedQueryTestBas
     protected FormattableString NormalizeDelimitersInInterpolatedString(FormattableString sql)
         => Fixture.TestStore.NormalizeDelimitersInInterpolatedString(sql);
 
-    protected virtual bool CanExecuteQueryString
-        => false;
-
     protected override QueryAsserter CreateQueryAsserter(TFixture fixture)
         => new RelationalQueryAsserter(
-            fixture, RewriteExpectedQueryExpression, RewriteServerQueryExpression, canExecuteQueryString: CanExecuteQueryString);
+            fixture, RewriteExpectedQueryExpression, RewriteServerQueryExpression);
 
-    public abstract class RelationalOwnedQueryFixture : OwnedQueryFixtureBase
+    public abstract class RelationalOwnedQueryFixture : OwnedQueryFixtureBase, ITestSqlLoggerFactory
     {
         public new RelationalTestStore TestStore
             => (RelationalTestStore)base.TestStore;

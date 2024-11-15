@@ -3,8 +3,6 @@
 
 // ReSharper disable InconsistentNaming
 
-#nullable enable
-
 using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.SqlServer.Metadata.Internal;
@@ -54,14 +52,19 @@ public class CompiledModelSqlServerTest : CompiledModelRelationalTestBase
         modelBuilder.Entity<PrincipalDerived<DependentBase<byte?>>>(
             eb =>
             {
-                eb.OwnsMany(
-                    typeof(OwnedType).FullName!, "ManyOwned", ob =>
-                    {
-                        if (!jsonColumns)
+                eb.HasMany(e => e.Principals).WithMany(e => (ICollection<PrincipalDerived<DependentBase<byte?>>>)e.Deriveds)
+                    .UsingEntity(
+                        jb =>
                         {
-                            ob.ToTable("ManyOwned", t => t.IsMemoryOptimized());
-                        }
-                    });
+                            jb.ToTable(tb => tb.IsMemoryOptimized());
+                        });
+            });
+
+        modelBuilder.Entity<ManyTypes>(
+            eb =>
+            {
+                eb.Property(m => m.CharToStringConverterProperty)
+                    .IsFixedLength(true);
             });
     }
 
@@ -150,22 +153,24 @@ public class CompiledModelSqlServerTest : CompiledModelRelationalTestBase
         var principalDerived = model.FindEntityType(typeof(PrincipalDerived<DependentBase<byte?>>))!;
         var ownedCollectionNavigation = principalDerived.GetDeclaredNavigations().Last();
         var collectionOwnedType = ownedCollectionNavigation.TargetEntityType;
-        if (jsonColumns)
-        {
-            Assert.False(collectionOwnedType.IsMemoryOptimized());
-        }
-        else
-        {
-            Assert.True(collectionOwnedType.IsMemoryOptimized());
-        }
+        Assert.False(collectionOwnedType.IsMemoryOptimized());
 
         var derivedSkipNavigation = principalDerived.GetDeclaredSkipNavigations().Single();
         var joinType = derivedSkipNavigation.JoinEntityType;
+        Assert.True(joinType.IsMemoryOptimized());
+
         var rowid = joinType.GetProperties().Single(p => !p.IsForeignKey());
         Assert.Equal("rowversion", rowid.GetColumnType());
         Assert.Equal(SqlServerValueGenerationStrategy.None, rowid.GetValueGenerationStrategy());
 
         var manyTypesType = model.FindEntityType(typeof(ManyTypes))!;
+        var stringProperty = manyTypesType.FindProperty(nameof(ManyTypes.String))!;
+        Assert.True(stringProperty.FindRelationalTypeMapping()!.IsUnicode);
+        Assert.False(stringProperty.FindRelationalTypeMapping()!.IsFixedLength);
+        var charToStringConverterProperty = manyTypesType.FindProperty(nameof(ManyTypes.CharToStringConverterProperty))!;
+        Assert.True(charToStringConverterProperty.FindRelationalTypeMapping()!.IsUnicode);
+        Assert.True(charToStringConverterProperty.FindRelationalTypeMapping()!.IsFixedLength);
+
         var dependentNavigation = principalDerived.GetDeclaredNavigations().First();
         var dependentBase = dependentNavigation.TargetEntityType;
         var dependentDerived = dependentBase.GetDerivedTypes().Single();
@@ -190,9 +195,11 @@ public class CompiledModelSqlServerTest : CompiledModelRelationalTestBase
             model.GetEntityTypes());
     }
 
-    protected override void BuildTpcModel(ModelBuilder modelBuilder)
+    protected override bool UseSprocReturnValue => true;
+
+    protected override void BuildTpcSprocsModel(ModelBuilder modelBuilder)
     {
-        base.BuildTpcModel(modelBuilder);
+        base.BuildTpcSprocsModel(modelBuilder);
 
         modelBuilder
             .HasDatabaseMaxSize("20TB")
@@ -204,7 +211,7 @@ public class CompiledModelSqlServerTest : CompiledModelRelationalTestBase
             {
                 eb.ToTable("PrincipalBase");
 
-                eb.HasIndex(new[] { "PrincipalBaseId" }, "PrincipalIndex")
+                eb.HasIndex(["PrincipalBaseId"], "PrincipalIndex")
                     .IsUnique()
                     .IsClustered()
                     .IsCreatedOnline()
@@ -215,9 +222,9 @@ public class CompiledModelSqlServerTest : CompiledModelRelationalTestBase
             });
     }
 
-    protected override void AssertTpc(IModel model)
+    protected override void AssertTpcSprocs(IModel model)
     {
-        base.AssertTpc(model);
+        base.AssertTpcSprocs(model);
 
         Assert.Null(model[SqlServerAnnotationNames.MaxDatabaseSize]);
         Assert.Equal(
@@ -315,6 +322,9 @@ public class CompiledModelSqlServerTest : CompiledModelRelationalTestBase
                 "foo"
             },
             detailsProperty.GetAnnotations().Select(a => a.Name));
+
+        var dbFunction = model.FindDbFunction("PrincipalBaseTvf")!;
+        Assert.Equal("dbo", dbFunction.Schema);
 
         Assert.Equal(SqlServerValueGenerationStrategy.None, detailsProperty.GetValueGenerationStrategy());
         Assert.Equal(

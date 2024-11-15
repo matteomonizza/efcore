@@ -106,7 +106,7 @@ internal class RootCommand : CommandBase
         {
             executable = Path.Combine(
                 toolsPath,
-                "net461",
+                "net472",
                 startupProject.PlatformTarget == "x86"
                     ? "win-x86"
                     : "any",
@@ -126,7 +126,7 @@ internal class RootCommand : CommandBase
             {
                 executable = Path.Combine(
                     toolsPath,
-                    "net461",
+                    "net472",
                     startupProject.PlatformTarget switch
                     {
                         "x86" => "win-x86",
@@ -303,7 +303,7 @@ internal class RootCommand : CommandBase
 
             if (!Directory.Exists(path)) // It's not a directory
             {
-                return new List<string> { path };
+                return [path];
             }
         }
 

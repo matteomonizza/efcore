@@ -121,15 +121,9 @@ public class SqlServerDatabaseCreatorTest
         }
     }
 
-    private class FakeSqlServerConnection : SqlServerConnection
+    private class FakeSqlServerConnection(IDbContextOptions options, RelationalConnectionDependencies dependencies) : SqlServerConnection(dependencies)
     {
-        private readonly IDbContextOptions _options;
-
-        public FakeSqlServerConnection(IDbContextOptions options, RelationalConnectionDependencies dependencies)
-            : base(dependencies)
-        {
-            _options = options;
-        }
+        private readonly IDbContextOptions _options = options;
 
         public int ErrorNumber { get; set; }
         public int FailureCount { get; set; }
@@ -170,7 +164,7 @@ public class SqlServerDatabaseCreatorTest
 
     private class FakeRelationalCommandBuilder : IRelationalCommandBuilder
     {
-        private readonly List<IRelationalParameter> _parameters = new();
+        private readonly List<IRelationalParameter> _parameters = [];
         public IndentedStringBuilder Instance { get; } = new();
 
         public IReadOnlyList<IRelationalParameter> Parameters

@@ -3,8 +3,6 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
-#nullable enable
-
 public class PrimitiveCollectionsQuerySqlServerTest : PrimitiveCollectionsQueryRelationalTestBase<
     PrimitiveCollectionsQuerySqlServerTest.PrimitiveCollectionsQuerySqlServerFixture>
 {
@@ -303,9 +301,9 @@ WHERE (
 """);
     }
 
-    public override async Task Parameter_collection_of_ints_Contains(bool async)
+    public override async Task Parameter_collection_of_ints_Contains_int(bool async)
     {
-        await base.Parameter_collection_of_ints_Contains(async);
+        await base.Parameter_collection_of_ints_Contains_int(async);
 
         AssertSql(
             """
@@ -317,6 +315,45 @@ WHERE [p].[Int] IN (
     SELECT [i].[value]
     FROM OPENJSON(@__ints_0) WITH ([value] int '$') AS [i]
 )
+""",
+            //
+            """
+@__ints_0='[10,999]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[Int] NOT IN (
+    SELECT [i].[value]
+    FROM OPENJSON(@__ints_0) WITH ([value] int '$') AS [i]
+)
+""");
+    }
+
+    public override async Task Parameter_collection_of_ints_Contains_nullable_int(bool async)
+    {
+        await base.Parameter_collection_of_ints_Contains_nullable_int(async);
+
+        AssertSql(
+            """
+@__ints_0='[10,999]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableInt] IN (
+    SELECT [i].[value]
+    FROM OPENJSON(@__ints_0) WITH ([value] int '$') AS [i]
+)
+""",
+            //
+            """
+@__ints_0='[10,999]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableInt] NOT IN (
+    SELECT [i].[value]
+    FROM OPENJSON(@__ints_0) WITH ([value] int '$') AS [i]
+) OR [p].[NullableInt] IS NULL
 """);
     }
 
@@ -334,6 +371,17 @@ WHERE [p].[Int] IN (
     SELECT [n].[value]
     FROM OPENJSON(@__nullableInts_0) WITH ([value] int '$') AS [n]
 )
+""",
+            //
+            """
+@__nullableInts_0='[10,999]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[Int] NOT IN (
+    SELECT [n].[value]
+    FROM OPENJSON(@__nullableInts_0) WITH ([value] int '$') AS [n]
+)
 """);
     }
 
@@ -343,20 +391,31 @@ WHERE [p].[Int] IN (
 
         AssertSql(
             """
-@__nullableInts_0='[null,999]' (Size = 4000)
+@__nullableInts_0_without_nulls='[999]' (Size = 4000)
 
 SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
 FROM [PrimitiveCollectionsEntity] AS [p]
-WHERE EXISTS (
-    SELECT 1
-    FROM OPENJSON(@__nullableInts_0) WITH ([value] int '$') AS [n]
-    WHERE [n].[value] = [p].[NullableInt] OR ([n].[value] IS NULL AND [p].[NullableInt] IS NULL))
+WHERE [p].[NullableInt] IN (
+    SELECT [n].[value]
+    FROM OPENJSON(@__nullableInts_0_without_nulls) AS [n]
+) OR [p].[NullableInt] IS NULL
+""",
+            //
+            """
+@__nullableInts_0_without_nulls='[999]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableInt] NOT IN (
+    SELECT [n].[value]
+    FROM OPENJSON(@__nullableInts_0_without_nulls) AS [n]
+) AND [p].[NullableInt] IS NOT NULL
 """);
     }
 
-    public override async Task Parameter_collection_of_strings_Contains_non_nullable_string(bool async)
+    public override async Task Parameter_collection_of_strings_Contains_string(bool async)
     {
-        await base.Parameter_collection_of_strings_Contains_non_nullable_string(async);
+        await base.Parameter_collection_of_strings_Contains_string(async);
 
         AssertSql(
             """
@@ -365,6 +424,17 @@ WHERE EXISTS (
 SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE [p].[String] IN (
+    SELECT [s].[value]
+    FROM OPENJSON(@__strings_0) WITH ([value] nvarchar(max) '$') AS [s]
+)
+""",
+            //
+            """
+@__strings_0='["10","999"]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[String] NOT IN (
     SELECT [s].[value]
     FROM OPENJSON(@__strings_0) WITH ([value] nvarchar(max) '$') AS [s]
 )
@@ -377,14 +447,81 @@ WHERE [p].[String] IN (
 
         AssertSql(
             """
-@__strings_0='["999",null]' (Size = 4000)
+@__strings_0='["10","999"]' (Size = 4000)
 
 SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
 FROM [PrimitiveCollectionsEntity] AS [p]
-WHERE EXISTS (
-    SELECT 1
+WHERE [p].[NullableString] IN (
+    SELECT [s].[value]
     FROM OPENJSON(@__strings_0) WITH ([value] nvarchar(max) '$') AS [s]
-    WHERE [s].[value] = [p].[NullableString] OR ([s].[value] IS NULL AND [p].[NullableString] IS NULL))
+)
+""",
+            //
+            """
+@__strings_0='["10","999"]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableString] NOT IN (
+    SELECT [s].[value]
+    FROM OPENJSON(@__strings_0) WITH ([value] nvarchar(max) '$') AS [s]
+) OR [p].[NullableString] IS NULL
+""");
+    }
+
+    public override async Task Parameter_collection_of_nullable_strings_Contains_string(bool async)
+    {
+        await base.Parameter_collection_of_nullable_strings_Contains_string(async);
+
+        AssertSql(
+            """
+@__strings_0='["10",null]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[String] IN (
+    SELECT [s].[value]
+    FROM OPENJSON(@__strings_0) WITH ([value] nvarchar(max) '$') AS [s]
+)
+""",
+            //
+            """
+@__strings_0_without_nulls='["10"]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[String] NOT IN (
+    SELECT [s].[value]
+    FROM OPENJSON(@__strings_0_without_nulls) AS [s]
+)
+""");
+    }
+
+    public override async Task Parameter_collection_of_nullable_strings_Contains_nullable_string(bool async)
+    {
+        await base.Parameter_collection_of_nullable_strings_Contains_nullable_string(async);
+
+        AssertSql(
+            """
+@__strings_0_without_nulls='["999"]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableString] IN (
+    SELECT [s].[value]
+    FROM OPENJSON(@__strings_0_without_nulls) AS [s]
+) OR [p].[NullableString] IS NULL
+""",
+            //
+            """
+@__strings_0_without_nulls='["999"]' (Size = 4000)
+
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableString] NOT IN (
+    SELECT [s].[value]
+    FROM OPENJSON(@__strings_0_without_nulls) AS [s]
+) AND [p].[NullableString] IS NOT NULL
 """);
     }
 
@@ -562,7 +699,7 @@ SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE (
     SELECT COUNT(*)
-    FROM OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i]) = 2
+    FROM OPENJSON([p].[Ints]) AS [i]) = 2
 """);
     }
 
@@ -576,7 +713,7 @@ SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE (
     SELECT COUNT(*)
-    FROM OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i]) = 2
+    FROM OPENJSON([p].[Ints]) AS [i]) = 2
 """);
     }
 
@@ -650,7 +787,7 @@ SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE EXISTS (
     SELECT 1
-    FROM OPENJSON([p].[Strings]) WITH ([value] nvarchar(max) '$') AS [s]) AND JSON_VALUE([p].[Strings], '$[1]') = [p].[NullableString]
+    FROM OPENJSON([p].[Strings]) AS [s]) AND JSON_VALUE([p].[Strings], '$[1]') = [p].[NullableString]
 """);
     }
 
@@ -723,11 +860,11 @@ FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT [i].[key]
+        SELECT 1 AS empty
         FROM OPENJSON([p].[Ints]) AS [i]
         ORDER BY CAST([i].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t]) = 2
+    ) AS [i0]) = 2
 """);
     }
 
@@ -790,7 +927,7 @@ SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE EXISTS (
     SELECT 1
-    FROM OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i])
+    FROM OPENJSON([p].[Ints]) AS [i])
 """);
     }
 
@@ -807,7 +944,19 @@ WHERE (
     FROM (
         SELECT DISTINCT [i].[value]
         FROM OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i]
-    ) AS [t]) = 3
+    ) AS [i0]) = 3
+""");
+    }
+
+    public override async Task Column_collection_SelectMany(bool async)
+    {
+        await base.Column_collection_SelectMany(async);
+
+        AssertSql(
+            """
+SELECT [i].[value]
+FROM [PrimitiveCollectionsEntity] AS [p]
+CROSS APPLY OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i]
 """);
     }
 
@@ -868,12 +1017,12 @@ FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT [i].[value]
-        FROM OPENJSON(@__ints_0) WITH ([value] int '$') AS [i]
+        SELECT 1 AS empty
+        FROM OPENJSON(@__ints_0) AS [i]
         UNION ALL
-        SELECT [i0].[value]
-        FROM OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i0]
-    ) AS [t]) = 2
+        SELECT 1 AS empty
+        FROM OPENJSON([p].[Ints]) AS [i0]
+    ) AS [u]) = 2
 """);
     }
 
@@ -895,7 +1044,7 @@ WHERE (
         UNION
         SELECT [i0].[value]
         FROM OPENJSON(@__ints_0) WITH ([value] int '$') AS [i0]
-    ) AS [t]) = 2
+    ) AS [u]) = 2
 """);
     }
 
@@ -915,7 +1064,7 @@ WHERE (
         INTERSECT
         SELECT [v].[Value] AS [value]
         FROM (VALUES (CAST(11 AS int)), (111)) AS [v]([Value])
-    ) AS [t]) = 2
+    ) AS [i0]) = 2
 """);
     }
 
@@ -935,8 +1084,8 @@ WHERE (
         EXCEPT
         SELECT [i].[value] AS [Value]
         FROM OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i]
-    ) AS [t]
-    WHERE [t].[Value] % 2 = 1) = 2
+    ) AS [e]
+    WHERE [e].[Value] % 2 = 1) = 2
 """);
     }
 
@@ -993,17 +1142,17 @@ FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT [t].[value]
+        SELECT [i1].[value]
         FROM (
-            SELECT CAST([i].[value] AS int) AS [value], [i].[key]
+            SELECT CAST([i].[value] AS int) AS [value]
             FROM OPENJSON(@__ints) AS [i]
             ORDER BY CAST([i].[key] AS int)
             OFFSET 1 ROWS
-        ) AS [t]
+        ) AS [i1]
         UNION
         SELECT [i0].[value]
         FROM OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i0]
-    ) AS [t0]) = 3
+    ) AS [u]) = 3
 """);
     }
 
@@ -1025,7 +1174,7 @@ WHERE (
         UNION
         SELECT [i].[value]
         FROM OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i]
-    ) AS [t]) = 3
+    ) AS [u]) = 3
 """);
     }
 
@@ -1045,21 +1194,21 @@ WHERE (
         SELECT [s].[value]
         FROM OPENJSON(@__Skip_0) WITH ([value] int '$') AS [s]
         UNION
-        SELECT [t1].[value]
+        SELECT [i2].[value]
         FROM (
-            SELECT TOP(20) [t0].[value]
+            SELECT TOP(20) [i1].[value]
             FROM (
-                SELECT DISTINCT [t2].[value]
+                SELECT DISTINCT [i0].[value]
                 FROM (
-                    SELECT CAST([i].[value] AS int) AS [value], [i].[key]
-                    FROM OPENJSON([p].[Ints]) AS [i]
-                    ORDER BY CAST([i].[value] AS int)
+                    SELECT [i].[value]
+                    FROM OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i]
+                    ORDER BY [i].[value]
                     OFFSET 1 ROWS
-                ) AS [t2]
-            ) AS [t0]
-            ORDER BY [t0].[value] DESC
-        ) AS [t1]
-    ) AS [t]) = 3
+                ) AS [i0]
+            ) AS [i1]
+            ORDER BY [i1].[value] DESC
+        ) AS [i2]
+    ) AS [u]) = 3
 """);
     }
 
@@ -1084,12 +1233,12 @@ FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([i].[value] AS int) AS [value], [i].[key], CAST([i].[key] AS int) AS [c], CAST([i].[value] AS int) AS [value0]
+        SELECT CAST([i].[value] AS int) AS [value0]
         FROM OPENJSON(@__ints) AS [i]
         ORDER BY CAST([i].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t]
-    WHERE [t].[value0] > [p].[Id]) = 1
+    ) AS [i0]
+    WHERE [i0].[value0] > [p].[Id]) = 1
 """);
     }
 
@@ -1113,17 +1262,17 @@ FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT [t].[value]
+        SELECT [i1].[value]
         FROM (
-            SELECT CAST([i].[value] AS int) AS [value], [i].[key]
+            SELECT CAST([i].[value] AS int) AS [value]
             FROM OPENJSON([p].[Ints]) AS [i]
             ORDER BY CAST([i].[key] AS int)
             OFFSET 1 ROWS
-        ) AS [t]
+        ) AS [i1]
         UNION
         SELECT [i0].[value]
         FROM OPENJSON(@__ints_0) WITH ([value] int '$') AS [i0]
-    ) AS [t0]) = 3
+    ) AS [u]) = 3
 """);
     }
 
@@ -1158,14 +1307,14 @@ ORDER BY [p].[Id], CAST([i].[value] AS int) DESC
 
         AssertSql(
             """
-SELECT [p].[Id], [t].[value], [t].[key]
+SELECT [p].[Id], [d0].[value], [d0].[key]
 FROM [PrimitiveCollectionsEntity] AS [p]
 OUTER APPLY (
     SELECT CAST([d].[value] AS datetime2) AS [value], [d].[key], CAST([d].[key] AS int) AS [c]
     FROM OPENJSON([p].[DateTimes]) AS [d]
     WHERE DATEPART(day, CAST([d].[value] AS datetime2)) <> 1
-) AS [t]
-ORDER BY [p].[Id], [t].[c]
+) AS [d0]
+ORDER BY [p].[Id], [d0].[c]
 """);
     }
 
@@ -1175,14 +1324,14 @@ ORDER BY [p].[Id], [t].[c]
 
         AssertSql(
             """
-SELECT [p].[Id], [t].[value], [t].[key]
+SELECT [p].[Id], [n0].[value], [n0].[key]
 FROM [PrimitiveCollectionsEntity] AS [p]
 OUTER APPLY (
     SELECT TOP(20) CAST([n].[value] AS int) AS [value], [n].[key], CAST([n].[key] AS int) AS [c]
     FROM OPENJSON([p].[NullableInts]) AS [n]
     ORDER BY CAST([n].[key] AS int)
-) AS [t]
-ORDER BY [p].[Id], [t].[c]
+) AS [n0]
+ORDER BY [p].[Id], [n0].[c]
 """);
     }
 
@@ -1192,15 +1341,15 @@ ORDER BY [p].[Id], [t].[c]
 
         AssertSql(
             """
-SELECT [p].[Id], [t].[value], [t].[key]
+SELECT [p].[Id], [n0].[value], [n0].[key]
 FROM [PrimitiveCollectionsEntity] AS [p]
 OUTER APPLY (
     SELECT CAST([n].[value] AS int) AS [value], [n].[key]
     FROM OPENJSON([p].[NullableInts]) AS [n]
     ORDER BY CAST([n].[value] AS int)
     OFFSET 1 ROWS
-) AS [t]
-ORDER BY [p].[Id], [t].[value]
+) AS [n0]
+ORDER BY [p].[Id], [n0].[value]
 """);
     }
 
@@ -1210,15 +1359,15 @@ ORDER BY [p].[Id], [t].[value]
 
         AssertSql(
             """
-SELECT [p].[Id], [t].[value], [t].[key]
+SELECT [p].[Id], [n0].[value], [n0].[key]
 FROM [PrimitiveCollectionsEntity] AS [p]
 OUTER APPLY (
     SELECT CAST([n].[value] AS int) AS [value], [n].[key], CAST([n].[key] AS int) AS [c]
     FROM OPENJSON([p].[NullableInts]) AS [n]
     ORDER BY CAST([n].[key] AS int)
     OFFSET 2 ROWS
-) AS [t]
-ORDER BY [p].[Id], [t].[c]
+) AS [n0]
+ORDER BY [p].[Id], [n0].[c]
 """);
     }
 
@@ -1228,12 +1377,12 @@ ORDER BY [p].[Id], [t].[c]
 
         AssertSql(
             """
-SELECT [p].[Id], [t].[value]
+SELECT [p].[Id], [i0].[value]
 FROM [PrimitiveCollectionsEntity] AS [p]
 OUTER APPLY (
     SELECT DISTINCT [i].[value]
     FROM OPENJSON([p].[Ints]) WITH ([value] int '$') AS [i]
-) AS [t]
+) AS [i0]
 ORDER BY [p].[Id]
 """);
     }
@@ -1251,14 +1400,14 @@ ORDER BY [p].[Id]
 
         AssertSql(
             """
-SELECT [t].[Id], CAST([i].[value] AS int) AS [value], [i].[key]
+SELECT [p0].[Id], CAST([i].[value] AS int) AS [value], [i].[key]
 FROM (
     SELECT TOP(1) [p].[Id], [p].[Ints]
     FROM [PrimitiveCollectionsEntity] AS [p]
     ORDER BY [p].[Id]
-) AS [t]
-OUTER APPLY OPENJSON([t].[Ints]) AS [i]
-ORDER BY [t].[Id], CAST([i].[key] AS int)
+) AS [p0]
+OUTER APPLY OPENJSON([p0].[Ints]) AS [i]
+ORDER BY [p0].[Id], CAST([i].[key] AS int)
 """);
     }
 
@@ -1268,19 +1417,19 @@ ORDER BY [t].[Id], CAST([i].[key] AS int)
 
         AssertSql(
             """
-SELECT [p].[Id], [t].[value], [t].[key], [t0].[value], [t0].[key]
+SELECT [p].[Id], [n1].[value], [n1].[key], [n2].[value], [n2].[key]
 FROM [PrimitiveCollectionsEntity] AS [p]
 OUTER APPLY (
     SELECT CAST([n].[value] AS int) AS [value], [n].[key], CAST([n].[key] AS int) AS [c]
     FROM OPENJSON([p].[NullableInts]) AS [n]
     WHERE 0 = 1
-) AS [t]
+) AS [n1]
 OUTER APPLY (
     SELECT CAST([n0].[value] AS int) AS [value], [n0].[key], CAST([n0].[key] AS int) AS [c]
     FROM OPENJSON([p].[NullableInts]) AS [n0]
     WHERE [n0].[value] IS NULL
-) AS [t0]
-ORDER BY [p].[Id], [t].[c], [t].[key], [t0].[c]
+) AS [n2]
+ORDER BY [p].[Id], [n1].[c], [n1].[key], [n2].[c]
 """);
     }
 
@@ -1290,7 +1439,7 @@ ORDER BY [p].[Id], [t].[c], [t].[key], [t0].[c]
 
         AssertSql(
             """
-SELECT [p].[Id], CAST([i].[value] AS int) AS [value], [i].[key], CAST([i0].[value] AS int) AS [value], [i0].[key], [t].[value], [t].[key], [t0].[value], [t0].[key]
+SELECT [p].[Id], CAST([i].[value] AS int) AS [value], [i].[key], CAST([i0].[value] AS int) AS [value], [i0].[key], [d1].[value], [d1].[key], [d2].[value], [d2].[key]
 FROM [PrimitiveCollectionsEntity] AS [p]
 OUTER APPLY OPENJSON([p].[Ints]) AS [i]
 OUTER APPLY OPENJSON([p].[Ints]) AS [i0]
@@ -1298,13 +1447,13 @@ OUTER APPLY (
     SELECT CAST([d].[value] AS datetime2) AS [value], [d].[key], CAST([d].[key] AS int) AS [c]
     FROM OPENJSON([p].[DateTimes]) AS [d]
     WHERE DATEPART(day, CAST([d].[value] AS datetime2)) <> 1
-) AS [t]
+) AS [d1]
 OUTER APPLY (
     SELECT CAST([d0].[value] AS datetime2) AS [value], [d0].[key], CAST([d0].[key] AS int) AS [c]
     FROM OPENJSON([p].[DateTimes]) AS [d0]
     WHERE CAST([d0].[value] AS datetime2) > '2000-01-01T00:00:00.0000000'
-) AS [t0]
-ORDER BY [p].[Id], CAST([i].[key] AS int), [i].[key], CAST([i0].[value] AS int) DESC, [i0].[key], [t].[c], [t].[key], [t0].[c]
+) AS [d2]
+ORDER BY [p].[Id], CAST([i].[key] AS int), [i].[key], CAST([i0].[value] AS int) DESC, [i0].[key], [d1].[c], [d1].[key], [d2].[c]
 """);
     }
 
@@ -1321,26 +1470,63 @@ ORDER BY [p].[Id]
 """);
     }
 
+    public override async Task Project_inline_collection(bool async)
+    {
+        await base.Project_inline_collection(async);
+
+        AssertSql(
+            """
+SELECT [p].[String]
+FROM [PrimitiveCollectionsEntity] AS [p]
+""");
+    }
+
+    public override async Task Project_inline_collection_with_Union(bool async)
+    {
+        await base.Project_inline_collection_with_Union(async);
+
+        AssertSql(
+            """
+SELECT [p].[Id], [u].[Value]
+FROM [PrimitiveCollectionsEntity] AS [p]
+OUTER APPLY (
+    SELECT [v].[Value]
+    FROM (VALUES ([p].[String])) AS [v]([Value])
+    UNION
+    SELECT [p0].[String] AS [Value]
+    FROM [PrimitiveCollectionsEntity] AS [p0]
+) AS [u]
+ORDER BY [p].[Id]
+""");
+    }
+
+    public override async Task Project_inline_collection_with_Concat(bool async)
+    {
+        await base.Project_inline_collection_with_Concat(async);
+
+        AssertSql();
+    }
+
     public override async Task Nested_contains_with_Lists_and_no_inferred_type_mapping(bool async)
     {
         await base.Nested_contains_with_Lists_and_no_inferred_type_mapping(async);
 
         AssertSql(
             """
-@__ints_1='[1,2,3]' (Size = 4000)
-@__strings_0='["one","two","three"]' (Size = 4000)
+@__ints_0='[1,2,3]' (Size = 4000)
+@__strings_1='["one","two","three"]' (Size = 4000)
 
 SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE CASE
     WHEN [p].[Int] IN (
         SELECT [i].[value]
-        FROM OPENJSON(@__ints_1) WITH ([value] int '$') AS [i]
+        FROM OPENJSON(@__ints_0) WITH ([value] int '$') AS [i]
     ) THEN N'one'
     ELSE N'two'
 END IN (
     SELECT [s].[value]
-    FROM OPENJSON(@__strings_0) WITH ([value] nvarchar(max) '$') AS [s]
+    FROM OPENJSON(@__strings_1) WITH ([value] nvarchar(max) '$') AS [s]
 )
 """);
     }
@@ -1351,20 +1537,20 @@ END IN (
 
         AssertSql(
             """
-@__ints_1='[1,2,3]' (Size = 4000)
-@__strings_0='["one","two","three"]' (Size = 4000)
+@__ints_0='[1,2,3]' (Size = 4000)
+@__strings_1='["one","two","three"]' (Size = 4000)
 
 SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE CASE
     WHEN [p].[Int] IN (
         SELECT [i].[value]
-        FROM OPENJSON(@__ints_1) WITH ([value] int '$') AS [i]
+        FROM OPENJSON(@__ints_0) WITH ([value] int '$') AS [i]
     ) THEN N'one'
     ELSE N'two'
 END IN (
     SELECT [s].[value]
-    FROM OPENJSON(@__strings_0) WITH ([value] nvarchar(max) '$') AS [s]
+    FROM OPENJSON(@__strings_1) WITH ([value] nvarchar(max) '$') AS [s]
 )
 """);
     }
@@ -1379,7 +1565,7 @@ END IN (
     private PrimitiveCollectionsContext CreateContext()
         => Fixture.CreateContext();
 
-    public class PrimitiveCollectionsQuerySqlServerFixture : PrimitiveCollectionsQueryFixtureBase
+    public class PrimitiveCollectionsQuerySqlServerFixture : PrimitiveCollectionsQueryFixtureBase, ITestSqlLoggerFactory
     {
         public TestSqlLoggerFactory TestSqlLoggerFactory
             => (TestSqlLoggerFactory)ListLoggerFactory;

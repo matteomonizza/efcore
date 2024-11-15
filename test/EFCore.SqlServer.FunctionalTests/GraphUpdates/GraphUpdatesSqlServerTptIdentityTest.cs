@@ -3,13 +3,10 @@
 
 namespace Microsoft.EntityFrameworkCore;
 
-public class GraphUpdatesSqlServerTptIdentityTest : GraphUpdatesSqlServerTestBase<GraphUpdatesSqlServerTptIdentityTest.SqlServerFixture>
-{
-    public GraphUpdatesSqlServerTptIdentityTest(SqlServerFixture fixture)
-        : base(fixture)
-    {
-    }
+#nullable disable
 
+public class GraphUpdatesSqlServerTptIdentityTest(GraphUpdatesSqlServerTptIdentityTest.SqlServerFixture fixture) : GraphUpdatesSqlServerTestBase<GraphUpdatesSqlServerTptIdentityTest.SqlServerFixture>(fixture)
+{
     protected override void UseTransaction(DatabaseFacade facade, IDbContextTransaction transaction)
         => facade.UseTransaction(transaction.GetDbTransaction());
 

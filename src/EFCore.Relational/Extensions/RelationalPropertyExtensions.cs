@@ -18,10 +18,10 @@ namespace Microsoft.EntityFrameworkCore;
 public static class RelationalPropertyExtensions
 {
     private static readonly MethodInfo GetFieldValueMethod =
-        typeof(DbDataReader).GetRuntimeMethod(nameof(DbDataReader.GetFieldValue), new[] { typeof(int) })!;
+        typeof(DbDataReader).GetRuntimeMethod(nameof(DbDataReader.GetFieldValue), [typeof(int)])!;
 
     private static readonly MethodInfo IsDbNullMethod =
-        typeof(DbDataReader).GetRuntimeMethod(nameof(DbDataReader.IsDBNull), new[] { typeof(int) })!;
+        typeof(DbDataReader).GetRuntimeMethod(nameof(DbDataReader.IsDBNull), [typeof(int)])!;
 
     private static readonly MethodInfo ThrowReadValueExceptionMethod
         = typeof(RelationalPropertyExtensions).GetTypeInfo().GetDeclaredMethod(nameof(ThrowReadValueException))!;
@@ -183,7 +183,9 @@ public static class RelationalPropertyExtensions
             var foreignKey = property.GetContainingForeignKeys().First();
             var principalEntityType = foreignKey.PrincipalEntityType;
             if (principalEntityType is { HasSharedClrType: false, ClrType.IsConstructedGenericType: true }
-                && foreignKey.DependentToPrincipal == null)
+                && foreignKey.DependentToPrincipal == null
+                && (principalEntityType.GetTableName() != foreignKey.DeclaringEntityType.GetTableName()
+                    || principalEntityType.GetSchema() != foreignKey.DeclaringEntityType.GetSchema()))
             {
                 var principalProperty = property.FindFirstPrincipal()!;
                 var principalName = principalEntityType.ShortName();
@@ -1186,7 +1188,7 @@ public static class RelationalPropertyExtensions
         }
 
         return property.IsNullable
-            || (property.DeclaringType is IReadOnlyEntityType entityType
+            || (property.DeclaringType.ContainingEntityType is IReadOnlyEntityType entityType
                 && ((entityType.BaseType != null
                         && entityType.GetMappingStrategy() == RelationalAnnotationNames.TphMappingStrategy)
                     || IsOptionalSharingDependent(entityType, storeObject, 0)));

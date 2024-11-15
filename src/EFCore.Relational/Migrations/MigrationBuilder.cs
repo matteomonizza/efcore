@@ -31,7 +31,7 @@ public class MigrationBuilder
     /// <summary>
     ///     The list of <see cref="MigrationOperation" />s being built.
     /// </summary>
-    public virtual List<MigrationOperation> Operations { get; } = new();
+    public virtual List<MigrationOperation> Operations { get; } = [];
 
     /// <summary>
     ///     Builds an <see cref="AddColumnOperation" /> to add a new column to a table.
@@ -151,11 +151,11 @@ public class MigrationBuilder
         => AddForeignKey(
             name,
             table,
-            new[] { Check.NotEmpty(column, nameof(column)) },
+            [Check.NotEmpty(column, nameof(column))],
             principalTable,
             schema,
             principalSchema,
-            principalColumn != null ? new[] { principalColumn } : null,
+            principalColumn != null ? [principalColumn] : null,
             onUpdate,
             onDelete);
 
@@ -232,7 +232,7 @@ public class MigrationBuilder
         => AddPrimaryKey(
             name,
             table,
-            new[] { Check.NotEmpty(column, nameof(column)) },
+            [Check.NotEmpty(column, nameof(column))],
             schema);
 
     /// <summary>
@@ -287,7 +287,7 @@ public class MigrationBuilder
         => AddUniqueConstraint(
             name,
             table,
-            new[] { Check.NotEmpty(column, nameof(column)) },
+            [Check.NotEmpty(column, nameof(column))],
             schema);
 
     /// <summary>
@@ -522,6 +522,10 @@ public class MigrationBuilder
     /// <param name="oldMinValue">The previous minimum value of the sequence, or <see langword="null" /> if not specified.</param>
     /// <param name="oldMaxValue">The previous maximum value of the sequence, or <see langword="null" /> if not specified.</param>
     /// <param name="oldCyclic">Indicates whether or not the sequence would previously re-start when the maximum value is reached.</param>
+    /// <param name="cached">Indicates whether the sequence use preallocated values.</param>
+    /// <param name="cacheSize">The amount of preallocated values.</param>
+    /// <param name="oldCached">Indicates whether the sequence previously used preallocated values</param>
+    /// <param name="oldCacheSize">The previous amount of preallocated values.</param>
     /// <returns>A builder to allow annotations to be added to the operation.</returns>
     public virtual AlterOperationBuilder<AlterSequenceOperation> AlterSequence(
         string name,
@@ -533,7 +537,11 @@ public class MigrationBuilder
         int oldIncrementBy = 1,
         long? oldMinValue = null,
         long? oldMaxValue = null,
-        bool oldCyclic = false)
+        bool oldCyclic = false,
+        bool cached = true,
+        int? cacheSize = null,
+        bool oldCached = true,
+        int? oldCacheSize = null)
     {
         Check.NotEmpty(name, nameof(name));
 
@@ -545,12 +553,16 @@ public class MigrationBuilder
             MinValue = minValue,
             MaxValue = maxValue,
             IsCyclic = cyclic,
+            IsCached = cached,
+            CacheSize = cacheSize,
             OldSequence = new CreateSequenceOperation
             {
                 IncrementBy = oldIncrementBy,
                 MinValue = oldMinValue,
                 MaxValue = oldMaxValue,
-                IsCyclic = oldCyclic
+                IsCyclic = oldCyclic,
+                IsCached = oldCached,
+                CacheSize = oldCacheSize,
             }
         };
         Operations.Add(operation);
@@ -618,7 +630,7 @@ public class MigrationBuilder
         => CreateIndex(
             name,
             table,
-            new[] { Check.NotEmpty(column, nameof(column)) },
+            [Check.NotEmpty(column, nameof(column))],
             schema,
             unique,
             filter,
@@ -702,6 +714,8 @@ public class MigrationBuilder
     /// <param name="minValue">The minimum value of the sequence, or <see langword="null" /> if not specified.</param>
     /// <param name="maxValue">The maximum value of the sequence, or <see langword="null" /> if not specified.</param>
     /// <param name="cyclic">Indicates whether or not the sequence will re-start when the maximum value is reached.</param>
+    /// <param name="cached">Indicates whether the sequence use preallocated values.</param>
+    /// <param name="cacheSize">The amount of preallocated values.</param>
     /// <returns>A builder to allow annotations to be added to the operation.</returns>
     public virtual OperationBuilder<CreateSequenceOperation> CreateSequence(
         string name,
@@ -710,8 +724,10 @@ public class MigrationBuilder
         int incrementBy = 1,
         long? minValue = null,
         long? maxValue = null,
-        bool cyclic = false)
-        => CreateSequence<long>(name, schema, startValue, incrementBy, minValue, maxValue, cyclic);
+        bool cyclic = false,
+        bool cached = true,
+        int? cacheSize = null)
+        => CreateSequence<long>(name, schema, startValue, incrementBy, minValue, maxValue, cyclic, cached, cacheSize);
 
     /// <summary>
     ///     Builds a <see cref="CreateSequenceOperation" /> to create a new sequence.
@@ -727,6 +743,8 @@ public class MigrationBuilder
     /// <param name="minValue">The minimum value of the sequence, or <see langword="null" /> if not specified.</param>
     /// <param name="maxValue">The maximum value of the sequence, or <see langword="null" /> if not specified.</param>
     /// <param name="cyclic">Indicates whether or not the sequence will re-start when the maximum value is reached.</param>
+    /// <param name="cached">Indicates whether the sequence use preallocated values.</param>
+    /// <param name="cacheSize">The amount of preallocated values.</param>
     /// <returns>A builder to allow annotations to be added to the operation.</returns>
     public virtual OperationBuilder<CreateSequenceOperation> CreateSequence<T>(
         string name,
@@ -735,7 +753,9 @@ public class MigrationBuilder
         int incrementBy = 1,
         long? minValue = null,
         long? maxValue = null,
-        bool cyclic = false)
+        bool cyclic = false,
+        bool cached = true,
+        int? cacheSize = null)
     {
         Check.NotEmpty(name, nameof(name));
 
@@ -748,7 +768,9 @@ public class MigrationBuilder
             IncrementBy = incrementBy,
             MinValue = minValue,
             MaxValue = maxValue,
-            IsCyclic = cyclic
+            IsCyclic = cyclic,
+            IsCached = cached,
+            CacheSize = cacheSize
         };
         Operations.Add(operation);
 
@@ -1296,7 +1318,7 @@ public class MigrationBuilder
         string column,
         object? value,
         string? schema = null)
-        => InsertData(table, new[] { Check.NotEmpty(column, nameof(column)) }, new[] { value }, schema);
+        => InsertData(table, [Check.NotEmpty(column, nameof(column))], [value], schema);
 
     /// <summary>
     ///     Builds an <see cref="InsertDataOperation" /> to insert a single seed data value for a single column.
@@ -1318,9 +1340,9 @@ public class MigrationBuilder
         string? schema = null)
         => InsertData(
             table,
-            new[] { Check.NotEmpty(column, nameof(column)) },
-            new[] { Check.NotEmpty(columnType, nameof(columnType)) },
-            new[] { value }, schema);
+            [Check.NotEmpty(column, nameof(column))],
+            [Check.NotEmpty(columnType, nameof(columnType))],
+            [value], schema);
 
     /// <summary>
     ///     Builds an <see cref="InsertDataOperation" /> to insert a single row of seed data values.
@@ -1378,7 +1400,7 @@ public class MigrationBuilder
         string? schema = null)
         => InsertDataInternal(
             table,
-            new[] { Check.NotEmpty(column, nameof(column)) },
+            [Check.NotEmpty(column, nameof(column))],
             null,
             ToMultidimensionalArray(Check.NotNull(values, nameof(values)), firstDimension: true),
             schema);
@@ -1403,8 +1425,8 @@ public class MigrationBuilder
         string? schema = null)
         => InsertDataInternal(
             table,
-            new[] { Check.NotEmpty(column, nameof(column)) },
-            new[] { Check.NotEmpty(columnType, nameof(columnType)) },
+            [Check.NotEmpty(column, nameof(column))],
+            [Check.NotEmpty(columnType, nameof(columnType))],
             ToMultidimensionalArray(Check.NotNull(values, nameof(values)), firstDimension: true),
             schema);
 
@@ -1496,7 +1518,7 @@ public class MigrationBuilder
         string keyColumn,
         object? keyValue,
         string? schema = null)
-        => DeleteData(table, new[] { Check.NotNull(keyColumn, nameof(keyValue)) }, new[] { keyValue }, schema);
+        => DeleteData(table, [Check.NotNull(keyColumn, nameof(keyValue))], [keyValue], schema);
 
     /// <summary>
     ///     Builds a <see cref="DeleteDataOperation" /> to delete a single row of seed data.
@@ -1520,9 +1542,9 @@ public class MigrationBuilder
         string? schema = null)
         => DeleteData(
             table,
-            new[] { Check.NotNull(keyColumn, nameof(keyValue)) },
-            new[] { Check.NotNull(keyColumnType, nameof(keyColumnType)) },
-            new[] { keyValue },
+            [Check.NotNull(keyColumn, nameof(keyValue))],
+            [Check.NotNull(keyColumnType, nameof(keyColumnType))],
+            [keyValue],
             schema);
 
     /// <summary>
@@ -1594,7 +1616,7 @@ public class MigrationBuilder
         string? schema = null)
         => DeleteData(
             table,
-            new[] { Check.NotEmpty(keyColumn, nameof(keyColumn)) },
+            [Check.NotEmpty(keyColumn, nameof(keyColumn))],
             ToMultidimensionalArray(Check.NotNull(keyValues, nameof(keyValues)), firstDimension: true),
             schema);
 
@@ -1620,8 +1642,8 @@ public class MigrationBuilder
         string? schema = null)
         => DeleteData(
             table,
-            new[] { Check.NotEmpty(keyColumn, nameof(keyColumn)) },
-            new[] { Check.NotEmpty(keyColumnType, nameof(keyColumnType)) },
+            [Check.NotEmpty(keyColumn, nameof(keyColumn))],
+            [Check.NotEmpty(keyColumnType, nameof(keyColumnType))],
             ToMultidimensionalArray(Check.NotNull(keyValues, nameof(keyValues)), firstDimension: true),
             schema);
 
@@ -1725,8 +1747,8 @@ public class MigrationBuilder
             table,
             keyColumn,
             keyValue,
-            new[] { Check.NotEmpty(column, nameof(column)) },
-            new[] { value },
+            [Check.NotEmpty(column, nameof(column))],
+            [value],
             schema);
 
     /// <summary>
@@ -1751,8 +1773,8 @@ public class MigrationBuilder
         string? schema = null)
         => UpdateData(
             table,
-            new[] { Check.NotEmpty(keyColumn, nameof(keyColumn)) },
-            new[] { keyValue },
+            [Check.NotEmpty(keyColumn, nameof(keyColumn))],
+            [keyValue],
             columns,
             values,
             schema);
@@ -1782,8 +1804,8 @@ public class MigrationBuilder
             table,
             keyColumns,
             keyValues,
-            new[] { Check.NotEmpty(column, nameof(column)) },
-            new[] { value },
+            [Check.NotEmpty(column, nameof(column))],
+            [value],
             schema);
 
     /// <summary>
@@ -1876,7 +1898,7 @@ public class MigrationBuilder
             table,
             keyColumn,
             keyValues,
-            new[] { Check.NotEmpty(column, nameof(column)) },
+            [Check.NotEmpty(column, nameof(column))],
             ToMultidimensionalArray(Check.NotNull(values, nameof(values)), firstDimension: true),
             schema);
 
@@ -1905,7 +1927,7 @@ public class MigrationBuilder
         string? schema = null)
         => UpdateData(
             table,
-            new[] { Check.NotEmpty(keyColumn, nameof(keyColumn)) },
+            [Check.NotEmpty(keyColumn, nameof(keyColumn))],
             ToMultidimensionalArray(Check.NotNull(keyValues, nameof(keyValues)), firstDimension: true),
             columns,
             values,
@@ -1939,7 +1961,7 @@ public class MigrationBuilder
             table,
             keyColumns,
             keyValues,
-            new[] { Check.NotEmpty(column, nameof(column)) },
+            [Check.NotEmpty(column, nameof(column))],
             ToMultidimensionalArray(Check.NotNull(values, nameof(values)), firstDimension: true),
             schema);
 

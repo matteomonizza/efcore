@@ -403,13 +403,9 @@ public class ChangeTrackerTest
         public Skinner? TheHero { get; set; }
     }
 
-    public class Skinner
-    {
-    }
+    public class Skinner;
 
-    public class TheStreets
-    {
-    }
+    public class TheStreets;
 
     public class WeakHerosContext : DbContext
     {
@@ -945,7 +941,7 @@ public class ChangeTrackerTest
         var generator = (ResettableValueGenerator)cache.GetOrAdd(
             property,
             property.DeclaringType,
-            (p, e) => new ResettableValueGenerator());
+            (p, e) => new ResettableValueGenerator())!;
 
         generator.Reset(generateTemporaryValues);
     }
@@ -2194,17 +2190,12 @@ public class ChangeTrackerTest
         public string? Contents { get; set; }
     }
 
-    private class Cat
+    private class Cat(int id)
     {
-        public Cat(int id)
-        {
-            Id = id;
-        }
-
         public IEntityType? EntityType { get; set; }
 
         // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
-        public int Id { get; private set; }
+        public int Id { get; private set; } = id;
 
         public string? Name { get; set; }
 
@@ -2213,15 +2204,11 @@ public class ChangeTrackerTest
         public ICollection<Mat> Mats { get; } = new List<Mat>();
     }
 
-    private class Hat
+    private class Hat(int id)
     {
-        public Hat(int id)
-        {
-            Id = id;
-        }
 
         // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
-        public int Id { get; private set; }
+        public int Id { get; private set; } = id;
 
         public string? Color { get; set; }
 
@@ -2229,15 +2216,11 @@ public class ChangeTrackerTest
         public Cat? Cat { get; set; }
     }
 
-    private class Mat
+    private class Mat(int id)
     {
-        public Mat(int id)
-        {
-            Id = id;
-        }
 
         // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
-        public int Id { get; private set; }
+        public int Id { get; private set; } = id;
 
         public ICollection<Cat> Cats { get; } = new List<Cat>();
     }
@@ -2263,13 +2246,8 @@ public class ChangeTrackerTest
                     .UseInternalServiceProvider(InMemoryFixture.BuildServiceProvider(_loggerFactory)))
             .BuildServiceProvider(validateScopes: true);
 
-    private class LikeAZooContextPooled : LikeAZooContext
+    private class LikeAZooContextPooled(DbContextOptions<LikeAZooContextPooled> options) : LikeAZooContext(options)
     {
-        public LikeAZooContextPooled(DbContextOptions<LikeAZooContextPooled> options)
-            : base(options)
-        {
-        }
-
         protected internal override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
         }
@@ -2999,7 +2977,7 @@ public class ChangeTrackerTest
     {
         public int Id { get; set; }
         public string? Name { get; set; }
-        public List<KontainerRoom> Rooms { get; } = new();
+        public List<KontainerRoom> Rooms { get; } = [];
     }
 
     private class KontainerRoom
@@ -3016,7 +2994,7 @@ public class ChangeTrackerTest
     {
         public int Id { get; set; }
         public string? Description { get; set; }
-        public List<KontainerRoom> Rooms { get; } = new();
+        public List<KontainerRoom> Rooms { get; } = [];
     }
 
     private class KontainerContext : DbContext
@@ -3661,15 +3639,13 @@ public class ChangeTrackerTest
                 .UseInMemoryDatabase(nameof(TheShadows));
     }
 
-    private class Dark
-    {
-    }
+    private class Dark;
 
     private class Category
     {
         public int Id { get; set; }
 
-        public List<Product> Products { get; } = new();
+        public List<Product> Products { get; } = [];
     }
 
     private class Product
@@ -3683,14 +3659,14 @@ public class ChangeTrackerTest
 
         // ReSharper disable once CollectionNeverUpdated.Local
         // ReSharper disable once MemberHidesStaticFromOuterClass
-        public List<OrderDetails> OrderDetails { get; } = new();
+        public List<OrderDetails> OrderDetails { get; } = [];
     }
 
     private class OptionalCategory
     {
         public int Id { get; set; }
 
-        public List<OptionalProduct> Products { get; } = new();
+        public List<OptionalProduct> Products { get; } = [];
     }
 
     private class OptionalProduct
@@ -3701,9 +3677,7 @@ public class ChangeTrackerTest
         public OptionalCategory? Category { get; set; }
     }
 
-    private class SpecialProduct : Product
-    {
-    }
+    private class SpecialProduct : Product;
 
     private class ProductDetails
     {
@@ -3736,7 +3710,7 @@ public class ChangeTrackerTest
 
         // ReSharper disable once CollectionNeverUpdated.Local
         // ReSharper disable once MemberHidesStaticFromOuterClass
-        public List<OrderDetails> OrderDetails { get; } = new();
+        public List<OrderDetails> OrderDetails { get; } = [];
     }
 
     private class OrderDetails
@@ -3762,13 +3736,9 @@ public class ChangeTrackerTest
         public OfThis? OfThis { get; set; }
     }
 
-    private class AreMade
-    {
-    }
+    private class AreMade;
 
-    private class OfThis : AreMade
-    {
-    }
+    private class OfThis : AreMade;
 
     private class WhoAmI
     {
@@ -3851,16 +3821,10 @@ public class ChangeTrackerTest
             => true;
     }
 
-    private class EarlyLearningCenter : DbContext
+    private class EarlyLearningCenter(params IInterceptor[] interceptors) : DbContext
     {
-        private readonly IInterceptor[] _interceptors;
-        private readonly IServiceProvider _serviceProvider;
-
-        public EarlyLearningCenter(params IInterceptor[] interceptors)
-        {
-            _interceptors = interceptors;
-            _serviceProvider = InMemoryTestHelpers.Instance.CreateServiceProvider();
-        }
+        private readonly IInterceptor[] _interceptors = interceptors;
+        private readonly IServiceProvider _serviceProvider = InMemoryTestHelpers.Instance.CreateServiceProvider();
 
         protected internal override void OnModelCreating(ModelBuilder modelBuilder)
         {

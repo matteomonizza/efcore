@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore.SqlServer.Infrastructure.Internal;
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public class LoggingSqlServerTest : LoggingRelationalTestBase<SqlServerDbContextOptionsBuilder, SqlServerOptionsExtension>
 {
     [ConditionalFact]
@@ -25,13 +27,8 @@ public class LoggingSqlServerTest : LoggingRelationalTestBase<SqlServerDbContext
                 () => context.Model).Message);
     }
 
-    protected class StoredProcedureConcurrencyTokenNotMappedContext : DbContext
+    protected class StoredProcedureConcurrencyTokenNotMappedContext(DbContextOptionsBuilder optionsBuilder) : DbContext(optionsBuilder.Options)
     {
-        public StoredProcedureConcurrencyTokenNotMappedContext(DbContextOptionsBuilder optionsBuilder)
-            : base(optionsBuilder.Options)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<Animal>(
                 b =>

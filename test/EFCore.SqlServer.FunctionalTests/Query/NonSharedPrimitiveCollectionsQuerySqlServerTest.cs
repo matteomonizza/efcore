@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore.SqlServer.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 using static Expression;
 
 public class NonSharedPrimitiveCollectionsQuerySqlServerTest : NonSharedPrimitiveCollectionsQueryRelationalTestBase
@@ -301,10 +303,6 @@ WHERE (
     }
 
     [ConditionalFact]
-    public override Task Array_of_array_is_not_supported()
-        => base.Array_of_array_is_not_supported();
-
-    [ConditionalFact]
     public override Task Multidimensional_array_is_not_supported()
         => base.Multidimensional_array_is_not_supported();
 
@@ -331,12 +329,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT [s].[value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT [s].[value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = N'a') = 2
+    ) AS [s0]
+    WHERE [s0].[value] = N'a') = 2
 """);
     }
 
@@ -352,12 +350,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS int) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS int) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = 1) = 2
+    ) AS [s0]
+    WHERE [s0].[value] = 1) = 2
 """);
     }
 
@@ -373,12 +371,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS bigint) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS bigint) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = CAST(1 AS bigint)) = 2
+    ) AS [s0]
+    WHERE [s0].[value] = CAST(1 AS bigint)) = 2
 """);
     }
 
@@ -394,12 +392,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS smallint) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS smallint) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = CAST(1 AS smallint)) = 2
+    ) AS [s0]
+    WHERE [s0].[value] = CAST(1 AS smallint)) = 2
 """);
     }
 
@@ -420,12 +418,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS float) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS float) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = 1.0E0) = 2
+    ) AS [s0]
+    WHERE [s0].[value] = 1.0E0) = 2
 """);
     }
 
@@ -441,12 +439,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS real) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS real) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = CAST(1 AS real)) = 2
+    ) AS [s0]
+    WHERE [s0].[value] = CAST(1 AS real)) = 2
 """);
     }
 
@@ -462,12 +460,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS decimal(18,2)) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS decimal(18,2)) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = 1.0) = 2
+    ) AS [s0]
+    WHERE [s0].[value] = 1.0) = 2
 """);
     }
 
@@ -483,12 +481,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS datetime2) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS datetime2) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = '2023-01-01T12:30:00.0000000') = 2
+    ) AS [s0]
+    WHERE [s0].[value] = '2023-01-01T12:30:00.0000000') = 2
 """);
     }
 
@@ -504,12 +502,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS date) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS date) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = '2023-01-01') = 2
+    ) AS [s0]
+    WHERE [s0].[value] = '2023-01-01') = 2
 """);
     }
 
@@ -525,12 +523,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS time) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS time) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = '12:30:00') = 2
+    ) AS [s0]
+    WHERE [s0].[value] = '12:30:00') = 2
 """);
     }
 
@@ -548,12 +546,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS datetimeoffset) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS datetimeoffset) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = '2023-01-01T12:30:00.0000000+02:00') = 2
+    ) AS [s0]
+    WHERE [s0].[value] = '2023-01-01T12:30:00.0000000+02:00') = 2
 """);
     }
 
@@ -569,12 +567,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS bit) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS bit) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = CAST(1 AS bit)) = 2
+    ) AS [s0]
+    WHERE [s0].[value] = CAST(1 AS bit)) = 2
 """);
     }
 
@@ -592,12 +590,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS uniqueidentifier) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS uniqueidentifier) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = 'dc8c903d-d655-4144-a0fd-358099d40ae1') = 2
+    ) AS [s0]
+    WHERE [s0].[value] = 'dc8c903d-d655-4144-a0fd-358099d40ae1') = 2
 """);
     }
 
@@ -605,7 +603,7 @@ WHERE (
     public virtual async Task Ordered_array_of_byte_array()
     {
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => TestOrderedArray(new byte[] { 1, 2 }, new byte[] { 3, 4 }));
+            () => TestOrderedArray([1, 2], new byte[] { 3, 4 }));
 
         Assert.Equal(SqlServerStrings.QueryingOrderedBinaryJsonCollectionsNotSupported, exception.Message);
     }
@@ -622,12 +620,12 @@ FROM [TestEntity] AS [t]
 WHERE (
     SELECT COUNT(*)
     FROM (
-        SELECT CAST([s].[value] AS int) AS [value], [s].[key], CAST([s].[key] AS int) AS [c]
+        SELECT CAST([s].[value] AS int) AS [value]
         FROM OPENJSON([t].[SomeArray]) AS [s]
         ORDER BY CAST([s].[key] AS int)
         OFFSET 1 ROWS
-    ) AS [t0]
-    WHERE [t0].[value] = 0) = 2
+    ) AS [s0]
+    WHERE [s0].[value] = 0) = 2
 """);
     }
 
@@ -660,7 +658,7 @@ WHERE (
                 array2.SetValue(value2, 2);
                 context.Entry(instance2).Property("SomeArray").CurrentValue = array2;
 
-                context.SaveChanges();
+                return context.SaveChangesAsync();
             });
 
         await using var context = contextFactory.CreateContext();
@@ -869,7 +867,67 @@ WHERE EXISTS (
         Assert.Equal(RelationalStrings.ConflictingTypeMappingsInferredForColumn("value"), exception.Message);
     }
 
+    [ConditionalFact]
+    public virtual async Task Infer_inline_collection_type_mapping()
+    {
+        var contextFactory = await InitializeAsync<TestContext>(
+            onModelCreating: mb => mb.Entity<TestEntity>(b => b.Property<DateTime>("DateTime").HasColumnType("datetime")));
+
+        await using var context = contextFactory.CreateContext();
+
+        _ = await context.Set<TestEntity>()
+            .Where(b => new[] { new DateTime(2020, 1, 1), EF.Property<DateTime>(b, "DateTime") }[0] == new DateTime(2020, 1, 1))
+            .ToArrayAsync();
+
+        AssertSql(
+            """
+SELECT [t].[Id], [t].[DateTime], [t].[Ints]
+FROM [TestEntity] AS [t]
+WHERE (
+    SELECT [v].[Value]
+    FROM (VALUES (0, CAST('2020-01-01T00:00:00.000' AS datetime)), (1, [t].[DateTime])) AS [v]([_ord], [Value])
+    ORDER BY [v].[_ord]
+    OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY) = '2020-01-01T00:00:00.000'
+""");
+    }
+
     #endregion Type mapping inference
+
+    [ConditionalFact]
+    public virtual async Task Ordered_collection_with_split_query()
+    {
+        var contextFactory = await InitializeAsync<Context32976>(
+            onModelCreating: mb => mb.Entity<Context32976.Principal>(),
+            seed: context =>
+            {
+                context.Add(new Context32976.Principal { Ints = [2, 3, 4] });
+                return context.SaveChangesAsync();
+            });
+
+        await using var context = contextFactory.CreateContext();
+
+        _ = await context.Set<Context32976.Principal>()
+            .Where(p => p.Ints.Skip(1).Contains(3))
+            .Include(p => p.Dependents)
+            .AsSplitQuery()
+            .SingleAsync();
+    }
+
+    public class Context32976(DbContextOptions options) : DbContext(options)
+    {
+        public class Principal
+        {
+            public int Id { get; set; }
+            public List<int> Ints { get; set; }
+            public List<Dependent> Dependents { get; set; }
+        }
+
+        public class Dependent
+        {
+            public int Id { get; set; }
+            public Principal Principal { get; set; }
+        }
+    }
 
     [ConditionalFact]
     public virtual void Check_all_tests_overridden()

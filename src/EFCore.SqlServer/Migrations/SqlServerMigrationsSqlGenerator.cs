@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-using System.Collections;
 using System.Globalization;
 using System.Text;
 using Microsoft.EntityFrameworkCore.SqlServer.Internal;
@@ -321,6 +320,30 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             DropIndexes(indexesToRebuild, builder);
         }
 
+        // Handle change of identity seed value
+        if (IsIdentity(operation) && oldColumnSupported)
+        {
+            Check.DebugAssert(IsIdentity(operation.OldColumn), "Unsupported column change to identity");
+
+            var oldSeed = 1;
+            if (TryParseIdentitySeedIncrement(operation, out var newSeed, out _)
+                && (operation.OldColumn[SqlServerAnnotationNames.Identity] is null
+                    || TryParseIdentitySeedIncrement(operation.OldColumn, out oldSeed, out _))
+                && newSeed != oldSeed)
+            {
+                var stringTypeMapping = Dependencies.TypeMappingSource.GetMapping(typeof(string));
+                var table = stringTypeMapping.GenerateSqlLiteral(
+                    Dependencies.SqlGenerationHelper.DelimitIdentifier(operation.Table, operation.Schema));
+
+                builder
+                    .Append($"DBCC CHECKIDENT({table}, RESEED, {newSeed})")
+                    .AppendLine(Dependencies.SqlGenerationHelper.StatementTerminator);
+            }
+        }
+
+        var newAnnotations = operation.GetAnnotations().Where(a => a.Name != SqlServerAnnotationNames.Identity);
+        var oldAnnotations = operation.OldColumn.GetAnnotations().Where(a => a.Name != SqlServerAnnotationNames.Identity);
+
         var alterStatementNeeded = narrowed
             || !oldColumnSupported
             || operation.ClrType != operation.OldColumn.ClrType
@@ -333,7 +356,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             || operation.IsRowVersion != operation.OldColumn.IsRowVersion
             || operation.IsNullable != operation.OldColumn.IsNullable
             || operation.Collation != operation.OldColumn.Collation
-            || HasDifferences(operation.GetAnnotations(), operation.OldColumn.GetAnnotations());
+            || HasDifferences(newAnnotations, oldAnnotations);
 
         var (oldDefaultValue, oldDefaultValueSql) = (operation.OldColumn.DefaultValue, operation.OldColumn.DefaultValueSql);
 
@@ -1372,16 +1395,11 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         var preBatched = operation.Sql
             .Replace("\\\n", "")
             .Replace("\\\r\n", "")
-            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            .Split(["\r\n", "\n"], StringSplitOptions.None);
 
         var batchBuilder = new StringBuilder();
         foreach (var line in preBatched)
         {
-            if (string.IsNullOrWhiteSpace(line))
-            {
-                continue;
-            }
-
             var trimmed = line.TrimStart();
             if (trimmed.StartsWith("GO", StringComparison.OrdinalIgnoreCase)
                 && (trimmed.Length == 2
@@ -1494,20 +1512,14 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
     protected override void Generate(UpdateDataOperation operation, IModel? model, MigrationCommandListBuilder builder)
         => GenerateExecWhenIdempotent(builder, b => base.Generate(operation, model, b));
 
-    /// <summary>
-    ///     Generates a SQL fragment configuring a sequence with the given options.
-    /// </summary>
-    /// <param name="schema">The schema that contains the sequence, or <see langword="null" /> to use the default schema.</param>
-    /// <param name="name">The sequence name.</param>
-    /// <param name="operation">The sequence options.</param>
-    /// <param name="model">The target model which may be <see langword="null" /> if the operations exist without a model.</param>
-    /// <param name="builder">The command builder to use to add the SQL fragment.</param>
+    /// <inheritdoc />
     protected override void SequenceOptions(
         string? schema,
         string name,
         SequenceOperation operation,
         IModel? model,
-        MigrationCommandListBuilder builder)
+        MigrationCommandListBuilder builder,
+        bool forAlter)
     {
         builder
             .Append(" INCREMENT BY ")
@@ -1519,7 +1531,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 .Append(" MINVALUE ")
                 .Append(IntegerConstant(operation.MinValue.Value));
         }
-        else
+        else if (forAlter)
         {
             builder.Append(" NO MINVALUE");
         }
@@ -1530,12 +1542,28 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
                 .Append(" MAXVALUE ")
                 .Append(IntegerConstant(operation.MaxValue.Value));
         }
-        else
+        else if (forAlter)
         {
             builder.Append(" NO MAXVALUE");
         }
 
         builder.Append(operation.IsCyclic ? " CYCLE" : " NO CYCLE");
+
+        if (!operation.IsCached)
+        {
+            builder.Append(" NO CACHE");
+        }
+        else if (operation.CacheSize.HasValue)
+        {
+            builder
+            .Append(" CACHE ")
+                .Append(IntegerConstant(operation.CacheSize.Value));
+        }
+        else if (forAlter)
+        {
+            builder
+                .Append(" CACHE");
+        }
     }
 
     /// <summary>
@@ -1767,7 +1795,7 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
     /// <param name="operation">The operation.</param>
     /// <param name="model">The target model which may be <see langword="null" /> if the operations exist without a model.</param>
     /// <param name="builder">The command builder to use to add the SQL fragment.</param>
-    protected override void IndexOptions(CreateIndexOperation operation, IModel? model, MigrationCommandListBuilder builder)
+    protected override void IndexOptions(MigrationOperation operation, IModel? model, MigrationCommandListBuilder builder)
     {
         if (operation[SqlServerAnnotationNames.Include] is IReadOnlyList<string> includeColumns
             && includeColumns.Count > 0)
@@ -1786,37 +1814,40 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
             builder.Append(")");
         }
 
-        if (!string.IsNullOrEmpty(operation.Filter))
+        if (operation is CreateIndexOperation createIndexOperation)
         {
-            builder
-                .Append(" WHERE ")
-                .Append(operation.Filter);
-        }
-        else if (UseLegacyIndexFilters(operation, model))
-        {
-            var table = model?.GetRelationalModel().FindTable(operation.Table, operation.Schema);
-            var nullableColumns = operation.Columns
-                .Where(c => table?.FindColumn(c)?.IsNullable != false)
-                .ToList();
-
-            builder.Append(" WHERE ");
-            for (var i = 0; i < nullableColumns.Count; i++)
+            if (!string.IsNullOrEmpty(createIndexOperation.Filter))
             {
-                if (i != 0)
-                {
-                    builder.Append(" AND ");
-                }
-
                 builder
-                    .Append(Dependencies.SqlGenerationHelper.DelimitIdentifier(nullableColumns[i]))
-                    .Append(" IS NOT NULL");
+                    .Append(" WHERE ")
+                    .Append(createIndexOperation.Filter);
+            }
+            else if (UseLegacyIndexFilters(createIndexOperation, model))
+            {
+                var table = model?.GetRelationalModel().FindTable(createIndexOperation.Table, createIndexOperation.Schema);
+                var nullableColumns = createIndexOperation.Columns
+                    .Where(c => table?.FindColumn(c)?.IsNullable != false)
+                    .ToList();
+
+                builder.Append(" WHERE ");
+                for (var i = 0; i < nullableColumns.Count; i++)
+                {
+                    if (i != 0)
+                    {
+                        builder.Append(" AND ");
+                    }
+
+                    builder
+                        .Append(Dependencies.SqlGenerationHelper.DelimitIdentifier(nullableColumns[i]))
+                        .Append(" IS NOT NULL");
+                }
             }
         }
 
         IndexWithOptions(operation, builder);
     }
 
-    private static void IndexWithOptions(CreateIndexOperation operation, MigrationCommandListBuilder builder)
+    private static void IndexWithOptions(MigrationOperation operation, MigrationCommandListBuilder builder)
     {
         var options = new List<string>();
 
@@ -2266,6 +2297,9 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
     private static string IntegerConstant(long value)
         => string.Format(CultureInfo.InvariantCulture, "{0}", value);
 
+    private static string IntegerConstant(int value)
+        => string.Format(CultureInfo.InvariantCulture, "{0}", value);
+
     private static bool IsMemoryOptimized(Annotatable annotatable, IModel? model, string? schema, string tableName)
         => annotatable[SqlServerAnnotationNames.MemoryOptimized] as bool?
             ?? model?.GetRelationalModel().FindTable(tableName, schema)?[SqlServerAnnotationNames.MemoryOptimized] as bool? == true;
@@ -2277,6 +2311,21 @@ public class SqlServerMigrationsSqlGenerator : MigrationsSqlGenerator
         => operation[SqlServerAnnotationNames.Identity] != null
             || operation[SqlServerAnnotationNames.ValueGenerationStrategy] as SqlServerValueGenerationStrategy?
             == SqlServerValueGenerationStrategy.IdentityColumn;
+
+    private static bool TryParseIdentitySeedIncrement(ColumnOperation operation, out int seed, out int increment)
+    {
+        if (operation[SqlServerAnnotationNames.Identity] is string seedIncrement
+            && seedIncrement.Split(",") is [var seedString, var incrementString]
+            && int.TryParse(seedString, out var seedParsed)
+            && int.TryParse(incrementString, out var incrementParsed))
+        {
+            (seed, increment) = (seedParsed, incrementParsed);
+            return true;
+        }
+
+        (seed, increment) = (0, 0);
+        return false;
+    }
 
     private void GenerateExecWhenIdempotent(
         MigrationCommandListBuilder builder,

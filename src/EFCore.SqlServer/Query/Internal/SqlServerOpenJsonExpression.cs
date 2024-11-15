@@ -20,8 +20,10 @@ namespace Microsoft.EntityFrameworkCore.SqlServer.Query.Internal;
 ///         doing so can result in application failures when updating to a new Entity Framework Core release.
 ///     </para>
 /// </remarks>
-public class SqlServerOpenJsonExpression : TableValuedFunctionExpression, IClonableTableExpressionBase
+public class SqlServerOpenJsonExpression : TableValuedFunctionExpression
 {
+    private static ConstructorInfo? _quotingConstructor, _columnInfoQuotingConstructor;
+
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
     ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
@@ -60,6 +62,11 @@ public class SqlServerOpenJsonExpression : TableValuedFunctionExpression, IClona
         IReadOnlyList<ColumnInfo>? columnInfos = null)
         : base(alias, "OPENJSON", schema: null, builtIn: true, new[] { jsonExpression })
     {
+        if (columnInfos?.Count == 0)
+        {
+            columnInfos = null;
+        }
+
         Path = path;
         ColumnInfos = columnInfos;
     }
@@ -130,12 +137,19 @@ public class SqlServerOpenJsonExpression : TableValuedFunctionExpression, IClona
         SqlExpression jsonExpression,
         IReadOnlyList<PathSegment>? path,
         IReadOnlyList<ColumnInfo>? columnInfos = null)
-        => jsonExpression == JsonExpression
+    {
+        if (columnInfos?.Count == 0)
+        {
+            columnInfos = null;
+        }
+
+        return jsonExpression == JsonExpression
             && (ReferenceEquals(path, Path) || path is not null && Path is not null && path.SequenceEqual(Path))
             && (ReferenceEquals(columnInfos, ColumnInfos)
                 || columnInfos is not null && ColumnInfos is not null && columnInfos.SequenceEqual(ColumnInfos))
                 ? this
                 : new SqlServerOpenJsonExpression(Alias, jsonExpression, path, columnInfos);
+    }
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -143,10 +157,10 @@ public class SqlServerOpenJsonExpression : TableValuedFunctionExpression, IClona
     ///     any release. You should only use it directly in your code with extreme caution and knowing that
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
-    // TODO: Deep clone, see #30982
-    public virtual TableExpressionBase Clone()
+    public override TableExpressionBase Clone(string? alias, ExpressionVisitor cloningExpressionVisitor)
     {
-        var clone = new SqlServerOpenJsonExpression(Alias, JsonExpression, Path, ColumnInfos);
+        var newJsonExpression = (SqlExpression)cloningExpressionVisitor.Visit(JsonExpression);
+        var clone = new SqlServerOpenJsonExpression(alias!, newJsonExpression, Path, ColumnInfos);
 
         foreach (var annotation in GetAnnotations())
         {
@@ -155,6 +169,44 @@ public class SqlServerOpenJsonExpression : TableValuedFunctionExpression, IClona
 
         return clone;
     }
+
+    /// <inheritdoc />
+    public override SqlServerOpenJsonExpression WithAlias(string newAlias)
+        => new(newAlias, JsonExpression, Path, ColumnInfos);
+
+    /// <inheritdoc />
+    public override Expression Quote()
+        => New(
+            _quotingConstructor ??= typeof(SqlServerOpenJsonExpression).GetConstructor(
+            [
+                typeof(string),
+                typeof(SqlExpression),
+                typeof(IReadOnlyList<PathSegment>),
+                typeof(IReadOnlyList<ColumnInfo>)
+            ])!,
+            Constant(Alias, typeof(string)),
+            JsonExpression.Quote(),
+            Path is null
+                ? Constant(null, typeof(IReadOnlyList<PathSegment>))
+                : NewArrayInit(typeof(PathSegment), Path.Select(s => s.Quote())),
+            ColumnInfos is null
+                ? Constant(null, typeof(IReadOnlyList<ColumnInfo>))
+                : NewArrayInit(
+                    typeof(ColumnInfo), ColumnInfos.Select(
+                        ci => New(
+                            _columnInfoQuotingConstructor ??= typeof(ColumnInfo).GetConstructor(
+                            [
+                                typeof(string),
+                                typeof(RelationalTypeMapping),
+                                typeof(IReadOnlyList<PathSegment>),
+                                typeof(bool)
+                            ])!,
+                            Constant(ci.Name),
+                            RelationalExpressionQuotingUtilities.QuoteTypeMapping(ci.TypeMapping),
+                            ci.Path is null
+                                ? Constant(null, typeof(IReadOnlyList<PathSegment>))
+                                : NewArrayInit(typeof(PathSegment), ci.Path.Select(s => s.Quote())),
+                            Constant(ci.AsJson)))));
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to

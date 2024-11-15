@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.BulkUpdates;
 
+#nullable disable
+
 public abstract class BulkUpdatesTestBase<TFixture> : IClassFixture<TFixture>
     where TFixture : class, IBulkUpdatesFixtureBase, new()
 {
@@ -19,7 +21,7 @@ public abstract class BulkUpdatesTestBase<TFixture> : IClassFixture<TFixture>
     protected virtual Expression RewriteServerQueryExpression(Expression serverQueryExpression)
         => serverQueryExpression;
 
-    public static IEnumerable<object[]> IsAsyncData = new[] { new object[] { false }, new object[] { true } };
+    public static IEnumerable<object[]> IsAsyncData = new object[][] { [false], [true] };
 
     public Task AssertDelete<TResult>(
         bool async,

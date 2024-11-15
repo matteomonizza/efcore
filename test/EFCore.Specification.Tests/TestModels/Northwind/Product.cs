@@ -5,13 +5,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Microsoft.EntityFrameworkCore.TestModels.Northwind;
 
+#nullable disable
+
 public class Product
 {
     private int? _productId;
 
     public Product()
     {
-        OrderDetails = new List<OrderDetail>();
+        OrderDetails = [];
     }
 
     public int ProductID

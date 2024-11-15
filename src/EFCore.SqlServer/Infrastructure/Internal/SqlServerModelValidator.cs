@@ -123,14 +123,47 @@ public class SqlServerModelValidator : RelationalModelValidator
         IKey key,
         IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
     {
-        if (entityType.GetTableName() != null
-            && (string?)entityType[RelationalAnnotationNames.MappingStrategy] == RelationalAnnotationNames.TpcMappingStrategy)
+        if (entityType.GetMappingStrategy() == RelationalAnnotationNames.TpcMappingStrategy
+            && entityType.BaseType == null)
         {
             foreach (var storeGeneratedProperty in key.Properties.Where(
                          p => (p.ValueGenerated & ValueGenerated.OnAdd) != 0
                              && p.GetValueGenerationStrategy() == SqlServerValueGenerationStrategy.IdentityColumn))
             {
                 logger.TpcStoreGeneratedIdentityWarning(storeGeneratedProperty);
+            }
+        }
+    }
+
+    /// <inheritdoc/>
+    protected override void ValidateTypeMappings(
+        IModel model,
+        IDiagnosticsLogger<DbLoggerCategory.Model.Validation> logger)
+    {
+        base.ValidateTypeMappings(model, logger);
+
+        foreach (var entityType in model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetFlattenedDeclaredProperties())
+            {
+                var strategy = property.GetValueGenerationStrategy();
+                var propertyType = property.ClrType;
+
+                if (strategy == SqlServerValueGenerationStrategy.IdentityColumn
+                    && !SqlServerPropertyExtensions.IsCompatibleWithValueGeneration(property))
+                {
+                    throw new InvalidOperationException(
+                        SqlServerStrings.IdentityBadType(
+                            property.Name, property.DeclaringType.DisplayName(), propertyType.ShortDisplayName()));
+                }
+
+                if (strategy is SqlServerValueGenerationStrategy.SequenceHiLo or SqlServerValueGenerationStrategy.Sequence
+                    && !SqlServerPropertyExtensions.IsCompatibleWithValueGeneration(property))
+                {
+                    throw new InvalidOperationException(
+                        SqlServerStrings.SequenceBadType(
+                            property.Name, property.DeclaringType.DisplayName(), propertyType.ShortDisplayName()));
+                }
             }
         }
     }

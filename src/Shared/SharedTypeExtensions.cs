@@ -311,7 +311,7 @@ internal static class SharedTypeExtensions
         this Type type,
         Type[]? types)
     {
-        types ??= Array.Empty<Type>();
+        types ??= [];
 
         return type.GetTypeInfo().DeclaredConstructors
             .SingleOrDefault(
@@ -372,6 +372,27 @@ internal static class SharedTypeExtensions
         string name)
         => type.GetMembersInHierarchy().Where(m => m.Name == name);
 
+    public static MethodInfo GetGenericMethod(
+        [DynamicallyAccessedMembers(
+            DynamicallyAccessedMemberTypes.PublicMethods
+            | DynamicallyAccessedMemberTypes.NonPublicMethods)]
+        this Type type,
+        string name,
+        int genericParameterCount,
+        BindingFlags bindingFlags,
+        Func<Type[], Type[], Type[]> parameterGenerator,
+        bool? @override = null)
+        => type.GetMethods(bindingFlags)
+            .Single(
+                mi => mi.Name == name
+                    && ((genericParameterCount == 0 && !mi.IsGenericMethod)
+                        || (mi.IsGenericMethod && mi.GetGenericArguments().Length == genericParameterCount))
+                    && mi.GetParameters().Select(e => e.ParameterType).SequenceEqual(
+                        parameterGenerator(
+                            type.IsGenericType ? type.GetGenericArguments() : Array.Empty<Type>(),
+                            mi.IsGenericMethod ? mi.GetGenericArguments() : Array.Empty<Type>()))
+                    && (!@override.HasValue || (@override.Value == (mi.GetBaseDefinition().DeclaringType != mi.DeclaringType))));
+
     private static readonly Dictionary<Type, object> CommonTypeDictionary = new()
     {
 #pragma warning disable IDE0034 // Simplify 'default' expression - default causes default(object)
@@ -428,7 +449,7 @@ internal static class SharedTypeExtensions
         }
         catch (ReflectionTypeLoadException ex)
         {
-            logger?.TypeLoadingErrorWarning(assembly, ex.Message);
+            logger?.TypeLoadingErrorWarning(assembly, ex);
 
             return ex.Types.Where(t => t != null).Select(IntrospectionExtensions.GetTypeInfo!);
         }
@@ -597,7 +618,18 @@ internal static class SharedTypeExtensions
             yield break;
         }
 
-        yield return type.Namespace!;
+        if (type.IsConstructedGenericType
+            && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+        {
+            foreach (var ns in type.UnwrapNullableType().GetNamespaces())
+            {
+                yield return ns;
+            }
+        }
+        else
+        {
+            yield return type.Namespace!;
+        }
 
         if (type.IsGenericType)
         {
@@ -613,7 +645,7 @@ internal static class SharedTypeExtensions
 
     public static ConstantExpression GetDefaultValueConstant(this Type type)
         => (ConstantExpression)GenerateDefaultValueConstantMethod
-            .MakeGenericMethod(type).Invoke(null, Array.Empty<object>())!;
+            .MakeGenericMethod(type).Invoke(null, [])!;
 
     private static readonly MethodInfo GenerateDefaultValueConstantMethod =
         typeof(SharedTypeExtensions).GetTypeInfo().GetDeclaredMethod(nameof(GenerateDefaultValueConstant))!;

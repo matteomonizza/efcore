@@ -45,7 +45,7 @@ public class DesignTimeFlagTest
                 typeof(TestContext),
                 null,
                 null,
-                new[] { "A", "B" }));
+                ["A", "B"]));
 
         Assert.True(EF.IsDesignTime);
     }
@@ -73,6 +73,4 @@ public class DesignTimeFlagTest
 }
 
 [CollectionDefinition("DesignTimeFlagTest", DisableParallelization = true)]
-public class DesignTimeFlagTestCollection
-{
-}
+public class DesignTimeFlagTestCollection;

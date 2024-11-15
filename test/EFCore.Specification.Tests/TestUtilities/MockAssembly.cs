@@ -3,11 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.TestUtilities;
 
-public class MockAssembly : Assembly
+public class MockAssembly(IEnumerable<TypeInfo> definedTypes, MethodInfo? entryPoint, ReflectionTypeLoadException? exception) : Assembly
 {
-    private readonly IEnumerable<TypeInfo> _definedTypes;
-    private readonly ReflectionTypeLoadException _exception;
-
     public static Assembly Create(params Type[] definedTypes)
         => Create(
             definedTypes,
@@ -15,24 +12,17 @@ public class MockAssembly : Assembly
                 ? null
                 : new MockMethodInfo(definedTypes.First()));
 
-    public static Assembly Create(Type[] definedTypes, MethodInfo entryPoint, ReflectionTypeLoadException exception = null)
+    public static Assembly Create(Type[] definedTypes, MethodInfo? entryPoint, ReflectionTypeLoadException? exception = null)
     {
         var definedTypeInfos = definedTypes.Select(t => t.GetTypeInfo()).ToArray();
 
         return new MockAssembly(definedTypeInfos, entryPoint, exception);
     }
 
-    public MockAssembly(IEnumerable<TypeInfo> definedTypes, MethodInfo entryPoint, ReflectionTypeLoadException exception)
-    {
-        _definedTypes = definedTypes;
-        _exception = exception;
-        EntryPoint = entryPoint;
-    }
-
-    public override MethodInfo EntryPoint { get; }
+    public override MethodInfo? EntryPoint { get; } = entryPoint;
 
     public override IEnumerable<TypeInfo> DefinedTypes
-        => _exception != null ? throw _exception : _definedTypes;
+        => exception != null ? throw exception : definedTypes;
 
     public override AssemblyName GetName()
         => new(nameof(MockAssembly));

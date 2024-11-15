@@ -46,10 +46,10 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Internal
                 newArrayExpression);
 
         /// <summary>
-        ///     Both the connection string and CredentialToken, account key or account endpoint were specified. Specify only one set of connection details.
+        ///     None of connection string, CredentialToken, account key or account endpoint were specified. Specify a set of connection details.
         /// </summary>
-        public static string ConnectionStringConflictingConfiguration
-            => GetString("ConnectionStringConflictingConfiguration");
+        public static string ConnectionInfoMissing
+            => GetString("ConnectionInfoMissing");
 
         /// <summary>
         ///     The entity type '{entityType}' is mapped to the container '{container}' but it is also configured as being contained in property '{property}'.
@@ -308,14 +308,6 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Internal
             => string.Format(
                 GetString("PartitionKeyStoreNameMismatch", nameof(property1), nameof(entityType1), nameof(storeName1), nameof(property2), nameof(entityType2), nameof(storeName2)),
                 property1, entityType1, storeName1, property2, entityType2, storeName2);
-
-        /// <summary>
-        ///     The property '{entityType}.{property}' is configured as an EF8 primitive collection. Primitive collections in a Cosmos model are discovered by convention.
-        /// </summary>
-        public static string PrimitiveCollectionsNotSupported(object? entityType, object? property)
-            => string.Format(
-                GetString("PrimitiveCollectionsNotSupported", nameof(entityType), nameof(property)),
-                entityType, property);
 
         /// <summary>
         ///     Unable to execute a 'ReadItem' query since the 'id' value is missing and cannot be generated.
@@ -585,6 +577,31 @@ namespace Microsoft.EntityFrameworkCore.Cosmos.Internal
             }
 
             return (EventDefinition<string, string?, string, string, string>)definition;
+        }
+
+        /// <summary>
+        ///     Azure Cosmos DB does not support synchronous I/O. Make sure to use and correctly await only async methods when using Entity Framework Core to access Azure Cosmos DB. See https://aka.ms/ef-cosmos-nosync for more information.
+        /// </summary>
+        public static EventDefinition LogSyncNotSupported(IDiagnosticsLogger logger)
+        {
+            var definition = ((Diagnostics.Internal.CosmosLoggingDefinitions)logger.Definitions).LogSyncNotSupported;
+            if (definition == null)
+            {
+                definition = NonCapturingLazyInitializer.EnsureInitialized(
+                    ref ((Diagnostics.Internal.CosmosLoggingDefinitions)logger.Definitions).LogSyncNotSupported,
+                    logger,
+                    static logger => new EventDefinition(
+                        logger.Options,
+                        CosmosEventId.SyncNotSupported,
+                        LogLevel.Error,
+                        "CosmosEventId.SyncNotSupported",
+                        level => LoggerMessage.Define(
+                            level,
+                            CosmosEventId.SyncNotSupported,
+                            _resourceManager.GetString("LogSyncNotSupported")!)));
+            }
+
+            return (EventDefinition)definition;
         }
     }
 }

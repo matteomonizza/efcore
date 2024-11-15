@@ -12,6 +12,8 @@ using System.Runtime.CompilerServices;
 // ReSharper disable NonReadonlyMemberInGetHashCode
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFixture>
     where TFixture : GraphUpdatesTestBase<TFixture>.GraphUpdatesFixtureBase, new()
 {
@@ -614,6 +616,59 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
                     b.HasOne(x => x.Brother).WithOne().HasForeignKey<SneakyUncle32084>(x => x.BrotherId);
                     b.Property(e => e.Id).HasValueGenerator<StableGuidGenerator>();
                 });
+
+            modelBuilder.Entity<CompositeKeyWith<int>>(
+                b =>
+                {
+                    b.HasKey(
+                        e => new
+                        {
+                            e.TargetId,
+                            e.SourceId,
+                            e.PrimaryGroup
+                        });
+                    b.Property(e => e.PrimaryGroup).ValueGeneratedOnAdd();
+                });
+
+            modelBuilder.Entity<CompositeKeyWith<bool>>(
+                b =>
+                {
+                    b.HasKey(
+                        e => new
+                        {
+                            e.TargetId,
+                            e.SourceId,
+                            e.PrimaryGroup
+                        });
+                    b.Property(e => e.PrimaryGroup).ValueGeneratedOnAdd();
+                });
+
+            modelBuilder.Entity<CompositeKeyWith<bool?>>(
+                b =>
+                {
+                    b.HasKey(
+                        e => new
+                        {
+                            e.TargetId,
+                            e.SourceId,
+                            e.PrimaryGroup
+                        });
+                    b.Property(e => e.PrimaryGroup).ValueGeneratedOnAdd();
+                });
+
+            modelBuilder.Entity<BoolOnlyKey<bool>>(
+                b =>
+                {
+                    b.HasKey(e => e.PrimaryGroup);
+                    b.Property(e => e.PrimaryGroup).ValueGeneratedOnAdd();
+                });
+
+            modelBuilder.Entity<BoolOnlyKey<bool?>>(
+                b =>
+                {
+                    b.HasKey(e => e.PrimaryGroup);
+                    b.Property(e => e.PrimaryGroup).ValueGeneratedOnAdd();
+                });
         }
 
         private class StableGuidGenerator : ValueGenerator<Guid>
@@ -785,7 +840,7 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
                 }
             };
 
-        protected override void Seed(PoolableDbContext context)
+        protected override Task SeedAsync(PoolableDbContext context)
         {
             var tracker = new KeyValueEntityTracker();
 
@@ -811,7 +866,7 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
 
             context.Add(new SharedFkDependant { Root = root, Parent = parent });
 
-            context.SaveChanges();
+            return context.SaveChangesAsync();
         }
 
         public class KeyValueEntityTracker
@@ -860,9 +915,9 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
             }
         };
 
-    protected Root LoadRequiredGraph(DbContext context)
+    protected Task<Root> LoadRequiredGraphAsync(DbContext context)
         => QueryRequiredGraph(context)
-            .Single(IsTheRoot);
+            .SingleAsync(IsTheRoot);
 
     protected IOrderedQueryable<Root> QueryRequiredGraph(DbContext context)
         => ModifyQueryRoot(context.Set<Root>())
@@ -870,9 +925,9 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
             .Include(e => e.RequiredSingle).ThenInclude(e => e.Single)
             .OrderBy(e => e.Id);
 
-    protected Root LoadOptionalGraph(DbContext context)
+    protected Task<Root> LoadOptionalGraphAsync(DbContext context)
         => QueryOptionalGraph(context)
-            .Single(IsTheRoot);
+            .SingleAsync(IsTheRoot);
 
     protected IOrderedQueryable<Root> QueryOptionalGraph(DbContext context)
         => ModifyQueryRoot(context.Set<Root>())
@@ -883,9 +938,9 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
             .Include(e => e.OptionalSingleMoreDerived).ThenInclude(e => e.Single)
             .OrderBy(e => e.Id);
 
-    protected Root LoadRequiredNonPkGraph(DbContext context)
+    protected Task<Root> LoadRequiredNonPkGraphAsync(DbContext context)
         => QueryRequiredNonPkGraph(context)
-            .Single(IsTheRoot);
+            .SingleAsync(IsTheRoot);
 
     protected IOrderedQueryable<Root> QueryRequiredNonPkGraph(DbContext context)
         => ModifyQueryRoot(context.Set<Root>())
@@ -897,9 +952,9 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
             .Include(e => e.RequiredNonPkSingleMoreDerived).ThenInclude(e => e.DerivedRoot)
             .OrderBy(e => e.Id);
 
-    protected Root LoadRequiredAkGraph(DbContext context)
+    protected Task<Root> LoadRequiredAkGraphAsync(DbContext context)
         => QueryRequiredAkGraph(context)
-            .Single(IsTheRoot);
+            .SingleAsync(IsTheRoot);
 
     protected IOrderedQueryable<Root> QueryRequiredAkGraph(DbContext context)
         => ModifyQueryRoot(context.Set<Root>())
@@ -909,9 +964,9 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
             .Include(e => e.RequiredSingleAk).ThenInclude(e => e.SingleComposite)
             .OrderBy(e => e.Id);
 
-    protected Root LoadOptionalAkGraph(DbContext context)
+    protected Task<Root> LoadOptionalAkGraphAsync(DbContext context)
         => QueryOptionalAkGraph(context)
-            .Single(IsTheRoot);
+            .SingleAsync(IsTheRoot);
 
     protected IOrderedQueryable<Root> QueryOptionalAkGraph(DbContext context)
         => ModifyQueryRoot(context.Set<Root>())
@@ -923,9 +978,9 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
             .Include(e => e.OptionalSingleAkMoreDerived).ThenInclude(e => e.Single)
             .OrderBy(e => e.Id);
 
-    protected Root LoadRequiredNonPkAkGraph(DbContext context)
+    protected Task<Root> LoadRequiredNonPkAkGraphAsync(DbContext context)
         => QueryRequiredNonPkAkGraph(context)
-            .Single(IsTheRoot);
+            .SingleAsync(IsTheRoot);
 
     protected IOrderedQueryable<Root> QueryRequiredNonPkAkGraph(DbContext context)
         => ModifyQueryRoot(context.Set<Root>())
@@ -937,9 +992,9 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
             .Include(e => e.RequiredNonPkSingleAkMoreDerived).ThenInclude(e => e.DerivedRoot)
             .OrderBy(e => e.Id);
 
-    protected Root LoadOptionalOneToManyGraph(DbContext context)
+    protected Task<Root> LoadOptionalOneToManyGraphAsync(DbContext context)
         => QueryOptionalOneToManyGraph(context)
-            .Single(IsTheRoot);
+            .SingleAsync(IsTheRoot);
 
     protected IOrderedQueryable<Root> QueryOptionalOneToManyGraph(DbContext context)
         => ModifyQueryRoot(context.Set<Root>())
@@ -949,9 +1004,9 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
             .Include(e => e.OptionalChildrenAk).ThenInclude(e => e.CompositeChildren)
             .OrderBy(e => e.Id);
 
-    protected Root LoadRequiredCompositeGraph(DbContext context)
+    protected Task<Root> LoadRequiredCompositeGraphAsync(DbContext context)
         => QueryRequiredCompositeGraph(context)
-            .Single(IsTheRoot);
+            .SingleAsync(IsTheRoot);
 
     protected IOrderedQueryable<Root> QueryRequiredCompositeGraph(DbContext context)
         => ModifyQueryRoot(context.Set<Root>())
@@ -962,7 +1017,7 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
     {
         var newEntities = new HashSet<object>(actualEntries.Select(ne => ne.Entity));
         var missingEntities = expectedEntries.Select(e => e.Entity).Where(e => !newEntities.Contains(e)).ToList();
-        Assert.Equal(Array.Empty<object>(), missingEntities);
+        Assert.Equal([], missingEntities);
         Assert.Equal(expectedEntries.Count, actualEntries.Count);
     }
 
@@ -1989,14 +2044,9 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
             => _id;
     }
 
-    protected class MyDiscriminator
+    protected class MyDiscriminator(int value)
     {
-        public MyDiscriminator(int value)
-        {
-            Value = value;
-        }
-
-        public int Value { get; }
+        public int Value { get; } = value;
 
         public override bool Equals(object obj)
             => throw new InvalidOperationException();
@@ -3186,9 +3236,7 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
         }
     }
 
-    protected class HiddenAreaTask : TaskWithChoices
-    {
-    }
+    protected class HiddenAreaTask : TaskWithChoices;
 
     protected abstract class QuestTask : NotifyingEntity
     {
@@ -3201,9 +3249,7 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
         }
     }
 
-    protected class QuizTask : TaskWithChoices
-    {
-    }
+    protected class QuizTask : TaskWithChoices;
 
     protected class TaskChoice : NotifyingEntity
     {
@@ -4379,9 +4425,7 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
         }
     }
 
-    protected class Beetroot2 : Parsnip2
-    {
-    }
+    protected class Beetroot2 : Parsnip2;
 
     protected class ParentEntity32084 : NotifyingEntity
     {
@@ -4491,6 +4535,44 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
         }
     }
 
+    protected class CompositeKeyWith<T> : NotifyingEntity
+        where T : new()
+    {
+        private Guid _targetId;
+        private Guid _sourceId;
+        private T _primaryGroup;
+
+        public Guid TargetId
+        {
+            get => _targetId;
+            set => SetWithNotify(value, ref _targetId);
+        }
+
+        public Guid SourceId
+        {
+            get => _sourceId;
+            set => SetWithNotify(value, ref _sourceId);
+        }
+
+        public T PrimaryGroup
+        {
+            get => _primaryGroup;
+            set => SetWithNotify(value, ref _primaryGroup);
+        }
+    }
+
+    protected class BoolOnlyKey<T> : NotifyingEntity
+        where T : new()
+    {
+        private T _primaryGroup;
+
+        public T PrimaryGroup
+        {
+            get => _primaryGroup;
+            set => SetWithNotify(value, ref _primaryGroup);
+        }
+    }
+
     protected class NotifyingEntity : INotifyPropertyChanging, INotifyPropertyChanged
     {
         protected void SetWithNotify<T>(T value, ref T field, [CallerMemberName] string propertyName = "")
@@ -4512,15 +4594,6 @@ public abstract partial class GraphUpdatesTestBase<TFixture> : IClassFixture<TFi
 
     protected DbContext CreateContext()
         => Fixture.CreateContext();
-
-    protected virtual void ExecuteWithStrategyInTransaction(
-        Action<DbContext> testOperation,
-        Action<DbContext> nestedTestOperation1 = null,
-        Action<DbContext> nestedTestOperation2 = null,
-        Action<DbContext> nestedTestOperation3 = null)
-        => TestHelpers.ExecuteWithStrategyInTransaction(
-            CreateContext, UseTransaction,
-            testOperation, nestedTestOperation1, nestedTestOperation2, nestedTestOperation3);
 
     protected virtual Task ExecuteWithStrategyInTransactionAsync(
         Func<DbContext, Task> testOperation,

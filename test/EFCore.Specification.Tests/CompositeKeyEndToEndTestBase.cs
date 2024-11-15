@@ -6,6 +6,8 @@ using System.Globalization;
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract class CompositeKeyEndToEndTestBase<TFixture> : IClassFixture<TFixture>
     where TFixture : CompositeKeyEndToEndTestBase<TFixture>.CompositeKeyEndToEndFixtureBase
 {
@@ -198,13 +200,8 @@ public abstract class CompositeKeyEndToEndTestBase<TFixture> : IClassFixture<TFi
         protected override Type ContextType { get; } = typeof(BronieContext);
     }
 
-    protected class BronieContext : PoolableDbContext
+    protected class BronieContext(DbContextOptions options) : PoolableDbContext(options)
     {
-        public BronieContext(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         // ReSharper disable UnusedAutoPropertyAccessor.Local
         public DbSet<Pegasus> Pegasuses { get; set; }
         public DbSet<Unicorn> Unicorns { get; set; }

@@ -5,8 +5,10 @@ using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 
 namespace Microsoft.EntityFrameworkCore.BulkUpdates;
 
+#nullable disable
+
 public class NorthwindBulkUpdatesSqlServerFixture<TModelCustomizer> : NorthwindBulkUpdatesFixture<TModelCustomizer>
-    where TModelCustomizer : IModelCustomizer, new()
+    where TModelCustomizer : ITestModelCustomizer, new()
 {
     protected override ITestStoreFactory TestStoreFactory
         => SqlServerNorthwindTestStoreFactory.Instance;

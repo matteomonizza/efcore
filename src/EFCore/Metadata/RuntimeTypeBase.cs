@@ -258,7 +258,7 @@ public abstract class RuntimeTypeBase : RuntimeAnnotatableBase, IRuntimeTypeBase
         => _properties.TryGetValue(name, out var property)
             ? property
             : null;
-    
+
     /// <summary>
     ///     Gets all scalar properties declared on this type.
     /// </summary>
@@ -515,17 +515,17 @@ public abstract class RuntimeTypeBase : RuntimeAnnotatableBase, IRuntimeTypeBase
 
         static IEnumerable<RuntimeProperty> Create(RuntimeTypeBase type)
         {
-            foreach (var property in type.GetProperties())
+            if (type._baseType != null)
             {
-                yield return property;
-            }
-
-            foreach (var complexProperty in type.GetComplexProperties())
-            {
-                foreach (var property in complexProperty.ComplexType.GetFlattenedProperties())
+                foreach (var property in type._baseType.GetFlattenedProperties())
                 {
                     yield return property;
                 }
+            }
+
+            foreach (var property in type.GetFlattenedDeclaredProperties())
+            {
+                yield return property;
             }
         }
     }

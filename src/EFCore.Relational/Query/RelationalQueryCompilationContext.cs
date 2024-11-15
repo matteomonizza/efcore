@@ -1,6 +1,8 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Microsoft.EntityFrameworkCore.Query.Internal;
+
 namespace Microsoft.EntityFrameworkCore.Query;
 
 /// <summary>
@@ -28,6 +30,7 @@ public class RelationalQueryCompilationContext : QueryCompilationContext
     {
         RelationalDependencies = relationalDependencies;
         QuerySplittingBehavior = RelationalOptionsExtension.Extract(ContextOptions).QuerySplittingBehavior;
+        SqlAliasManager = relationalDependencies.SqlAliasManagerFactory.Create();
     }
 
     /// <summary>
@@ -41,4 +44,9 @@ public class RelationalQueryCompilationContext : QueryCompilationContext
     ///     will be used.
     /// </summary>
     public virtual QuerySplittingBehavior? QuerySplittingBehavior { get; internal set; }
+
+    /// <summary>
+    ///     A manager for SQL aliases, capable of generate uniquified table aliases.
+    /// </summary>
+    public virtual SqlAliasManager SqlAliasManager { get; }
 }

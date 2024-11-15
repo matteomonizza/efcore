@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.BulkUpdates;
 
+#nullable disable
+
 public class NonSharedModelBulkUpdatesSqlServerTest : NonSharedModelBulkUpdatesTestBase
 {
     protected override ITestStoreFactory TestStoreFactory
@@ -20,6 +22,25 @@ public class NonSharedModelBulkUpdatesSqlServerTest : NonSharedModelBulkUpdatesT
             """
 DELETE FROM [o]
 FROM [Owner] AS [o]
+""");
+    }
+
+    public override async Task Delete_with_owned_collection_and_non_natively_translatable_query(bool async)
+    {
+        await base.Delete_with_owned_collection_and_non_natively_translatable_query(async);
+
+        AssertSql(
+            """
+@__p_0='1'
+
+DELETE FROM [o]
+FROM [Owner] AS [o]
+WHERE [o].[Id] IN (
+    SELECT [o0].[Id]
+    FROM [Owner] AS [o0]
+    ORDER BY [o0].[Title]
+    OFFSET @__p_0 ROWS
+)
 """);
     }
 
@@ -65,6 +86,19 @@ FROM [Owner] AS [o]
 """);
     }
 
+    public override async Task Update_non_owned_property_on_entity_with_owned_in_join(bool async)
+    {
+        await base.Update_non_owned_property_on_entity_with_owned_in_join(async);
+
+        AssertSql(
+            """
+UPDATE [o]
+SET [o].[Title] = N'NewValue'
+FROM [Owner] AS [o]
+INNER JOIN [Owner] AS [o0] ON [o].[Id] = [o0].[Id]
+""");
+    }
+
     public override async Task Update_owned_and_non_owned_properties_with_table_sharing(bool async)
     {
         await base.Update_owned_and_non_owned_properties_with_table_sharing(async);
@@ -90,10 +124,19 @@ FROM [Blogs] AS [b]
 """);
     }
 
-    // #31407
-    public override Task Update_non_main_table_in_entity_with_entity_splitting(bool async)
-        => Assert.ThrowsAnyAsync<Exception>(
-            () => base.Update_non_main_table_in_entity_with_entity_splitting(async));
+    public override async Task Update_non_main_table_in_entity_with_entity_splitting(bool async)
+    {
+        await base.Update_non_main_table_in_entity_with_entity_splitting(async);
+
+        AssertSql(
+            """
+UPDATE [b0]
+SET [b0].[Rating] = CAST(LEN([b0].[Title]) AS int),
+    [b0].[Title] = CONVERT(varchar(11), [b0].[Rating])
+FROM [Blogs] AS [b]
+INNER JOIN [BlogsPart1] AS [b0] ON [b].[Id] = [b0].[Id]
+""");
+    }
 
     public override async Task Delete_entity_with_auto_include(bool async)
     {

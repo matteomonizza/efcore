@@ -46,7 +46,7 @@ namespace TestNamespace
             };
             microsoftEntityFrameworkCoreScaffoldingCompiledModelRelationalTestBaseSpatialTypesTableBase.Columns.Add("Point", pointColumnBase);
             relationalModel.DefaultTables.Add("Microsoft.EntityFrameworkCore.Scaffolding.CompiledModelRelationalTestBase+SpatialTypes", microsoftEntityFrameworkCoreScaffoldingCompiledModelRelationalTestBaseSpatialTypesTableBase);
-            var microsoftEntityFrameworkCoreScaffoldingCompiledModelRelationalTestBaseSpatialTypesMappingBase = new TableMappingBase<ColumnMappingBase>(spatialTypes, microsoftEntityFrameworkCoreScaffoldingCompiledModelRelationalTestBaseSpatialTypesTableBase, true);
+            var microsoftEntityFrameworkCoreScaffoldingCompiledModelRelationalTestBaseSpatialTypesMappingBase = new TableMappingBase<ColumnMappingBase>(spatialTypes, microsoftEntityFrameworkCoreScaffoldingCompiledModelRelationalTestBaseSpatialTypesTableBase, null);
             microsoftEntityFrameworkCoreScaffoldingCompiledModelRelationalTestBaseSpatialTypesTableBase.AddTypeMapping(microsoftEntityFrameworkCoreScaffoldingCompiledModelRelationalTestBaseSpatialTypesMappingBase, false);
             defaultTableMappings.Add(microsoftEntityFrameworkCoreScaffoldingCompiledModelRelationalTestBaseSpatialTypesMappingBase);
             RelationalModel.CreateColumnMapping((ColumnBase<ColumnMappingBase>)idColumnBase, spatialTypes.FindProperty("Id")!, microsoftEntityFrameworkCoreScaffoldingCompiledModelRelationalTestBaseSpatialTypesMappingBase);
@@ -64,14 +64,14 @@ namespace TestNamespace
             spatialTypesTable.Columns.Add("Point", pointColumn);
             var pK_SpatialTypes = new UniqueConstraint("PK_SpatialTypes", spatialTypesTable, new[] { idColumn });
             spatialTypesTable.PrimaryKey = pK_SpatialTypes;
-            var pK_SpatialTypesUc = RelationalModel.GetKey(this,
+            var pK_SpatialTypesKey = RelationalModel.GetKey(this,
                 "Microsoft.EntityFrameworkCore.Scaffolding.CompiledModelRelationalTestBase+SpatialTypes",
                 new[] { "Id" });
-            pK_SpatialTypes.MappedKeys.Add(pK_SpatialTypesUc);
-            RelationalModel.GetOrCreateUniqueConstraints(pK_SpatialTypesUc).Add(pK_SpatialTypes);
+            pK_SpatialTypes.MappedKeys.Add(pK_SpatialTypesKey);
+            RelationalModel.GetOrCreateUniqueConstraints(pK_SpatialTypesKey).Add(pK_SpatialTypes);
             spatialTypesTable.UniqueConstraints.Add("PK_SpatialTypes", pK_SpatialTypes);
             relationalModel.Tables.Add(("SpatialTypes", null), spatialTypesTable);
-            var spatialTypesTableMapping = new TableMapping(spatialTypes, spatialTypesTable, true);
+            var spatialTypesTableMapping = new TableMapping(spatialTypes, spatialTypesTable, null);
             spatialTypesTable.AddTypeMapping(spatialTypesTableMapping, false);
             tableMappings.Add(spatialTypesTableMapping);
             RelationalModel.CreateColumnMapping(idColumn, spatialTypes.FindProperty("Id")!, spatialTypesTableMapping);

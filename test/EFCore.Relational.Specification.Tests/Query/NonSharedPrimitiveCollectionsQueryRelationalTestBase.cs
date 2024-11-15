@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class NonSharedPrimitiveCollectionsQueryRelationalTestBase : NonSharedPrimitiveCollectionsQueryTestBase
 {
     // On relational databases, byte[] gets mapped to a special binary data type, which isn't queryable as a regular primitive collection.
@@ -18,9 +20,9 @@ public abstract class NonSharedPrimitiveCollectionsQueryRelationalTestBase : Non
             seed: context =>
             {
                 context.AddRange(
-                    new TestOwner { Owned = new TestOwned { Strings = new[] { "foo", "bar" } } },
-                    new TestOwner { Owned = new TestOwned { Strings = new[] { "baz" } } });
-                context.SaveChanges();
+                    new TestOwner { Owned = new TestOwned { Strings = ["foo", "bar"] } },
+                    new TestOwner { Owned = new TestOwned { Strings = ["baz"] } });
+                return context.SaveChangesAsync();
             });
 
         await using var context = contextFactory.CreateContext();

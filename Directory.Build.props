@@ -10,6 +10,7 @@
         ( $(MSBuildProjectName.EndsWith('.Tests')) OR
           $(MSBuildProjectName.EndsWith('.FunctionalTests'))) ">true</IsUnitTestProject>
     <IsUnitTestProject Condition=" '$(IsUnitTestProject)' == '' ">false</IsUnitTestProject>
+    <SolutionRoot>$(MSBuildThisFileDirectory)</SolutionRoot>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -37,7 +38,8 @@
     <PackageTags>Entity Framework Core;entity-framework-core;EF;Data;O/RM;EntityFramework;EntityFrameworkCore;EFCore</PackageTags>
     <Product>Microsoft Entity Framework Core</Product>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <LangVersion>11.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
     <DebugType>portable</DebugType>
     <PackageProjectUrl>https://docs.microsoft.com/ef/core/</PackageProjectUrl>
     <PackageIconFullPath>$(MSBuildThisFileDirectory)logo\ef-logo.png</PackageIconFullPath>

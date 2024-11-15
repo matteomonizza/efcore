@@ -105,6 +105,8 @@ namespace TestNamespace
                 mappingInfo: new RelationalTypeMappingInfo(
                     storeTypeName: "nchar(256)",
                     size: 256,
+                    unicode: true,
+                    fixedLength: true,
                     dbType: System.Data.DbType.StringFixedLength));
 
             getCount.TypeMapping = IntTypeMapping.Default.Clone(
@@ -208,6 +210,8 @@ namespace TestNamespace
                 mappingInfo: new RelationalTypeMappingInfo(
                     storeTypeName: "nchar(256)",
                     size: 256,
+                    unicode: true,
+                    fixedLength: true,
                     dbType: System.Data.DbType.StringFixedLength));
 
             isDateStatic.TypeMapping = SqlServerBoolTypeMapping.Default.Clone(
@@ -247,7 +251,7 @@ namespace TestNamespace
             };
             microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase.Columns.Add("Blob", blobColumnBase);
             relationalModel.DefaultTables.Add("Microsoft.EntityFrameworkCore.Scaffolding.CompiledModelTestBase+Data", microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase);
-            var microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataMappingBase = new TableMappingBase<ColumnMappingBase>(data, microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase, true);
+            var microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataMappingBase = new TableMappingBase<ColumnMappingBase>(data, microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase, null);
             microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataTableBase.AddTypeMapping(microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataMappingBase, false);
             defaultTableMappings.Add(microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataMappingBase);
             RelationalModel.CreateColumnMapping((ColumnBase<ColumnMappingBase>)blobColumnBase, data.FindProperty("Blob")!, microsoftEntityFrameworkCoreScaffoldingCompiledModelTestBaseDataMappingBase);
@@ -264,7 +268,7 @@ namespace TestNamespace
             relationalModel.Functions.Add(
                 ("GetAllData", "dbo", new string[0]),
                 getAllDataFunction);
-            var getAllDataFunctionMapping = new FunctionMapping(data, getAllDataFunction, getAllData, true);
+            var getAllDataFunctionMapping = new FunctionMapping(data, getAllDataFunction, getAllData, null);
             getAllDataFunction.AddTypeMapping(getAllDataFunctionMapping, false);
             functionMappings.Add(getAllDataFunctionMapping);
             getAllDataFunctionMapping.IsDefaultFunctionMapping = true;
@@ -280,7 +284,7 @@ namespace TestNamespace
             relationalModel.Functions.Add(
                 ("GetData", "dbo", new[] { "int" }),
                 getDataFunction);
-            var getDataFunctionMapping = new FunctionMapping(data, getDataFunction, getData, true);
+            var getDataFunctionMapping = new FunctionMapping(data, getDataFunction, getData, null);
             getDataFunction.AddTypeMapping(getDataFunctionMapping, false);
             functionMappings.Add(getDataFunctionMapping);
             RelationalModel.CreateFunctionColumnMapping(blobFunctionColumn0, data.FindProperty("Blob")!, getDataFunctionMapping);
@@ -291,7 +295,7 @@ namespace TestNamespace
             @object.SetRuntimeAnnotation("Relational:DefaultMappings", defaultTableMappings0);
             var objectTableBase = new TableBase("object", null, relationalModel);
             relationalModel.DefaultTables.Add("object", objectTableBase);
-            var objectMappingBase = new TableMappingBase<ColumnMappingBase>(@object, objectTableBase, true);
+            var objectMappingBase = new TableMappingBase<ColumnMappingBase>(@object, objectTableBase, null);
             objectTableBase.AddTypeMapping(objectMappingBase, false);
             defaultTableMappings0.Add(objectMappingBase);
 
@@ -302,7 +306,7 @@ namespace TestNamespace
             relationalModel.Functions.Add(
                 ("GetBlobs", "dbo", new string[0]),
                 getBlobsFunction);
-            var getBlobsFunctionMapping = new FunctionMapping(@object, getBlobsFunction, getBlobs, true);
+            var getBlobsFunctionMapping = new FunctionMapping(@object, getBlobsFunction, getBlobs, null);
             getBlobsFunction.AddTypeMapping(getBlobsFunctionMapping, false);
             functionMappings0.Add(getBlobsFunctionMapping);
             getBlobsFunctionMapping.IsDefaultFunctionMapping = true;

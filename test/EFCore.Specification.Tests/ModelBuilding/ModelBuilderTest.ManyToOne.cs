@@ -5,15 +5,12 @@
 
 namespace Microsoft.EntityFrameworkCore.ModelBuilding;
 
+#nullable disable
+
 public abstract partial class ModelBuilderTest
 {
-    public abstract class ManyToOneTestBase : ModelBuilderTestBase
+    public abstract class ManyToOneTestBase(ModelBuilderFixtureBase fixture) : ModelBuilderTestBase(fixture)
     {
-        public ManyToOneTestBase(ModelBuilderFixtureBase fixture)
-            : base(fixture)
-        {
-        }
-
         [ConditionalFact]
         public virtual void Finds_existing_navigations_and_uses_associated_FK()
         {
@@ -1204,7 +1201,7 @@ public abstract partial class ModelBuilderTest
         {
             public Guid Id { get; set; }
             private readonly string _email = string.Empty;
-            private readonly List<Profile13300> _profiles = new();
+            private readonly List<Profile13300> _profiles = [];
         }
 
         protected class Profile13300

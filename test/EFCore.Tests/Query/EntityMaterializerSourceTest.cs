@@ -20,7 +20,7 @@ public class EntityMaterializerSourceTest
     {
         var entityType = CreateConventionalModelBuilder().Model.AddEntityType(typeof(SomeAbstractEntity));
         var source = (IEntityMaterializerSource)new EntityMaterializerSource(
-            new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>()));
+            new EntityMaterializerSourceDependencies([]));
 
         Assert.Equal(
             CoreStrings.CannotMaterializeAbstractType(nameof(SomeAbstractEntity)),
@@ -54,12 +54,12 @@ public class EntityMaterializerSourceTest
 
         var factory = GetMaterializer(
             new EntityMaterializerSource(
-                new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>())), entityType, useParameters);
+                new EntityMaterializerSourceDependencies([])), entityType, useParameters);
 
         var gu = Guid.NewGuid();
         var entity = (SomeEntity)factory(
             new MaterializationContext(
-                new ValueBuffer(new object[] { 77, SomeEnum.EnumValue, "Fu", gu, SomeEnum.EnumValue }),
+                new ValueBuffer([77, SomeEnum.EnumValue, "Fu", gu, SomeEnum.EnumValue]),
                 context));
 
         Assert.Equal(77, entity.Id);
@@ -98,12 +98,12 @@ public class EntityMaterializerSourceTest
 
         var factory = GetMaterializer(
             new EntityMaterializerSource(
-                new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>())), entityType, useParameters);
+                new EntityMaterializerSourceDependencies([])), entityType, useParameters);
 
         var gu = Guid.NewGuid();
         var entity = (SomeEntity)factory(
             new MaterializationContext(
-                new ValueBuffer(new object[] { 77, SomeEnum.EnumValue, "Fu", gu, SomeEnum.EnumValue }),
+                new ValueBuffer([77, SomeEnum.EnumValue, "Fu", gu, SomeEnum.EnumValue]),
                 context));
 
         Assert.Equal(77, entity.Id);
@@ -146,12 +146,12 @@ public class EntityMaterializerSourceTest
 
         var factory = GetMaterializer(
             new EntityMaterializerSource(
-                new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>())), entityType, useParameters);
+                new EntityMaterializerSourceDependencies([])), entityType, useParameters);
 
         var gu = Guid.NewGuid();
         var entity = (SomeEntity)factory(
             new MaterializationContext(
-                new ValueBuffer(new object[] { 77, SomeEnum.EnumValue, "Fu", gu, SomeEnum.EnumValue }),
+                new ValueBuffer([77, SomeEnum.EnumValue, "Fu", gu, SomeEnum.EnumValue]),
                 context));
 
         Assert.Equal(77, entity.Id);
@@ -187,12 +187,12 @@ public class EntityMaterializerSourceTest
 
         var factory = GetMaterializer(
             new EntityMaterializerSource(
-                new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>())), entityType, useParameters);
+                new EntityMaterializerSourceDependencies([])), entityType, useParameters);
 
         var gu = Guid.NewGuid();
         var entity = (SomeEntity)factory(
             new MaterializationContext(
-                new ValueBuffer(new object[] { 77, SomeEnum.EnumValue, "Fu", gu, SomeEnum.EnumValue }),
+                new ValueBuffer([77, SomeEnum.EnumValue, "Fu", gu, SomeEnum.EnumValue]),
                 context));
 
         Assert.Equal(77, entity.Id);
@@ -225,12 +225,12 @@ public class EntityMaterializerSourceTest
 
         var factory = GetMaterializer(
             new EntityMaterializerSource(
-                new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>())), entityType, useParameters);
+                new EntityMaterializerSourceDependencies([])), entityType, useParameters);
 
         var gu = Guid.NewGuid();
         var entity = (SomeEntity)factory(
             new MaterializationContext(
-                new ValueBuffer(new object[] { 77, SomeEnum.EnumValue, "Fu", gu, SomeEnum.EnumValue }),
+                new ValueBuffer([77, SomeEnum.EnumValue, "Fu", gu, SomeEnum.EnumValue]),
                 context));
 
         Assert.Equal(77, entity.Id);
@@ -262,12 +262,12 @@ public class EntityMaterializerSourceTest
 
         var factory = GetMaterializer(
             new EntityMaterializerSource(
-                new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>())), entityType, useParameters);
+                new EntityMaterializerSourceDependencies([])), entityType, useParameters);
 
         var gu = Guid.NewGuid();
         var entity = (SomeEntityWithFields)factory(
             new MaterializationContext(
-                new ValueBuffer(new object[] { 77, SomeEnum.EnumValue, "Fu", gu, null }),
+                new ValueBuffer([77, SomeEnum.EnumValue, "Fu", gu, null]),
                 context));
 
         Assert.Equal(77, entity.Id);
@@ -294,11 +294,11 @@ public class EntityMaterializerSourceTest
 
         var factory = GetMaterializer(
             new EntityMaterializerSource(
-                new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>())), entityType, useParameters);
+                new EntityMaterializerSourceDependencies([])), entityType, useParameters);
 
         var entity = (SomeEntity)factory(
             new MaterializationContext(
-                new ValueBuffer(new object[] { 77, null, null }),
+                new ValueBuffer([77, null, null]),
                 context));
 
         Assert.Equal(77, entity.Id);
@@ -329,12 +329,12 @@ public class EntityMaterializerSourceTest
 
         var factory = GetMaterializer(
             new EntityMaterializerSource(
-                new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>())), entityType, useParameters);
+                new EntityMaterializerSourceDependencies([])), entityType, useParameters);
 
         var gu = Guid.NewGuid();
         var entity = (SomeEntity)factory(
             new MaterializationContext(
-                new ValueBuffer(new object[] { 77, "Fu", "FuS", gu, Guid.NewGuid(), 777 }),
+                new ValueBuffer([77, "Fu", "FuS", gu, Guid.NewGuid(), 777]),
                 context));
 
         Assert.Equal(77, entity.Id);
@@ -364,7 +364,7 @@ public class EntityMaterializerSourceTest
         using var context = new FactoryContext();
 
         var entityType = context.Model.FindEntityType(typeof(Parameterless))!;
-        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>()));
+        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies([]));
         var instance1 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
         var instance2 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
 
@@ -379,7 +379,7 @@ public class EntityMaterializerSourceTest
         using var context = new FactoryContext();
 
         var entityType = context.Model.FindEntityType(typeof(WithLazyLoader))!;
-        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>()));
+        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies([]));
         var instance1 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
         var instance2 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
 
@@ -396,7 +396,7 @@ public class EntityMaterializerSourceTest
         using var context = new FactoryContext();
 
         var entityType = context.Model.FindEntityType(typeof(WithLazyLoaderDelegate))!;
-        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>()));
+        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies([]));
         var instance1 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
         var instance2 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
 
@@ -413,7 +413,7 @@ public class EntityMaterializerSourceTest
         using var context = new FactoryContext();
 
         var entityType = context.Model.FindEntityType(typeof(WithEntityType))!;
-        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>()));
+        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies([]));
         var instance1 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
         var instance2 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
 
@@ -430,7 +430,7 @@ public class EntityMaterializerSourceTest
         using var context = new FactoryContext();
 
         var entityType = context.Model.FindEntityType(typeof(WithContext))!;
-        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>()));
+        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies([]));
         var instance1 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
         var instance2 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
 
@@ -447,7 +447,7 @@ public class EntityMaterializerSourceTest
         using var context = new FactoryContext();
 
         var entityType = context.Model.FindEntityType(typeof(WithServiceAndWithProperties))!;
-        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>()));
+        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies([]));
         var instance1 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
         var instance2 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
 
@@ -464,7 +464,7 @@ public class EntityMaterializerSourceTest
         using var context = new FactoryContext();
 
         var entityType = context.Model.FindEntityType(typeof(ParameterlessAndWithProperties))!;
-        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>()));
+        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies([]));
         var instance1 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
         var instance2 = source.GetEmptyMaterializer(entityType)(new MaterializationContext(ValueBuffer.Empty, context));
 
@@ -479,7 +479,7 @@ public class EntityMaterializerSourceTest
         using var context = new FactoryContext();
 
         var entityType = context.Model.FindEntityType(typeof(WithProperties))!;
-        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies(Array.Empty<ISingletonInterceptor>()));
+        var source = new EntityMaterializerSource(new EntityMaterializerSourceDependencies([]));
 
         Assert.Equal(
             CoreStrings.NoParameterlessConstructor(nameof(WithProperties)),
@@ -516,15 +516,11 @@ public class EntityMaterializerSourceTest
         public int Id { get; set; }
     }
 
-    private class WithProperties
+    private class WithProperties(int id)
     {
-        public WithProperties(int id)
-        {
-            Id = id;
-        }
 
         // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
-        public int Id { get; set; }
+        public int Id { get; set; } = id;
     }
 
     private class ParameterlessAndWithProperties
@@ -542,64 +538,39 @@ public class EntityMaterializerSourceTest
         public int Id { get; set; }
     }
 
-    private class WithLazyLoader
+    private class WithLazyLoader(ILazyLoader lazyLoader)
     {
-        public WithLazyLoader(ILazyLoader lazyLoader)
-        {
-            LazyLoader = lazyLoader;
-        }
-
         public int Id { get; set; }
-        public ILazyLoader LazyLoader { get; }
+        public ILazyLoader LazyLoader { get; } = lazyLoader;
     }
 
-    private class WithLazyLoaderDelegate
+    private class WithLazyLoaderDelegate(Action<object, string> lazyLoader)
     {
-        public WithLazyLoaderDelegate(Action<object, string> lazyLoader)
-        {
-            LazyLoader = lazyLoader;
-        }
-
         public int Id { get; set; }
-        public Action<object, string> LazyLoader { get; }
+        public Action<object, string> LazyLoader { get; } = lazyLoader;
     }
 
-    private class WithEntityType
+    private class WithEntityType(IEntityType entityType)
     {
-        public WithEntityType(IEntityType entityType)
-        {
-            EntityType = entityType;
-        }
-
         public int Id { get; set; }
-        public IEntityType EntityType { get; }
+        public IEntityType EntityType { get; } = entityType;
     }
 
-    private class WithContext
+    private class WithContext(DbContext context)
     {
-        public WithContext(DbContext context)
-        {
-            Context = context;
-        }
-
         public int Id { get; set; }
-        public DbContext Context { get; }
+        public DbContext Context { get; } = context;
     }
 
-    private class WithServiceAndWithProperties
+    private class WithServiceAndWithProperties(ILazyLoader lazyLoader)
     {
-        public WithServiceAndWithProperties(ILazyLoader lazyLoader)
-        {
-            LazyLoader = lazyLoader;
-        }
-
         public WithServiceAndWithProperties(ILazyLoader lazyLoader, int id)
             : this(lazyLoader)
         {
             Id = id;
         }
 
-        public ILazyLoader LazyLoader { get; }
+        public ILazyLoader LazyLoader { get; } = lazyLoader;
 
         // ReSharper disable once AutoPropertyCanBeMadeGetOnly.Local
         public int Id { get; set; }
@@ -625,18 +596,11 @@ public class EntityMaterializerSourceTest
                 _contextParameter)
             .Compile();
 
-    private abstract class SomeAbstractEntity
-    {
-    }
+    private abstract class SomeAbstractEntity;
 
-    private class SomeEntityContext : DbContext
+    private class SomeEntityContext(Action<ModelBuilder> builderAction) : DbContext
     {
-        private readonly Action<ModelBuilder> _builderAction;
-
-        public SomeEntityContext(Action<ModelBuilder> builderAction)
-        {
-            _builderAction = builderAction;
-        }
+        private readonly Action<ModelBuilder> _builderAction = builderAction;
 
         protected internal override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
             => optionsBuilder
@@ -767,17 +731,12 @@ public class EntityMaterializerSourceTest
         EnumValue
     }
 
-    private class EntityWithoutParameterlessConstructor
+    private class EntityWithoutParameterlessConstructor(int value)
     {
         public static readonly PropertyInfo IdProperty = typeof(EntityWithoutParameterlessConstructor).GetProperty("Id");
 
         public int Id { get; set; }
 
-        private readonly int _value;
-
-        public EntityWithoutParameterlessConstructor(int value)
-        {
-            _value = value;
-        }
+        private readonly int _value = value;
     }
 }

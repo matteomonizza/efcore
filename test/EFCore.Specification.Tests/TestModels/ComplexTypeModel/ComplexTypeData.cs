@@ -3,8 +3,6 @@
 
 namespace Microsoft.EntityFrameworkCore.TestModels.ComplexTypeModel;
 
-#nullable enable
-
 public class ComplexTypeData : ISetSource
 {
     private readonly IReadOnlyList<Customer> _customers;
@@ -52,7 +50,8 @@ public class ComplexTypeData : ISetSource
         {
             AddressLine1 = "804 S. Lakeshore Road",
             ZipCode = 38654,
-            Country = new Country { FullName = "United States", Code = "US" }
+            Country = new Country { FullName = "United States", Code = "US" },
+            Tags = new List<string> { "foo", "bar" }
         };
 
         var customer1 = new Customer
@@ -71,13 +70,20 @@ public class ComplexTypeData : ISetSource
             {
                 AddressLine1 = "72 Hickory Rd.",
                 ZipCode = 07728,
-                Country = new Country { FullName = "Germany", Code = "DE" }
+                Country = new Country { FullName = "Germany", Code = "DE" },
+                Tags = new List<string> { "baz" }
             },
             BillingAddress = new Address
             {
                 AddressLine1 = "79 Main St.",
                 ZipCode = 29293,
-                Country = new Country { FullName = "Germany", Code = "DE" }
+                Country = new Country { FullName = "Germany", Code = "DE" },
+                Tags = new List<string>
+                {
+                    "a1",
+                    "a2",
+                    "a3"
+                }
             }
         };
 
@@ -85,7 +91,8 @@ public class ComplexTypeData : ISetSource
         {
             AddressLine1 = "79 Main St.",
             ZipCode = 29293,
-            Country = new Country { FullName = "Germany", Code = "DE" }
+            Country = new Country { FullName = "Germany", Code = "DE" },
+            Tags = new List<string> { "foo", "moo" }
         };
 
         var customer3 = new Customer
@@ -224,7 +231,7 @@ public class ComplexTypeData : ISetSource
         };
     }
 
-    public static void Seed(PoolableDbContext context)
+    public static Task SeedAsync(PoolableDbContext context)
     {
         var customers = CreateCustomers();
         var customerGroups = CreateCustomerGroups(customers);
@@ -236,6 +243,6 @@ public class ComplexTypeData : ISetSource
         context.AddRange(valuedCustomers);
         context.AddRange(valuedCustomerGroups);
 
-        context.SaveChanges();
+        return context.SaveChangesAsync();
     }
 }

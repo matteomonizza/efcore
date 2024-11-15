@@ -85,17 +85,11 @@ public abstract class ModelValidatorTestBase
         public ICollection<A> ManyAs { get; set; }
     }
 
-    protected class C : A
-    {
-    }
+    protected class C : A;
 
-    protected class D : A
-    {
-    }
+    protected class D : A;
 
-    protected class F : D
-    {
-    }
+    protected class F : D;
 
     protected class G
     {
@@ -109,16 +103,48 @@ public abstract class ModelValidatorTestBase
         public A A { get; set; }
     }
 
-    protected abstract class Abstract : A
-    {
-    }
+    protected abstract class Abstract : A;
 
     // ReSharper disable once UnusedTypeParameter
-    protected class Generic<T> : Abstract
+    protected class Generic<T> : Abstract;
+
+#nullable enable
+    protected class BaseEntity
+    {
+        public int Id { get; set; }
+    }
+
+    protected class ChildA : BaseEntity
+    {
+        public OwnedType OwnedType { get; set; } = null!;
+    }
+
+    protected class ChildB : BaseEntity
     {
     }
 
-    public class SampleEntity
+    protected class ChildC : BaseEntity
+    {
+    }
+
+    protected class ChildD : BaseEntity
+    {
+    }
+
+    [Owned]
+    protected class OwnedType
+    {
+        public NestedOwnedType NestedOwnedType { get; set; } = null!;
+    }
+
+    [Owned]
+    protected class NestedOwnedType
+    {
+    }
+
+#nullable restore
+
+    protected class SampleEntity
     {
         public int Id { get; set; }
         public int Number { get; set; }
@@ -131,29 +157,27 @@ public abstract class ModelValidatorTestBase
         public ICollection<SampleEntity> OtherSamples { get; set; }
     }
 
-    public class AnotherSampleEntity
+    protected class AnotherSampleEntity
     {
         public int Id { get; set; }
         public ReferencedEntity ReferencedEntity { get; set; }
     }
 
-    public class ReferencedEntity
+    protected class ReferencedEntity
     {
         public int Id { get; set; }
         public int SampleEntityId { get; set; }
     }
 
-    public class SampleEntityMinimal
+    protected class SampleEntityMinimal
     {
         public int Id { get; set; }
         public ReferencedEntityMinimal ReferencedEntity { get; set; }
     }
 
-    public class ReferencedEntityMinimal
-    {
-    }
+    protected class ReferencedEntityMinimal;
 
-    public class AnotherSampleEntityMinimal
+    protected class AnotherSampleEntityMinimal
     {
         public int Id { get; set; }
         public ReferencedEntityMinimal ReferencedEntity { get; set; }
@@ -373,7 +397,7 @@ public abstract class ModelValidatorTestBase
         public PrincipalFour PrincipalFour { get; set; }
     }
 
-    public class Blog
+    protected class Blog
     {
         public int BlogId { get; set; }
         public bool IsDeleted { get; set; }
@@ -381,14 +405,14 @@ public abstract class ModelValidatorTestBase
         public List<BlogOwnedEntity> BlogOwnedEntities { get; set; }
     }
 
-    public class BlogOwnedEntity
+    protected class BlogOwnedEntity
     {
         public int BlogOwnedEntityId { get; set; }
         public int BlogId { get; set; }
         public Blog Blog { get; set; }
     }
 
-    public class Post
+    protected class Post
     {
         public int PostId { get; set; }
         public int BlogId { get; set; }
@@ -397,13 +421,13 @@ public abstract class ModelValidatorTestBase
         public Blog Blog { get; set; }
     }
 
-    public class PicturePost : Post
+    protected class PicturePost : Post
     {
         public string PictureUrl { get; set; }
         public List<Picture> Pictures { get; set; }
     }
 
-    public class Picture
+    protected class Picture
     {
         public int PictureId { get; set; }
         public bool IsDeleted { get; set; }

@@ -117,7 +117,7 @@ public class RuntimeModel : RuntimeAnnotatableBase, IRuntimeModel
     /// <param name="unnamedIndexCount">The expected number of declared unnamed indexes for this entity type.</param>
     /// <param name="namedIndexCount">The expected number of declared named indexes for this entity type.</param>
     /// <param name="keyCount">The expected number of declared keys for this entity type.</param>
-    /// <param name="triggerPropertyCount">The expected number of declared triggers for this entity type.</param>
+    /// <param name="triggerCount">The expected number of declared triggers for this entity type.</param>
     /// <returns>The new entity type.</returns>
     public virtual RuntimeEntityType AddEntityType(
         string name,
@@ -139,7 +139,7 @@ public class RuntimeModel : RuntimeAnnotatableBase, IRuntimeModel
         int unnamedIndexCount = 0,
         int namedIndexCount = 0,
         int keyCount = 0,
-        int triggerPropertyCount = 0)
+        int triggerCount = 0)
     {
         var entityType = new RuntimeEntityType(
             name,
@@ -157,12 +157,12 @@ public class RuntimeModel : RuntimeAnnotatableBase, IRuntimeModel
             complexPropertyCount: complexPropertyCount,
             foreignKeyCount: foreignKeyCount,
             navigationCount: navigationCount,
-            skipNavigationPropertyCount: skipNavigationCount,
+            skipNavigationCount: skipNavigationCount,
             servicePropertyCount: servicePropertyCount,
             unnamedIndexCount: unnamedIndexCount,
             namedIndexCount: namedIndexCount,
             keyCount: keyCount,
-            triggerPropertyCount: triggerPropertyCount);
+            triggerCount: triggerCount);
 
         if (sharedClrType)
         {
@@ -189,6 +189,7 @@ public class RuntimeModel : RuntimeAnnotatableBase, IRuntimeModel
     public virtual RuntimeEntityType GetOrAddAdHocEntityType(RuntimeEntityType entityType)
     {
         entityType.Reparent(this);
+        entityType.AddRuntimeAnnotation(CoreAnnotationNames.AdHocModel, true);
         return _adHocEntityTypes.GetOrAdd(((IReadOnlyTypeBase)entityType).ClrType, entityType);
     }
 
@@ -246,6 +247,16 @@ public class RuntimeModel : RuntimeAnnotatableBase, IRuntimeModel
             ? result.Concat(sharedTypes.OrderBy(n => n.Name, StringComparer.Ordinal))
             : result;
     }
+
+    /// <summary>
+    ///     Gets all entity types defined in the model.
+    /// </summary>
+    /// <remarks>
+    ///     See <see href="https://aka.ms/efcore-docs-modeling">Modeling entity types and relationships</see> for more information and examples.
+    /// </remarks>
+    /// <returns>All entity types defined in the model.</returns>
+    private IEnumerable<RuntimeEntityType> GetEntityTypes()
+        => _entityTypes.Values.OrderBy(e => e.Name, StringComparer.Ordinal);
 
     /// <summary>
     ///     Adds configuration for a scalar type.
@@ -392,12 +403,12 @@ public class RuntimeModel : RuntimeAnnotatableBase, IRuntimeModel
     /// <inheritdoc />
     [DebuggerStepThrough]
     IEnumerable<IReadOnlyEntityType> IReadOnlyModel.GetEntityTypes()
-        => _entityTypes.Values.OrderBy(e => e.Name, StringComparer.Ordinal);
+        => GetEntityTypes();
 
     /// <inheritdoc />
     [DebuggerStepThrough]
     IEnumerable<IEntityType> IModel.GetEntityTypes()
-        => _entityTypes.Values.OrderBy(e => e.Name, StringComparer.Ordinal);
+        => GetEntityTypes();
 
     /// <inheritdoc />
     [DebuggerStepThrough]

@@ -77,7 +77,7 @@ public class RelationalEventIdTest : EventIdTestBase
         TestEventLogging(
             typeof(RelationalEventId),
             typeof(RelationalLoggerExtensions),
-            new[] { typeof(IRelationalConnectionDiagnosticsLogger), typeof(IRelationalCommandDiagnosticsLogger) },
+            [typeof(IRelationalConnectionDiagnosticsLogger), typeof(IRelationalCommandDiagnosticsLogger)],
             new TestRelationalLoggingDefinitions(),
             fakeFactories,
             services => FakeRelationalOptionsExtension.AddEntityFrameworkRelationalDatabase(services),
@@ -110,9 +110,7 @@ public class RelationalEventIdTest : EventIdTestBase
             });
     }
 
-    private class FakeDbContext : DbContext
-    {
-    }
+    private class FakeDbContext : DbContext;
 
     [Migration("00000000000000_FakeMigration")]
     private class FakeMigration : Migration
@@ -127,6 +125,9 @@ public class RelationalEventIdTest : EventIdTestBase
             : base(typeof(object), null)
         {
         }
+
+        public override Expression Quote()
+            => throw new NotSupportedException();
 
         protected override void Print(ExpressionPrinter expressionPrinter)
             => expressionPrinter.Append("FakeSqlExpression");

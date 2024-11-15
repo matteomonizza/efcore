@@ -359,7 +359,7 @@ public class RelationalCommandTest
             CreateOptions());
 
         DbDataReader CreateDbDataReader()
-            => new FakeDbDataReader(new[] { "Id", "Name" }, new List<object[]> { new object[] { 1, "Foo" }, new object[] { 2, "Bar" } });
+            => new FakeDbDataReader(["Id", "Name"], new List<object[]> { new object[] { 1, "Foo" }, new object[] { 2, "Bar" } });
 
         var fakeDbConnection = new FakeDbConnection(
             ConnectionString,
@@ -860,16 +860,11 @@ public class RelationalCommandTest
         Assert.Equal(1, fakeDbConnection.DbCommands[0].DisposeCount);
     }
 
-    private class ReaderThrowingRelationalCommand : RelationalCommand
+    private class ReaderThrowingRelationalCommand(
+        RelationalCommandBuilderDependencies dependencies,
+        string commandText,
+        IReadOnlyList<IRelationalParameter> parameters) : RelationalCommand(dependencies, commandText, parameters)
     {
-        public ReaderThrowingRelationalCommand(
-            RelationalCommandBuilderDependencies dependencies,
-            string commandText,
-            IReadOnlyList<IRelationalParameter> parameters)
-            : base(dependencies, commandText, parameters)
-        {
-        }
-
         protected override RelationalDataReader CreateRelationalDataReader()
             => new ThrowingRelationalReader();
 
@@ -881,7 +876,7 @@ public class RelationalCommandTest
                         TestServiceFactory.Instance.Create<RelationalTypeMappingSourceDependencies>()),
                     new ExceptionDetector()),
                 commandText,
-                Array.Empty<IRelationalParameter>());
+                []);
 
         private class ThrowingRelationalReader : RelationalDataReader
         {
@@ -1348,14 +1343,8 @@ public class RelationalCommandTest
         return optionsBuilder.Options;
     }
 
-    private class FakeLoggingOptions : ILoggingOptions
+    private class FakeLoggingOptions(bool sensitiveDataLoggingEnabled, bool detailedErrorsEnabled = false) : ILoggingOptions
     {
-        public FakeLoggingOptions(bool sensitiveDataLoggingEnabled, bool detailedErrorsEnabled = false)
-        {
-            IsSensitiveDataLoggingEnabled = sensitiveDataLoggingEnabled;
-            DetailedErrorsEnabled = detailedErrorsEnabled;
-        }
-
         public void Initialize(IDbContextOptions options)
         {
         }
@@ -1364,10 +1353,10 @@ public class RelationalCommandTest
         {
         }
 
-        public bool IsSensitiveDataLoggingEnabled { get; }
+        public bool IsSensitiveDataLoggingEnabled { get; } = sensitiveDataLoggingEnabled;
         public bool IsSensitiveDataLoggingWarned { get; set; }
 
-        public bool DetailedErrorsEnabled { get; }
+        public bool DetailedErrorsEnabled { get; } = detailedErrorsEnabled;
 
         public WarningsConfiguration WarningsConfiguration
             => null;
@@ -1386,7 +1375,7 @@ public class RelationalCommandTest
                     TestServiceFactory.Instance.Create<RelationalTypeMappingSourceDependencies>()),
                 new ExceptionDetector()),
             commandText,
-            parameters ?? Array.Empty<IRelationalParameter>());
+            parameters ?? []);
 
     private Task<RelationalDataReader> ExecuteReader(
         IRelationalCommand relationalCommand,
@@ -1399,5 +1388,5 @@ public class RelationalCommandTest
     private Task<bool> Read(RelationalDataReader relationalReader, bool async)
         => async ? relationalReader.ReadAsync() : Task.FromResult(relationalReader.Read());
 
-    public static IEnumerable<object[]> IsAsyncData = new[] { new object[] { false }, new object[] { true } };
+    public static IEnumerable<object[]> IsAsyncData = new object[][] { [false], [true] };
 }

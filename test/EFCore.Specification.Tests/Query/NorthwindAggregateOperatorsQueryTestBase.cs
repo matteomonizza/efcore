@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : QueryTestBase<TFixture>
     where TFixture : NorthwindQueryFixtureBase<NoopModelCustomizer>, new()
 {
@@ -864,7 +866,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
             async,
             ss => ss.Set<Customer>().Where(c => ids.Contains(c.CustomerID)));
 
-        ids = new[] { "ABCDE" };
+        ids = ["ABCDE"];
 
         await AssertQuery(
             async,
@@ -883,7 +885,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
             ss => ss.Set<Customer>().Where(
                 c => ss.Set<Customer>().Where(c1 => ids.Contains(c1.City)).Any(e => e.CustomerID == c.CustomerID)));
 
-        ids = new[] { "London" };
+        ids = ["London"];
 
         await AssertQuery(
             async,
@@ -901,7 +903,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
             async,
             ss => ss.Set<Employee>().Where(e => ids.Contains(e.EmployeeID)));
 
-        ids = new uint[] { 0 };
+        ids = [0];
 
         await AssertQuery(
             async,
@@ -919,7 +921,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
             async,
             ss => ss.Set<Employee>().Where(e => ids.Contains(e.EmployeeID)));
 
-        ids = new uint?[] { 0 };
+        ids = [0];
 
         await AssertQuery(
             async,
@@ -1219,7 +1221,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_collection_false(bool async)
     {
-        string[] ids = { "ABCDE", "ALFKI" };
+        string[] ids = ["ABCDE", "ALFKI"];
 
         return AssertQuery(
             async,
@@ -1230,7 +1232,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_collection_complex_predicate_and(bool async)
     {
-        string[] ids = { "ABCDE", "ALFKI" };
+        string[] ids = ["ABCDE", "ALFKI"];
 
         return AssertQuery(
             async,
@@ -1241,7 +1243,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_collection_complex_predicate_or(bool async)
     {
-        string[] ids = { "ABCDE", "ALFKI" };
+        string[] ids = ["ABCDE", "ALFKI"];
 
         return AssertQuery(
             async,
@@ -1252,7 +1254,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_collection_complex_predicate_not_matching_ins1(bool async)
     {
-        string[] ids = { "ABCDE", "ALFKI" };
+        string[] ids = ["ABCDE", "ALFKI"];
 
         return AssertQuery(
             async,
@@ -1263,7 +1265,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_collection_complex_predicate_not_matching_ins2(bool async)
     {
-        string[] ids = { "ABCDE", "ALFKI" };
+        string[] ids = ["ABCDE", "ALFKI"];
 
         return AssertQuery(
             async,
@@ -1275,7 +1277,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_collection_sql_injection(bool async)
     {
-        string[] ids = { "ALFKI", "ABC')); GO; DROP TABLE Orders; GO; --" };
+        string[] ids = ["ALFKI", "ABC')); GO; DROP TABLE Orders; GO; --"];
 
         return AssertQuery(
             async,
@@ -1286,7 +1288,7 @@ public abstract class NorthwindAggregateOperatorsQueryTestBase<TFixture> : Query
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_with_local_collection_empty_closure(bool async)
     {
-        var ids = Array.Empty<string>();
+        string[] ids = [];
 
         return AssertQuery(
             async,

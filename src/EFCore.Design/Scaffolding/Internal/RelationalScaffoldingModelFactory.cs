@@ -28,7 +28,7 @@ public class RelationalScaffoldingModelFactory : IScaffoldingModelFactory
     private readonly DatabaseTable _nullTable = new();
     private CSharpUniqueNamer<DatabaseTable> _tableNamer = null!;
     private CSharpUniqueNamer<DatabaseTable> _dbSetNamer = null!;
-    private readonly HashSet<DatabaseColumn> _unmappedColumns = new();
+    private readonly HashSet<DatabaseColumn> _unmappedColumns = [];
     private readonly IPluralizer _pluralizer;
     private readonly ICSharpUtilities _cSharpUtilities;
     private readonly IScaffoldingTypeMapper _scaffoldingTypeMapper;
@@ -73,7 +73,8 @@ public class RelationalScaffoldingModelFactory : IScaffoldingModelFactory
             _cSharpUtilities,
             options.NoPluralize
                 ? null
-                : _pluralizer.Singularize);
+                : _pluralizer.Singularize,
+            caseSensitive: false);
         _dbSetNamer = new CSharpUniqueNamer<DatabaseTable>(
             options.UseDatabaseNames
                 ? (t => t.Name)
@@ -81,7 +82,8 @@ public class RelationalScaffoldingModelFactory : IScaffoldingModelFactory
             _cSharpUtilities,
             options.NoPluralize
                 ? null
-                : _pluralizer.Pluralize);
+                : _pluralizer.Pluralize,
+            caseSensitive: true);
         _columnNamers = new Dictionary<DatabaseTable, CSharpUniqueNamer<DatabaseColumn>>();
         _options = options;
 
@@ -133,7 +135,8 @@ public class RelationalScaffoldingModelFactory : IScaffoldingModelFactory
                         c => c.Name,
                         usedNames,
                         _cSharpUtilities,
-                        singularizePluralizer: null));
+                        singularizePluralizer: null,
+                        caseSensitive: true));
             }
             else
             {
@@ -143,7 +146,8 @@ public class RelationalScaffoldingModelFactory : IScaffoldingModelFactory
                         c => _candidateNamingService.GenerateCandidateIdentifier(c),
                         usedNames,
                         _cSharpUtilities,
-                        singularizePluralizer: null));
+                        singularizePluralizer: null,
+                        caseSensitive: true));
             }
         }
 
@@ -263,6 +267,19 @@ public class RelationalScaffoldingModelFactory : IScaffoldingModelFactory
         if (sequence.IsCyclic.HasValue)
         {
             builder.IsCyclic(sequence.IsCyclic.Value);
+        }
+
+        if (sequence.IsCached.HasValue && !sequence.IsCached.Value)
+        {
+            builder.UseNoCache();
+        }
+        else if (sequence.IsCached.HasValue && sequence.CacheSize.HasValue)
+        {
+            builder.UseCache(sequence.CacheSize);
+        }
+        else
+        {
+            builder.UseCache();
         }
 
         return builder;
@@ -953,7 +970,7 @@ public class RelationalScaffoldingModelFactory : IScaffoldingModelFactory
     {
         if (!_entityTypeAndPropertyIdentifiers.TryGetValue(entityType, out var existingIdentifiers))
         {
-            existingIdentifiers = new List<string> { entityType.Name };
+            existingIdentifiers = [entityType.Name];
             existingIdentifiers.AddRange(entityType.GetProperties().Select(p => p.Name));
             _entityTypeAndPropertyIdentifiers[entityType] = existingIdentifiers;
         }

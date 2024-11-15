@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract class AdHocManyToManyQueryTestBase : NonSharedModelTestBase
 {
     protected override string StoreName
@@ -16,7 +18,7 @@ public abstract class AdHocManyToManyQueryTestBase : NonSharedModelTestBase
     [ConditionalFact]
     public virtual async Task SelectMany_with_collection_selector_having_subquery()
     {
-        var contextFactory = await InitializeAsync<MyContext7973>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<MyContext7973>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
         var users = (from user in context.Users
                      from organisation in context.Organisations.Where(o => o.OrganisationUsers.Any()).DefaultIfEmpty()
@@ -25,15 +27,10 @@ public abstract class AdHocManyToManyQueryTestBase : NonSharedModelTestBase
         Assert.Equal(2, users.Count);
     }
 
-    private class MyContext7973 : DbContext
+    private class MyContext7973(DbContextOptions options) : DbContext(options)
     {
         public DbSet<User> Users { get; set; }
         public DbSet<Organisation> Organisations { get; set; }
-
-        public MyContext7973(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -44,14 +41,14 @@ public abstract class AdHocManyToManyQueryTestBase : NonSharedModelTestBase
                 .HasForeignKey(ou => ou.UserId);
         }
 
-        public void Seed()
+        public Task SeedAsync()
         {
             AddRange(
                 new OrganisationUser { Organisation = new Organisation(), User = new User() },
                 new Organisation(),
                 new User());
 
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class User
@@ -144,13 +141,8 @@ public abstract class AdHocManyToManyQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    protected class Context20277 : DbContext
+    protected class Context20277(DbContextOptions options) : DbContext(options)
     {
-        public Context20277(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<ManyM_DB>()
                 .HasMany(e => e.ManyN_DB)

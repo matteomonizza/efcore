@@ -19,8 +19,10 @@ namespace Microsoft.EntityFrameworkCore.Sqlite.Query.SqlExpressions.Internal;
 ///         doing so can result in application failures when updating to a new Entity Framework Core release.
 ///     </para>
 /// </remarks>
-public class JsonEachExpression : TableValuedFunctionExpression, IClonableTableExpressionBase
+public class JsonEachExpression : TableValuedFunctionExpression
 {
+    private static ConstructorInfo? _quotingConstructor;
+
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
     ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
@@ -129,10 +131,10 @@ public class JsonEachExpression : TableValuedFunctionExpression, IClonableTableE
     ///     any release. You should only use it directly in your code with extreme caution and knowing that
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
-    // TODO: Deep clone, see #30982
-    public virtual TableExpressionBase Clone()
+    public override TableExpressionBase Clone(string? alias, ExpressionVisitor cloningExpressionVisitor)
     {
-        var clone = new JsonEachExpression(Alias, JsonExpression, Path);
+        var newJsonExpression = (SqlExpression)cloningExpressionVisitor.Visit(JsonExpression);
+        var clone = new JsonEachExpression(alias!, newJsonExpression, Path);
 
         foreach (var annotation in GetAnnotations())
         {
@@ -141,6 +143,25 @@ public class JsonEachExpression : TableValuedFunctionExpression, IClonableTableE
 
         return clone;
     }
+
+    /// <inheritdoc />
+    public override JsonEachExpression WithAlias(string newAlias)
+        => new(newAlias, JsonExpression, Path);
+
+    /// <inheritdoc />
+    public override Expression Quote()
+        => New(
+            _quotingConstructor ??= typeof(JsonEachExpression).GetConstructor(
+            [
+                typeof(string),
+                typeof(SqlExpression),
+                typeof(IReadOnlyList<PathSegment>)
+            ])!,
+            Constant(Alias, typeof(string)),
+            JsonExpression.Quote(),
+            Path is null
+                ? Constant(null, typeof(IReadOnlyList<PathSegment>))
+                : NewArrayInit(typeof(PathSegment), Path.Select(s => s.Quote())));
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to

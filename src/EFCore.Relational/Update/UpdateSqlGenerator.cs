@@ -179,7 +179,7 @@ public abstract class UpdateSqlGenerator : IUpdateSqlGenerator
         requiresTransaction = false;
 
         AppendDeleteCommand(
-            commandStringBuilder, name, schema, Array.Empty<IColumnModification>(), conditionOperations, appendReturningOneClause: true);
+            commandStringBuilder, name, schema, [], conditionOperations, appendReturningOneClause: true);
 
         return ResultSetMapping.LastInResultSet | ResultSetMapping.ResultSetWithRowsAffectedOnly;
     }
@@ -519,7 +519,7 @@ public abstract class UpdateSqlGenerator : IUpdateSqlGenerator
                     commandStringBuilder.Append(", ");
                 }
 
-                commandStringBuilder.Append("1");
+                commandStringBuilder.Append('1');
             }
         }
     }

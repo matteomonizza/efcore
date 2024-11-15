@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public class LoadSqlServerTest : LoadTestBase<LoadSqlServerTest.LoadSqlServerFixture>
 {
     public LoadSqlServerTest(LoadSqlServerFixture fixture)
@@ -1809,7 +1811,7 @@ WHERE 0 = 1
         catch
         {
             var methodCallLine = Environment.StackTrace.Split(
-                new[] { Environment.NewLine },
+                [Environment.NewLine],
                 StringSplitOptions.RemoveEmptyEntries)[2][6..];
 
             var indexMethodEnding = methodCallLine.IndexOf(')') + 1;

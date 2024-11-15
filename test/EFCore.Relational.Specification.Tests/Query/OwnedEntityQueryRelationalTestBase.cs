@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestBase
 {
     protected TestSqlLoggerFactory TestSqlLoggerFactory
@@ -26,13 +28,8 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
             message);
     }
 
-    private class Context23198 : DbContext
+    private class Context23198(DbContextOptions options) : DbContext(options)
     {
-        public Context23198(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<AnAggregateRoot>().OwnsOne(
                 e => e.AnOwnedTypeWithOwnedProperties,
@@ -84,13 +81,8 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
         Assert.Equal(2, root3.ModdleA.Leaves.Count);
     }
 
-    private class Context24777 : DbContext
+    private class Context24777(DbContextOptions options) : DbContext(options)
     {
-        public Context24777(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<Root> Roots { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -198,13 +190,8 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
             : query.FirstOrDefault();
     }
 
-    protected class Context25680 : DbContext
+    protected class Context25680(DbContextOptions options) : DbContext(options)
     {
-        public Context25680(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<Location25680>().OwnsMany(
                 e => e.PublishTokenTypes,
@@ -247,7 +234,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Owned_reference_mapped_to_different_table_updated_correctly_after_subquery_pushdown(bool async)
     {
-        var contextFactory = await InitializeAsync<MyContext26592>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<MyContext26592>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
 
         await base.Owned_references_on_same_level_expanded_at_different_times_around_take_helper(context, async);
@@ -257,19 +244,14 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Owned_reference_mapped_to_different_table_nested_updated_correctly_after_subquery_pushdown(bool async)
     {
-        var contextFactory = await InitializeAsync<MyContext26592>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<MyContext26592>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
 
         await base.Owned_references_on_same_level_nested_expanded_at_different_times_around_take_helper(context, async);
     }
 
-    protected class MyContext26592 : MyContext26592Base
+    protected class MyContext26592(DbContextOptions options) : MyContext26592Base(options)
     {
-        public MyContext26592(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Company>(
@@ -301,7 +283,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Owned_entity_with_all_null_properties_materializes_when_not_containing_another_owned_entity(bool async)
     {
-        var contextFactory = await InitializeAsync<Context28247>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context28247>(seed: c => c.SeedAsync());
 
         using var context = contextFactory.CreateContext();
         var query = context.RotRutCases.OrderBy(e => e.Buyer);
@@ -333,7 +315,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Owned_entity_with_all_null_properties_entity_equality_when_not_containing_another_owned_entity(bool async)
     {
-        var contextFactory = await InitializeAsync<Context28247>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context28247>(seed: c => c.SeedAsync());
 
         using var context = contextFactory.CreateContext();
         var query = context.RotRutCases.AsNoTracking().Select(e => e.Rot).Where(e => e != null);
@@ -355,13 +337,16 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Owned_entity_with_all_null_properties_in_compared_to_null_in_conditional_projection(bool async)
     {
-        var contextFactory = await InitializeAsync<Context28247>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context28247>(seed: c => c.SeedAsync());
 
         using var context = contextFactory.CreateContext();
         var query = context.RotRutCases
             .AsNoTracking()
             .OrderBy(e => e.Id)
-            .Select(e => e.Rot == null ? null : new Context28247.RotDto { MyApartmentNo = e.Rot.ApartmentNo, MyServiceType = e.Rot.ServiceType });
+            .Select(
+                e => e.Rot == null
+                    ? null
+                    : new Context28247.RotDto { MyApartmentNo = e.Rot.ApartmentNo, MyServiceType = e.Rot.ServiceType });
 
         var result = async
             ? await query.ToListAsync()
@@ -384,13 +369,16 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Owned_entity_with_all_null_properties_in_compared_to_non_null_in_conditional_projection(bool async)
     {
-        var contextFactory = await InitializeAsync<Context28247>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context28247>(seed: c => c.SeedAsync());
 
         using var context = contextFactory.CreateContext();
         var query = context.RotRutCases
             .AsNoTracking()
             .OrderBy(e => e.Id)
-            .Select(e => e.Rot != null ? new Context28247.RotDto { MyApartmentNo = e.Rot.ApartmentNo, MyServiceType = e.Rot.ServiceType } : null);
+            .Select(
+                e => e.Rot != null
+                    ? new Context28247.RotDto { MyApartmentNo = e.Rot.ApartmentNo, MyServiceType = e.Rot.ServiceType }
+                    : null);
 
         var result = async
             ? await query.ToListAsync()
@@ -413,7 +401,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Owned_entity_with_all_null_properties_property_access_when_not_containing_another_owned_entity(bool async)
     {
-        var contextFactory = await InitializeAsync<Context28247>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context28247>(seed: c => c.SeedAsync());
 
         using var context = contextFactory.CreateContext();
         var query = context.RotRutCases.AsNoTracking().Select(e => e.Rot.ApartmentNo);
@@ -434,13 +422,8 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
             });
     }
 
-    private class Context28247 : DbContext
+    private class Context28247(DbContextOptions options) : DbContext(options)
     {
-        public Context28247(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<RotRutCase> RotRutCases { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -453,7 +436,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
                     b.OwnsOne(e => e.Rut);
                 });
 
-        public void Seed()
+        public Task SeedAsync()
         {
             Add(
                 new RotRutCase
@@ -471,7 +454,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
                     Rut = new Rut { Value = null }
                 });
 
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class RotRutCase
@@ -508,7 +491,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Join_selects_with_duplicating_aliases_and_owned_expansion_uniquifies_correctly(bool async)
     {
-        var contextFactory = await InitializeAsync<Context30358>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context30358>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
 
         var query = from monarch in context.Monarchs
@@ -522,20 +505,15 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
         Assert.Equal("The Divider", result[0].magus.ToolUsed.Name);
     }
 
-    private class Context30358 : DbContext
+    private class Context30358(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Monarch> Monarchs { get; set; }
         public DbSet<Magus> Magi { get; set; }
 
-        public Context30358(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<Magus>().OwnsOne(x => x.ToolUsed, x => x.ToTable("MagicTools"));
 
-        public void Seed()
+        public Task SeedAsync()
         {
             Add(
                 new Monarch
@@ -565,7 +543,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
                     ToolUsed = new MagicTool { Name = "The Hundred Words" }
                 });
 
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class Monarch
@@ -596,38 +574,36 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
     [ConditionalFact]
     public async Task Can_have_required_owned_type_on_derived_type()
     {
-        var contextFactory = await InitializeAsync<Context31107>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context31107>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
         context.Set<Context31107.BaseEntity>().ToList();
     }
 
-    private class Context31107 : DbContext
+    private class Context31107(DbContextOptions options) : DbContext(options)
     {
-        public Context31107(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<BaseEntity>();
-            modelBuilder.Entity<Child1Entity>(b =>
-            {
-                b.OwnsOne(entity => entity.Data, builder =>
+            modelBuilder.Entity<Child1Entity>(
+                b =>
                 {
-                    builder.ToTable("Child1EntityData");
-                    builder.WithOwner().HasForeignKey("Child1EntityId");
+                    b.OwnsOne(
+                        entity => entity.Data, builder =>
+                        {
+                            builder.ToTable("Child1EntityData");
+                            builder.WithOwner().HasForeignKey("Child1EntityId");
+                        });
+                    b.Navigation(e => e.Data).IsRequired();
                 });
-                b.Navigation(e => e.Data).IsRequired();
-            });
 
             modelBuilder.Entity<Child2Entity>();
         }
-        public void Seed()
+
+        public Task SeedAsync()
         {
             Add(new Child2Entity { Id = Guid.NewGuid() });
 
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public abstract class BaseEntity
@@ -645,9 +621,7 @@ public abstract class OwnedEntityQueryRelationalTestBase : OwnedEntityQueryTestB
             public ChildData Data { get; set; }
         }
 
-        public sealed class Child2Entity : BaseEntity
-        {
-        }
+        public sealed class Child2Entity : BaseEntity;
     }
 
     #endregion

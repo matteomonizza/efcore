@@ -19,7 +19,7 @@ public class DbSetFinderTest
             sets.Select(s => s.Name).ToArray());
 
         Assert.Equal(
-            new[] { typeof(Better), typeof(Brandy), typeof(Drinking), typeof(Stop), typeof(You) },
+            [typeof(Better), typeof(Brandy), typeof(Drinking), typeof(Stop), typeof(You)],
             sets.Select(s => s.Type).ToArray());
 
         Assert.Equal(
@@ -49,25 +49,15 @@ public class DbSetFinderTest
         public NotANormalSet<Random> NotMe4 { get; set; }
     }
 
-    public class You
-    {
-    }
+    public class You;
 
-    public class Better
-    {
-    }
+    public class Better;
 
-    public class Stop
-    {
-    }
+    public class Stop;
 
-    public class Drinking
-    {
-    }
+    public class Drinking;
 
-    internal class Brandy
-    {
-    }
+    internal class Brandy;
 
     public class NotANormalSet<TEntity> : DbSet<TEntity>
         where TEntity : class

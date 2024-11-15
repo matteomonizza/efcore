@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore.TestModels.ManyToManyModel;
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract class ManyToManyTrackingSqlServerTestBase<TFixture> : ManyToManyTrackingRelationalTestBase<TFixture>
     where TFixture : ManyToManyTrackingSqlServerTestBase<TFixture>.ManyToManyTrackingSqlServerFixtureBase
 {
@@ -26,8 +28,11 @@ public abstract class ManyToManyTrackingSqlServerTestBase<TFixture> : ManyToMany
         { "UnidirectionalEntityTwo.SelfSkipSharedRight", DeleteBehavior.ClientCascade },
     };
 
-    public class ManyToManyTrackingSqlServerFixtureBase : ManyToManyTrackingRelationalFixture
+    public class ManyToManyTrackingSqlServerFixtureBase : ManyToManyTrackingRelationalFixture, ITestSqlLoggerFactory
     {
+        public TestSqlLoggerFactory TestSqlLoggerFactory
+            => (TestSqlLoggerFactory)ListLoggerFactory;
+
         protected override ITestStoreFactory TestStoreFactory
             => SqlServerTestStoreFactory.Instance;
 

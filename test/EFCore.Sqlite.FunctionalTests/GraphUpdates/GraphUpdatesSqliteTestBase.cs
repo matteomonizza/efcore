@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract class GraphUpdatesSqliteTestBase<TFixture> : GraphUpdatesTestBase<TFixture>
     where TFixture : GraphUpdatesSqliteTestBase<TFixture>.GraphUpdatesSqliteFixtureBase, new()
 {
@@ -122,6 +124,24 @@ public abstract class GraphUpdatesSqliteTestBase<TFixture> : GraphUpdatesTestBas
 
             modelBuilder.Entity<SomethingOfCategoryA>().Property<int>("CategoryId").HasDefaultValue(1);
             modelBuilder.Entity<SomethingOfCategoryB>().Property(e => e.CategoryId).HasDefaultValue(2);
+
+            modelBuilder.Entity<CompositeKeyWith<int>>(
+                b =>
+                {
+                    b.Property(e => e.PrimaryGroup).HasDefaultValue(1).HasSentinel(1);
+                });
+
+            modelBuilder.Entity<CompositeKeyWith<bool>>(
+                b =>
+                {
+                    b.Property(e => e.PrimaryGroup).HasDefaultValue(true);
+                });
+
+            modelBuilder.Entity<CompositeKeyWith<bool?>>(
+                b =>
+                {
+                    b.Property(e => e.PrimaryGroup).HasDefaultValue(true);
+                });
         }
     }
 }

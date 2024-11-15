@@ -32,7 +32,7 @@ internal partial class MigrationsBundleCommand
         }
     }
 
-#if NET461
+#if NET472
     protected override int Execute(string[] args)
         => throw new CommandException(Resources.VersionRequired("6.0.0"));
 #else
@@ -138,7 +138,7 @@ internal partial class MigrationsBundleCommand
             publishArgs.Add("--runtime");
             publishArgs.Add(runtime);
 
-            var baseLength = runtime.IndexOfAny(new[] { '-', '.', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' });
+            var baseLength = runtime.IndexOfAny(['-', '.', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
             var baseRid = runtime.Substring(0, baseLength);
             var exe = string.Equals(baseRid, "win", StringComparison.OrdinalIgnoreCase)
                 ? ".exe"
@@ -175,7 +175,9 @@ internal partial class MigrationsBundleCommand
                 publishArgs.Add(configuration!);
             }
 
-            var exitCode = Exe.Run("dotnet", publishArgs, directory, interceptOutput: true);
+            publishArgs.Add("--disable-build-servers");
+
+            var exitCode = Exe.Run("dotnet", publishArgs, directory, handleOutput: Reporter.WriteVerbose);
             if (exitCode != 0)
             {
                 throw new CommandException(Resources.BuildBundleFailed);

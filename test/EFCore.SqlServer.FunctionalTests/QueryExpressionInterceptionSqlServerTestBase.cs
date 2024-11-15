@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract class QueryExpressionInterceptionSqlServerTestBase : QueryExpressionInterceptionTestBase
 {
     protected QueryExpressionInterceptionSqlServerTestBase(InterceptionSqlServerFixtureBase fixture)
@@ -30,14 +32,9 @@ public abstract class QueryExpressionInterceptionSqlServerTestBase : QueryExpres
         }
     }
 
-    public class QueryExpressionInterceptionSqlServerTest
-        : QueryExpressionInterceptionSqlServerTestBase, IClassFixture<QueryExpressionInterceptionSqlServerTest.InterceptionSqlServerFixture>
+    public class QueryExpressionInterceptionSqlServerTest(QueryExpressionInterceptionSqlServerTest.InterceptionSqlServerFixture fixture)
+        : QueryExpressionInterceptionSqlServerTestBase(fixture), IClassFixture<QueryExpressionInterceptionSqlServerTest.InterceptionSqlServerFixture>
     {
-        public QueryExpressionInterceptionSqlServerTest(InterceptionSqlServerFixture fixture)
-            : base(fixture)
-        {
-        }
-
         public class InterceptionSqlServerFixture : InterceptionSqlServerFixtureBase
         {
             protected override string StoreName
@@ -48,15 +45,10 @@ public abstract class QueryExpressionInterceptionSqlServerTestBase : QueryExpres
         }
     }
 
-    public class QueryExpressionInterceptionWithDiagnosticsSqlServerTest
-        : QueryExpressionInterceptionSqlServerTestBase,
+    public class QueryExpressionInterceptionWithDiagnosticsSqlServerTest(QueryExpressionInterceptionWithDiagnosticsSqlServerTest.InterceptionSqlServerFixture fixture)
+        : QueryExpressionInterceptionSqlServerTestBase(fixture),
             IClassFixture<QueryExpressionInterceptionWithDiagnosticsSqlServerTest.InterceptionSqlServerFixture>
     {
-        public QueryExpressionInterceptionWithDiagnosticsSqlServerTest(InterceptionSqlServerFixture fixture)
-            : base(fixture)
-        {
-        }
-
         public class InterceptionSqlServerFixture : InterceptionSqlServerFixtureBase
         {
             protected override string StoreName

@@ -1,20 +1,13 @@
 ﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#nullable enable
-
 using System.Data;
 
 namespace Microsoft.EntityFrameworkCore;
 
-public class ValueConvertersEndToEndSqlServerTest
-    : ValueConvertersEndToEndTestBase<ValueConvertersEndToEndSqlServerTest.ValueConvertersEndToEndSqlServerFixture>
+public class ValueConvertersEndToEndSqlServerTest(ValueConvertersEndToEndSqlServerTest.ValueConvertersEndToEndSqlServerFixture fixture)
+    : ValueConvertersEndToEndTestBase<ValueConvertersEndToEndSqlServerTest.ValueConvertersEndToEndSqlServerFixture>(fixture)
 {
-    public ValueConvertersEndToEndSqlServerTest(ValueConvertersEndToEndSqlServerFixture fixture)
-        : base(fixture)
-    {
-    }
-
     [ConditionalTheory]
     [InlineData(nameof(ConvertingEntity.BoolAsChar), "nvarchar(1)", false)]
     [InlineData(nameof(ConvertingEntity.BoolAsNullableChar), "nvarchar(1)", false)]

@@ -5,15 +5,12 @@
 
 namespace Microsoft.EntityFrameworkCore.ModelBuilding;
 
+#nullable disable
+
 public abstract partial class ModelBuilderTest
 {
-    public abstract class OneToManyTestBase : ModelBuilderTestBase
+    public abstract class OneToManyTestBase(ModelBuilderFixtureBase fixture) : ModelBuilderTestBase(fixture)
     {
-        public OneToManyTestBase(ModelBuilderFixtureBase fixture)
-            : base(fixture)
-        {
-        }
-
         [ConditionalFact]
         public virtual void Finds_existing_navigations_and_uses_associated_FK()
         {

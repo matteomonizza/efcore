@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract class TransactionInterceptionSqlServerTestBase : TransactionInterceptionTestBase
 {
     protected TransactionInterceptionSqlServerTestBase(InterceptionSqlServerFixtureBase fixture)
@@ -24,13 +26,9 @@ public abstract class TransactionInterceptionSqlServerTestBase : TransactionInte
             => base.InjectInterceptors(serviceCollection.AddEntityFrameworkSqlServer(), injectedInterceptors);
     }
 
-    public class TransactionInterceptionSqlServerTest
-        : TransactionInterceptionSqlServerTestBase, IClassFixture<TransactionInterceptionSqlServerTest.InterceptionSqlServerFixture>
+    public class TransactionInterceptionSqlServerTest(TransactionInterceptionSqlServerTest.InterceptionSqlServerFixture fixture)
+        : TransactionInterceptionSqlServerTestBase(fixture), IClassFixture<TransactionInterceptionSqlServerTest.InterceptionSqlServerFixture>
     {
-        public TransactionInterceptionSqlServerTest(InterceptionSqlServerFixture fixture)
-            : base(fixture)
-        {
-        }
 
         // ReleaseSavepoint is unsupported by SQL Server and is ignored
         public override Task Intercept_ReleaseSavepoint(bool async)
@@ -43,14 +41,10 @@ public abstract class TransactionInterceptionSqlServerTestBase : TransactionInte
         }
     }
 
-    public class TransactionInterceptionWithDiagnosticsSqlServerTest
-        : TransactionInterceptionSqlServerTestBase,
+    public class TransactionInterceptionWithDiagnosticsSqlServerTest(TransactionInterceptionWithDiagnosticsSqlServerTest.InterceptionSqlServerFixture fixture)
+        : TransactionInterceptionSqlServerTestBase(fixture),
             IClassFixture<TransactionInterceptionWithDiagnosticsSqlServerTest.InterceptionSqlServerFixture>
     {
-        public TransactionInterceptionWithDiagnosticsSqlServerTest(InterceptionSqlServerFixture fixture)
-            : base(fixture)
-        {
-        }
 
         // ReleaseSavepoint is unsupported by SQL Server and is ignored
         public override Task Intercept_ReleaseSavepoint(bool async)

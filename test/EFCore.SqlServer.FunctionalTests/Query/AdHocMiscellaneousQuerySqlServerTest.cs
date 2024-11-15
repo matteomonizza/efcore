@@ -12,19 +12,19 @@ using NetTopologySuite.Geometries;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public class AdHocMiscellaneousQuerySqlServerTest : AdHocMiscellaneousQueryRelationalTestBase
 {
     protected override ITestStoreFactory TestStoreFactory
         => SqlServerTestStoreFactory.Instance;
 
-    protected override void Seed2951(Context2951 context)
-    {
-        context.Database.ExecuteSqlRaw(
-"""
+    protected override Task Seed2951(Context2951 context)
+        => context.Database.ExecuteSqlRawAsync(
+            """
 CREATE TABLE ZeroKey (Id int);
 INSERT ZeroKey VALUES (NULL)
 """);
-    }
 
     #region 5456
 
@@ -32,8 +32,8 @@ INSERT ZeroKey VALUES (NULL)
     public virtual async Task Include_group_join_is_per_query_context()
     {
         var contextFactory = await InitializeAsync<Context5456>(
-            seed: c => c.Seed(),
-            createTestStore: () => SqlServerTestStore.CreateInitialized(StoreName, multipleActiveResultSets: true));
+            seed: c => c.SeedAsync(),
+            createTestStore: async () => await SqlServerTestStore.CreateInitializedAsync(StoreName, multipleActiveResultSets: true));
 
         Parallel.For(
             0, 10, i =>
@@ -67,8 +67,8 @@ INSERT ZeroKey VALUES (NULL)
     public virtual async Task Include_group_join_is_per_query_context_async()
     {
         var contextFactory = await InitializeAsync<Context5456>(
-            seed: c => c.Seed(),
-            createTestStore: () => SqlServerTestStore.CreateInitialized(StoreName, multipleActiveResultSets: true));
+            seed: c => c.SeedAsync(),
+            createTestStore: async () => await SqlServerTestStore.CreateInitializedAsync(StoreName, multipleActiveResultSets: true));
 
         await Parallel.ForAsync(
             0, 10, async (i, ct) =>
@@ -100,31 +100,22 @@ INSERT ZeroKey VALUES (NULL)
             });
     }
 
-    private class Context5456 : DbContext
+    private class Context5456(DbContextOptions options) : DbContext(options)
     {
-        public Context5456(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<Blog> Blogs { get; set; }
         public DbSet<Post> Posts { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<Author> Authors { get; set; }
 
-        public void Seed()
+        public Task SeedAsync()
         {
             for (var i = 0; i < 100; i++)
             {
                 Add(
-                    new Blog
-                    {
-                        Posts = new List<Post> { new() { Comments = new List<Comment> { new(), new() } }, new() },
-                        Author = new Author()
-                    });
+                    new Blog { Posts = [new() { Comments = [new(), new()] }, new()], Author = new Author() });
             }
 
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class Blog
@@ -156,12 +147,81 @@ INSERT ZeroKey VALUES (NULL)
 
     #endregion
 
+    #region 8864
+
+    [ConditionalFact]
+    public virtual async Task Select_nested_projection()
+    {
+        var contextFactory = await InitializeAsync<Context8864>(seed: c => c.SeedAsync());
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var customers = context.Customers
+                .Select(c => new { Customer = c, CustomerAgain = Context8864.Get(context, c.Id) })
+                .ToList();
+
+            Assert.Equal(2, customers.Count);
+
+            foreach (var customer in customers)
+            {
+                Assert.Same(customer.Customer, customer.CustomerAgain);
+            }
+        }
+
+        AssertSql(
+            """
+SELECT [c].[Id], [c].[Name]
+FROM [Customers] AS [c]
+""",
+            //
+            """
+@__id_0='1'
+
+SELECT TOP(2) [c].[Id], [c].[Name]
+FROM [Customers] AS [c]
+WHERE [c].[Id] = @__id_0
+""",
+            //
+            """
+@__id_0='2'
+
+SELECT TOP(2) [c].[Id], [c].[Name]
+FROM [Customers] AS [c]
+WHERE [c].[Id] = @__id_0
+""");
+    }
+
+    private class Context8864(DbContextOptions options) : DbContext(options)
+    {
+        public DbSet<Customer> Customers { get; set; }
+
+        public Task SeedAsync()
+        {
+            AddRange(
+                new Customer { Name = "Alan" },
+                new Customer { Name = "Elon" });
+
+            return SaveChangesAsync();
+        }
+
+        public static Customer Get(Context8864 context, int id)
+            => context.Customers.Single(c => c.Id == id);
+
+        public class Customer
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+        }
+    }
+
+    #endregion
+
     #region 9214
 
     [ConditionalFact]
     public async Task Default_schema_applied_when_no_function_schema()
     {
-        var contextFactory = await InitializeAsync<Context9214>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context9214>(seed: c => c.SeedAsync());
 
         using (var context = contextFactory.CreateContext())
         {
@@ -193,7 +253,7 @@ WHERE [w].[Val] = 1
         }
     }
 
-    protected class Context9214 : DbContext
+    protected class Context9214(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Widget9214> Widgets { get; set; }
 
@@ -206,12 +266,6 @@ WHERE [w].[Val] = 1
 
         public static int AddThree(int num)
             => throw new Exception();
-#pragma warning restore IDE0060 // Remove unused parameter
-
-        public Context9214(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -223,16 +277,16 @@ WHERE [w].[Val] = 1
             modelBuilder.HasDbFunction(typeof(Context9214).GetMethod(nameof(AddTwo))).HasSchema("dbo");
         }
 
-        public void Seed()
+        public async Task SeedAsync()
         {
             var w1 = new Widget9214 { Val = 1 };
             var w2 = new Widget9214 { Val = 2 };
             var w3 = new Widget9214 { Val = 3 };
             Widgets.AddRange(w1, w2, w3);
-            SaveChanges();
+            await SaveChangesAsync();
 
-            Database.ExecuteSqlRaw(
-"""
+            await Database.ExecuteSqlRawAsync(
+                """
 CREATE FUNCTION foo.AddOne (@num int)
 RETURNS int
     AS
@@ -242,8 +296,8 @@ END
 """);
 
 
-            Database.ExecuteSqlRaw(
-"""
+            await Database.ExecuteSqlRawAsync(
+                """
 CREATE FUNCTION dbo.AddTwo (@num int)
 RETURNS int
     AS
@@ -267,7 +321,7 @@ END
     [ConditionalFact]
     public virtual async Task From_sql_gets_value_of_out_parameter_in_stored_procedure()
     {
-        var contextFactory = await InitializeAsync<Context9277>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context9277>(seed: c => c.SeedAsync());
 
         using (var context = contextFactory.CreateContext())
         {
@@ -292,19 +346,14 @@ END
         }
     }
 
-    protected class Context9277 : DbContext
+    protected class Context9277(DbContextOptions options) : DbContext(options)
     {
-        public Context9277(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<Blog9277> Blogs { get; set; }
 
-        public void Seed()
+        public async Task SeedAsync()
         {
-            Database.ExecuteSqlRaw(
-"""
+            await Database.ExecuteSqlRawAsync(
+                """
 CREATE PROCEDURE [dbo].[GetPersonAndVoteCount]
  (
     @id int,
@@ -327,178 +376,13 @@ BEGIN
                 new Blog9277 { SomeValue = 3 }
             );
 
-            SaveChanges();
+            await SaveChangesAsync();
         }
 
         public class Blog9277
         {
             public int Id { get; set; }
             public int SomeValue { get; set; }
-        }
-    }
-
-    #endregion
-
-    #region 11885
-
-    [ConditionalFact]
-    public virtual async Task Average_with_cast()
-    {
-        var contextFactory = await InitializeAsync<Context11885>(seed: c => c.Seed());
-
-        using (var context = contextFactory.CreateContext())
-        {
-            var prices = context.Prices.ToList();
-
-            ClearLog();
-
-            Assert.Equal(prices.Average(e => e.Price), context.Prices.Average(e => e.Price));
-            Assert.Equal(prices.Average(e => e.IntColumn), context.Prices.Average(e => e.IntColumn));
-            Assert.Equal(prices.Average(e => e.NullableIntColumn), context.Prices.Average(e => e.NullableIntColumn));
-            Assert.Equal(prices.Average(e => e.LongColumn), context.Prices.Average(e => e.LongColumn));
-            Assert.Equal(prices.Average(e => e.NullableLongColumn), context.Prices.Average(e => e.NullableLongColumn));
-            Assert.Equal(prices.Average(e => e.FloatColumn), context.Prices.Average(e => e.FloatColumn));
-            Assert.Equal(prices.Average(e => e.NullableFloatColumn), context.Prices.Average(e => e.NullableFloatColumn));
-            Assert.Equal(prices.Average(e => e.DoubleColumn), context.Prices.Average(e => e.DoubleColumn));
-            Assert.Equal(prices.Average(e => e.NullableDoubleColumn), context.Prices.Average(e => e.NullableDoubleColumn));
-            Assert.Equal(prices.Average(e => e.DecimalColumn), context.Prices.Average(e => e.DecimalColumn));
-            Assert.Equal(prices.Average(e => e.NullableDecimalColumn), context.Prices.Average(e => e.NullableDecimalColumn));
-
-            AssertSql(
-                """
-SELECT AVG([p].[Price])
-FROM [Prices] AS [p]
-""",
-                //
-                """
-SELECT AVG(CAST([p].[IntColumn] AS float))
-FROM [Prices] AS [p]
-""",
-                //
-                """
-SELECT AVG(CAST([p].[NullableIntColumn] AS float))
-FROM [Prices] AS [p]
-""",
-                //
-                """
-SELECT AVG(CAST([p].[LongColumn] AS float))
-FROM [Prices] AS [p]
-""",
-                //
-                """
-SELECT AVG(CAST([p].[NullableLongColumn] AS float))
-FROM [Prices] AS [p]
-""",
-                //
-                """
-SELECT CAST(AVG([p].[FloatColumn]) AS real)
-FROM [Prices] AS [p]
-""",
-                //
-                """
-SELECT CAST(AVG([p].[NullableFloatColumn]) AS real)
-FROM [Prices] AS [p]
-""",
-                //
-                """
-SELECT AVG([p].[DoubleColumn])
-FROM [Prices] AS [p]
-""",
-                //
-                """
-SELECT AVG([p].[NullableDoubleColumn])
-FROM [Prices] AS [p]
-""",
-                //
-                """
-SELECT AVG([p].[DecimalColumn])
-FROM [Prices] AS [p]
-""",
-                //
-                """
-SELECT AVG([p].[NullableDecimalColumn])
-FROM [Prices] AS [p]
-""");
-        }
-    }
-
-    private class Context11885 : DbContext
-    {
-        public DbSet<PriceEntity> Prices { get; set; }
-
-        public Context11885(DbContextOptions options)
-            : base(options)
-        {
-        }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-            => modelBuilder.Entity<PriceEntity>(
-                b =>
-                {
-                    b.Property(e => e.Price).HasColumnType("DECIMAL(18, 8)");
-                    b.Property(e => e.DecimalColumn).HasColumnType("DECIMAL(18, 2)");
-                    b.Property(e => e.NullableDecimalColumn).HasColumnType("DECIMAL(18, 2)");
-                });
-
-        public void Seed()
-        {
-            AddRange(
-                new PriceEntity
-                {
-                    IntColumn = 1,
-                    NullableIntColumn = 1,
-                    LongColumn = 1000,
-                    NullableLongColumn = 1000,
-                    FloatColumn = 0.1F,
-                    NullableFloatColumn = 0.1F,
-                    DoubleColumn = 0.000001,
-                    NullableDoubleColumn = 0.000001,
-                    DecimalColumn = 1.0m,
-                    NullableDecimalColumn = 1.0m,
-                    Price = 0.00112000m
-                },
-                new PriceEntity
-                {
-                    IntColumn = 2,
-                    NullableIntColumn = 2,
-                    LongColumn = 2000,
-                    NullableLongColumn = 2000,
-                    FloatColumn = 0.2F,
-                    NullableFloatColumn = 0.2F,
-                    DoubleColumn = 0.000002,
-                    NullableDoubleColumn = 0.000002,
-                    DecimalColumn = 2.0m,
-                    NullableDecimalColumn = 2.0m,
-                    Price = 0.00232111m
-                },
-                new PriceEntity
-                {
-                    IntColumn = 3,
-                    LongColumn = 3000,
-                    FloatColumn = 0.3F,
-                    DoubleColumn = 0.000003,
-                    DecimalColumn = 3.0m,
-                    Price = 0.00345223m
-                }
-            );
-
-            SaveChanges();
-        }
-
-        public class PriceEntity
-        {
-            public int Id { get; set; }
-            public int IntColumn { get; set; }
-            public int? NullableIntColumn { get; set; }
-            public long LongColumn { get; set; }
-            public long? NullableLongColumn { get; set; }
-            public float FloatColumn { get; set; }
-            public float? NullableFloatColumn { get; set; }
-            public double DoubleColumn { get; set; }
-            public double? NullableDoubleColumn { get; set; }
-            public decimal DecimalColumn { get; set; }
-            public decimal? NullableDecimalColumn { get; set; }
-            public decimal Price { get; set; }
         }
     }
 
@@ -543,14 +427,9 @@ OUTPUT INSERTED.[Id], i._Position;
         }
     }
 
-    private class Context12482 : DbContext
+    private class Context12482(DbContextOptions options) : DbContext(options)
     {
         public virtual DbSet<BaseEntity> BaseEntities { get; set; }
-
-        public Context12482(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<BaseEntity>();
@@ -571,12 +450,12 @@ OUTPUT INSERTED.[Id], i._Position;
     [ConditionalFact]
     public virtual async Task Projecting_entity_with_value_converter_and_include_works()
     {
-        var contextFactory = await InitializeAsync<Context12518>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context12518>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
         var result = context.Parents.Include(p => p.Child).OrderBy(e => e.Id).FirstOrDefault();
 
         AssertSql(
-"""
+            """
 SELECT TOP(1) [p].[Id], [p].[ChildId], [c].[Id], [c].[ParentId], [c].[ULongRowVersion]
 FROM [Parents] AS [p]
 LEFT JOIN [Children] AS [c] ON [p].[ChildId] = [c].[Id]
@@ -587,12 +466,12 @@ ORDER BY [p].[Id]
     [ConditionalFact]
     public virtual async Task Projecting_column_with_value_converter_of_ulong_byte_array()
     {
-        var contextFactory = await InitializeAsync<Context12518>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context12518>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
         var result = context.Parents.OrderBy(e => e.Id).Select(p => (ulong?)p.Child.ULongRowVersion).FirstOrDefault();
 
         AssertSql(
-"""
+            """
 SELECT TOP(1) [c].[ULongRowVersion]
 FROM [Parents] AS [p]
 LEFT JOIN [Children] AS [c] ON [p].[ChildId] = [c].[Id]
@@ -600,15 +479,10 @@ ORDER BY [p].[Id]
 """);
     }
 
-    protected class Context12518 : DbContext
+    protected class Context12518(DbContextOptions options) : DbContext(options)
     {
         public virtual DbSet<Parent12518> Parents { get; set; }
         public virtual DbSet<Child12518> Children { get; set; }
-
-        public Context12518(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -625,10 +499,10 @@ ORDER BY [p].[Id]
             modelBuilder.Entity<Parent12518>();
         }
 
-        public void Seed()
+        public Task SeedAsync()
         {
             Parents.Add(new Parent12518());
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class Parent12518
@@ -654,7 +528,7 @@ ORDER BY [p].[Id]
     [ConditionalFact]
     public virtual async Task DateTime_Contains_with_smalldatetime_generates_correct_literal()
     {
-        var contextFactory = await InitializeAsync<Context13118>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context13118>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
         var testDateList = new List<DateTime> { new(2018, 10, 07) };
         var findRecordsWithDateInList = context.ReproEntity
@@ -664,7 +538,7 @@ ORDER BY [p].[Id]
         Assert.Single(findRecordsWithDateInList);
 
         AssertSql(
-"""
+            """
 @__testDateList_0='["2018-10-07T00:00:00"]' (Size = 4000)
 
 SELECT [r].[Id], [r].[MyTime]
@@ -676,25 +550,20 @@ WHERE [r].[MyTime] IN (
 """);
     }
 
-    private class Context13118 : DbContext
+    private class Context13118(DbContextOptions options) : DbContext(options)
     {
         public virtual DbSet<ReproEntity13118> ReproEntity { get; set; }
-
-        public Context13118(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<ReproEntity13118>(e => e.Property("MyTime").HasColumnType("smalldatetime"));
 
-        public void Seed()
+        public Task SeedAsync()
         {
             AddRange(
                 new ReproEntity13118 { MyTime = new DateTime(2018, 10, 07) },
                 new ReproEntity13118 { MyTime = new DateTime(2018, 10, 08) });
 
-            SaveChanges();
+            return SaveChangesAsync();
         }
     }
 
@@ -713,7 +582,7 @@ WHERE [r].[MyTime] IN (
     [InlineData(true)]
     public async Task Where_equals_DateTime_Now(bool async)
     {
-        var contextFactory = await InitializeAsync<Context14095>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context14095>(seed: c => c.SeedAsync());
 
         using var context = contextFactory.CreateContext();
         var query = context.Dates.Where(
@@ -741,7 +610,7 @@ WHERE [d].[DateTime2_2] = GETDATE() OR [d].[DateTime2_7] = GETDATE() OR [d].[Dat
     [InlineData(true)]
     public async Task Where_not_equals_DateTime_Now(bool async)
     {
-        var contextFactory = await InitializeAsync<Context14095>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context14095>(seed: c => c.SeedAsync());
 
         using var context = contextFactory.CreateContext();
         var query = context.Dates.Where(
@@ -769,7 +638,7 @@ WHERE [d].[DateTime2_2] <> GETDATE() AND [d].[DateTime2_7] <> GETDATE() AND [d].
     [InlineData(true)]
     public async Task Where_equals_new_DateTime(bool async)
     {
-        var contextFactory = await InitializeAsync<Context14095>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context14095>(seed: c => c.SeedAsync());
 
         using var context = contextFactory.CreateContext();
         var query = context.Dates.Where(
@@ -819,7 +688,7 @@ WHERE [d].[SmallDateTime] = '1970-09-03T12:00:00' AND [d].[DateTime] = '1971-09-
             new DateTime(1980, 9, 3, 12, 0, 10, 222)
         };
 
-        var contextFactory = await InitializeAsync<Context14095>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context14095>(seed: c => c.SeedAsync());
 
         using var context = contextFactory.CreateContext();
         var query = context.Dates.Where(
@@ -841,7 +710,6 @@ WHERE [d].[SmallDateTime] = '1970-09-03T12:00:00' AND [d].[DateTime] = '1971-09-
 
         Assert.Single(results);
 
-        // TODO: DateTime values in the parameters should reflect their store type, see #32515
         AssertSql(
             """
 @__dateTimes_0='["1970-09-03T12:00:00","1971-09-03T12:00:10.22","1972-09-03T12:00:10.333","1973-09-03T12:00:10","1974-09-03T12:00:10.5","1975-09-03T12:00:10.66","1976-09-03T12:00:10.777","1977-09-03T12:00:10.888","1978-09-03T12:00:10.999","1979-09-03T12:00:10.111","1980-09-03T12:00:10.222"]' (Size = 4000)
@@ -895,16 +763,11 @@ WHERE [d].[SmallDateTime] IN (
 """);
     }
 
-    protected class Context14095 : DbContext
+    protected class Context14095(DbContextOptions options) : DbContext(options)
     {
-        public Context14095(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<DatesAndPrunes14095> Dates { get; set; }
 
-        public void Seed()
+        public Task SeedAsync()
         {
             Add(
                 new DatesAndPrunes14095
@@ -921,7 +784,7 @@ WHERE [d].[SmallDateTime] IN (
                     DateTime2_6 = new DateTime(1979, 9, 3, 12, 0, 10, 111),
                     DateTime2_7 = new DateTime(1980, 9, 3, 12, 0, 10, 222)
                 });
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class DatesAndPrunes14095
@@ -965,12 +828,113 @@ WHERE [d].[SmallDateTime] IN (
 
     #endregion
 
+    #region 15518
+
+    [ConditionalTheory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public virtual async Task Nested_queries_does_not_cause_concurrency_exception_sync(bool tracking)
+    {
+        var contextFactory = await InitializeAsync<Context15518>(seed: c => c.SeedAsync());
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Repos.OrderBy(r => r.Id).Where(r => r.Id > 0);
+            query = tracking ? query.AsTracking() : query.AsNoTracking();
+
+            foreach (var a in query)
+            {
+                foreach (var b in query)
+                {
+                }
+            }
+        }
+
+        using (var context = contextFactory.CreateContext())
+        {
+            var query = context.Repos.OrderBy(r => r.Id).Where(r => r.Id > 0);
+            query = tracking ? query.AsTracking() : query.AsNoTracking();
+
+            await foreach (var a in query.AsAsyncEnumerable())
+            {
+                await foreach (var b in query.AsAsyncEnumerable())
+                {
+                }
+            }
+        }
+
+        AssertSql(
+            """
+SELECT [r].[Id], [r].[Name]
+FROM [Repos] AS [r]
+WHERE [r].[Id] > 0
+ORDER BY [r].[Id]
+""",
+            //
+            """
+SELECT [r].[Id], [r].[Name]
+FROM [Repos] AS [r]
+WHERE [r].[Id] > 0
+ORDER BY [r].[Id]
+""",
+            //
+            """
+SELECT [r].[Id], [r].[Name]
+FROM [Repos] AS [r]
+WHERE [r].[Id] > 0
+ORDER BY [r].[Id]
+""",
+            //
+            """
+SELECT [r].[Id], [r].[Name]
+FROM [Repos] AS [r]
+WHERE [r].[Id] > 0
+ORDER BY [r].[Id]
+""",
+            //
+            """
+SELECT [r].[Id], [r].[Name]
+FROM [Repos] AS [r]
+WHERE [r].[Id] > 0
+ORDER BY [r].[Id]
+""",
+            //
+            """
+SELECT [r].[Id], [r].[Name]
+FROM [Repos] AS [r]
+WHERE [r].[Id] > 0
+ORDER BY [r].[Id]
+""");
+    }
+
+    private class Context15518(DbContextOptions options) : DbContext(options)
+    {
+        public DbSet<Repo> Repos { get; set; }
+
+        public Task SeedAsync()
+        {
+            AddRange(
+                new Repo { Name = "London" },
+                new Repo { Name = "New York" });
+
+            return SaveChangesAsync();
+        }
+
+        public class Repo
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+        }
+    }
+
+    #endregion
+
     #region 19206
 
     [ConditionalFact]
     public virtual async Task From_sql_expression_compares_correctly()
     {
-        var contextFactory = await InitializeAsync<Context19206>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context19206>(seed: c => c.SeedAsync());
 
         using (var context = contextFactory.CreateContext())
         {
@@ -987,7 +951,7 @@ WHERE [d].[SmallDateTime] IN (
             Assert.Equal(Context19206.TestType19206.Integration, item.t2.Type);
 
             AssertSql(
-"""
+                """
 p0='0'
 p1='1'
 
@@ -1002,24 +966,19 @@ CROSS JOIN (
         }
     }
 
-    private class Context19206 : DbContext
+    private class Context19206(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Test> Tests { get; set; }
-
-        public Context19206(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
         }
 
-        public void Seed()
+        public Task SeedAsync()
         {
             Add(new Test { Type = TestType19206.Unit });
             Add(new Test { Type = TestType19206.Integration });
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class Test
@@ -1059,14 +1018,9 @@ CROSS JOIN (
             });
     }
 
-    private class Context21666 : DbContext
+    private class Context21666(DbContextOptions options) : DbContext(options)
     {
         public DbSet<List> Lists { get; set; }
-
-        public Context21666(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1088,7 +1042,7 @@ CROSS JOIN (
     public virtual async Task Can_query_point_with_buffered_data_reader()
     {
         var contextFactory = await InitializeAsync<Context23282>(
-            seed: c => c.Seed(),
+            seed: c => c.SeedAsync(),
             onConfiguring: o => new SqlServerDbContextOptionsBuilder(o).UseNetTopologySuite(),
             addServices: c => c.AddEntityFrameworkSqlServerNetTopologySuite());
 
@@ -1098,23 +1052,18 @@ CROSS JOIN (
         Assert.NotNull(testUser);
 
         AssertSql(
-"""
+            """
 SELECT TOP(1) [l].[Id], [l].[Name], [l].[Address_County], [l].[Address_Line1], [l].[Address_Line2], [l].[Address_Point], [l].[Address_Postcode], [l].[Address_Town], [l].[Address_Value]
 FROM [Locations] AS [l]
 WHERE [l].[Name] = N'My Location'
 """);
     }
 
-    private class Context23282 : DbContext
+    private class Context23282(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Location> Locations { get; set; }
 
-        public Context23282(DbContextOptions options)
-            : base(options)
-        {
-        }
-
-        public void Seed()
+        public Task SeedAsync()
         {
             Locations.Add(
                 new Location
@@ -1129,7 +1078,7 @@ WHERE [l].[Name] = N'My Location'
                         Point = new Point(115.7930, 37.2431) { SRID = 4326 }
                     }
                 });
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         [Owned]
@@ -1167,7 +1116,7 @@ WHERE [l].[Name] = N'My Location'
         using var context = contextFactory.CreateContext();
 
         context.Database.ExecuteSqlRaw(
-"""
+            """
 create function [dbo].[GetPersonStatusAsOf] (@personId bigint, @timestamp datetime2)
 returns @personStatus table
 (
@@ -1200,7 +1149,7 @@ end
         q2.ToList();
 
         AssertSql(
-"""
+            """
 @__p_0='10'
 
 SELECT (
@@ -1211,9 +1160,9 @@ FROM (
     SELECT TOP(@__p_0) [m].[Id], [m].[PersonId], [m].[Timestamp]
     FROM [Message] AS [m]
     ORDER BY [m].[Id]
-) AS [t]
-CROSS APPLY [dbo].[GetPersonStatusAsOf]([t].[PersonId], [t].[Timestamp]) AS [g]
-ORDER BY [t].[Id]
+) AS [m0]
+CROSS APPLY [dbo].[GetPersonStatusAsOf]([m0].[PersonId], [m0].[Timestamp]) AS [g]
+ORDER BY [m0].[Id]
 """);
     }
 
@@ -1244,13 +1193,8 @@ ORDER BY [t].[Id]
         public string StatusMessage { get; set; }
     }
 
-    private class Context24216 : DbContext
+    private class Context24216(DbContextOptions options) : DbContext(options)
     {
-        public Context24216(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<Gender24216> Gender { get; set; }
 
         public DbSet<Message24216> Message { get; set; }
@@ -1265,7 +1209,7 @@ ORDER BY [t].[Id]
             modelBuilder.HasDbFunction(
                 typeof(Context24216).GetMethod(
                     nameof(GetPersonStatusAsOf),
-                    new[] { typeof(long), typeof(DateTime) }));
+                    [typeof(long), typeof(DateTime)]));
         }
     }
 
@@ -1313,13 +1257,8 @@ GROUP BY [d].[Id]
 """);
     }
 
-    protected class Context27427 : DbContext
+    protected class Context27427(DbContextOptions options) : DbContext(options)
     {
-        public Context27427(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<DemoEntity> DemoEntities { get; set; }
     }
 
@@ -1336,7 +1275,7 @@ GROUP BY [d].[Id]
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task TemporalAsOf_with_json_basic_query(bool async)
     {
-        var contextFactory = await InitializeAsync<Context30478>(seed: x => x.Seed());
+        var contextFactory = await InitializeAsync<Context30478>(seed: x => x.SeedAsync());
         using var context = contextFactory.CreateContext();
         var query = context.Entities.TemporalAsOf(new DateTime(2010, 1, 1));
 
@@ -1359,7 +1298,7 @@ FROM [Entities] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [e]
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task TemporalAll_with_json_basic_query(bool async)
     {
-        var contextFactory = await InitializeAsync<Context30478>(seed: x => x.Seed());
+        var contextFactory = await InitializeAsync<Context30478>(seed: x => x.SeedAsync());
         using var context = contextFactory.CreateContext();
         var query = context.Entities.TemporalAll();
 
@@ -1382,7 +1321,7 @@ FROM [Entities] FOR SYSTEM_TIME ALL AS [e]
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task TemporalAsOf_project_json_entity_reference(bool async)
     {
-        var contextFactory = await InitializeAsync<Context30478>(seed: x => x.Seed());
+        var contextFactory = await InitializeAsync<Context30478>(seed: x => x.SeedAsync());
         using var context = contextFactory.CreateContext();
         var query = context.Entities.TemporalAsOf(new DateTime(2010, 1, 1)).Select(x => x.Reference);
 
@@ -1404,7 +1343,7 @@ FROM [Entities] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [e]
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task TemporalAsOf_project_json_entity_collection(bool async)
     {
-        var contextFactory = await InitializeAsync<Context30478>(seed: x => x.Seed());
+        var contextFactory = await InitializeAsync<Context30478>(seed: x => x.SeedAsync());
         using var context = contextFactory.CreateContext();
         var query = context.Entities.TemporalAsOf(new DateTime(2010, 1, 1)).Select(x => x.Collection);
 
@@ -1422,102 +1361,76 @@ FROM [Entities] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [e]
 """);
     }
 
-    protected class Context30478 : DbContext
+    protected class Context30478(DbContextOptions options) : DbContext(options)
     {
-        public Context30478(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<Entity30478> Entities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Entity30478>().Property(x => x.Id).ValueGeneratedNever();
             modelBuilder.Entity<Entity30478>().ToTable("Entities", tb => tb.IsTemporal());
-            modelBuilder.Entity<Entity30478>().OwnsOne(x => x.Reference, nb =>
-            {
-                nb.ToJson();
-                nb.OwnsOne(x => x.Nested);
-            });
+            modelBuilder.Entity<Entity30478>().OwnsOne(
+                x => x.Reference, nb =>
+                {
+                    nb.ToJson();
+                    nb.OwnsOne(x => x.Nested);
+                });
 
-            modelBuilder.Entity<Entity30478>().OwnsMany(x => x.Collection, nb =>
-            {
-                nb.ToJson();
-                nb.OwnsOne(x => x.Nested);
-            });
+            modelBuilder.Entity<Entity30478>().OwnsMany(
+                x => x.Collection, nb =>
+                {
+                    nb.ToJson();
+                    nb.OwnsOne(x => x.Nested);
+                });
         }
 
-        public void Seed()
+        public async Task SeedAsync()
         {
             var e1 = new Entity30478
             {
                 Id = 1,
                 Name = "e1",
-                Reference = new Json30478
-                {
-                    Name = "r1",
-                    Nested = new JsonNested30478 { Number = 1 }
-                },
-                Collection = new List<Json30478>
-                {
-                    new Json30478
-                    {
-                        Name = "c11",
-                        Nested = new JsonNested30478 { Number = 11 }
-                    },
-                    new Json30478
-                    {
-                        Name = "c12",
-                        Nested = new JsonNested30478 { Number = 12 }
-                    },
-                    new Json30478
-                    {
-                        Name = "c13",
-                        Nested = new JsonNested30478 { Number = 12 }
-                    }
-                }
+                Reference = new Json30478 { Name = "r1", Nested = new JsonNested30478 { Number = 1 } },
+                Collection =
+                [
+                    new Json30478 { Name = "c11", Nested = new JsonNested30478 { Number = 11 } },
+
+                    new Json30478 { Name = "c12", Nested = new JsonNested30478 { Number = 12 } },
+
+                    new Json30478 { Name = "c13", Nested = new JsonNested30478 { Number = 12 } }
+                ]
             };
 
             var e2 = new Entity30478
             {
                 Id = 2,
                 Name = "e2",
-                Reference = new Json30478
-                {
-                    Name = "r2",
-                    Nested = new JsonNested30478 { Number = 2 }
-                },
-                Collection = new List<Json30478>
-                {
-                    new Json30478
-                    {
-                        Name = "c21",
-                        Nested = new JsonNested30478 { Number = 21 }
-                    },
-                    new Json30478
-                    {
-                        Name = "c22",
-                        Nested = new JsonNested30478 { Number = 22 }
-                    },
-                }
+                Reference = new Json30478 { Name = "r2", Nested = new JsonNested30478 { Number = 2 } },
+                Collection =
+                [
+                    new Json30478 { Name = "c21", Nested = new JsonNested30478 { Number = 21 } },
+
+                    new Json30478 { Name = "c22", Nested = new JsonNested30478 { Number = 22 } }
+
+                ]
             };
 
             AddRange(e1, e2);
-            SaveChanges();
+            await SaveChangesAsync();
 
             RemoveRange(e1, e2);
-            SaveChanges();
+            await SaveChangesAsync();
 
 
-            Database.ExecuteSqlRaw($"ALTER TABLE [Entities] SET (SYSTEM_VERSIONING = OFF)");
-            Database.ExecuteSqlRaw($"ALTER TABLE [Entities] DROP PERIOD FOR SYSTEM_TIME");
+            await Database.ExecuteSqlRawAsync("ALTER TABLE [Entities] SET (SYSTEM_VERSIONING = OFF)");
+            await Database.ExecuteSqlRawAsync("ALTER TABLE [Entities] DROP PERIOD FOR SYSTEM_TIME");
 
-            Database.ExecuteSqlRaw($"UPDATE [EntitiesHistory] SET PeriodStart = '2000-01-01T01:00:00.0000000Z'");
-            Database.ExecuteSqlRaw($"UPDATE [EntitiesHistory] SET PeriodEnd = '2020-07-01T07:00:00.0000000Z'");
+            await Database.ExecuteSqlRawAsync("UPDATE [EntitiesHistory] SET PeriodStart = '2000-01-01T01:00:00.0000000Z'");
+            await Database.ExecuteSqlRawAsync("UPDATE [EntitiesHistory] SET PeriodEnd = '2020-07-01T07:00:00.0000000Z'");
 
-            Database.ExecuteSqlRaw($"ALTER TABLE [Entities] ADD PERIOD FOR SYSTEM_TIME ([PeriodStart], [PeriodEnd])");
-            Database.ExecuteSqlRaw($"ALTER TABLE [Entities] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [dbo].[EntitiesHistory]))");
+            await Database.ExecuteSqlRawAsync("ALTER TABLE [Entities] ADD PERIOD FOR SYSTEM_TIME ([PeriodStart], [PeriodEnd])");
+            await Database.ExecuteSqlRawAsync(
+                "ALTER TABLE [Entities] SET (SYSTEM_VERSIONING = ON (HISTORY_TABLE = [dbo].[EntitiesHistory]))");
         }
     }
 
@@ -1547,13 +1460,13 @@ FROM [Entities] FOR SYSTEM_TIME AS OF '2010-01-01T00:00:00.0000000' AS [e]
         await base.First_FirstOrDefault_ix_async();
 
         AssertSql(
-"""
+            """
 SELECT TOP(1) [p].[Id], [p].[Name]
 FROM [Products] AS [p]
 ORDER BY [p].[Id]
 """,
-                //
-                """
+            //
+            """
 @p0='1'
 
 SET IMPLICIT_TRANSACTIONS OFF;
@@ -1562,8 +1475,8 @@ DELETE FROM [Products]
 OUTPUT 1
 WHERE [Id] = @p0;
 """,
-                //
-                """
+            //
+            """
 @p0='Product 1' (Size = 4000)
 
 SET IMPLICIT_TRANSACTIONS OFF;
@@ -1572,14 +1485,14 @@ INSERT INTO [Products] ([Name])
 OUTPUT INSERTED.[Id]
 VALUES (@p0);
 """,
-                //
-                """
+            //
+            """
 SELECT TOP(1) [p].[Id], [p].[Name]
 FROM [Products] AS [p]
 ORDER BY [p].[Id]
 """,
-                //
-                """
+            //
+            """
 @p0='2'
 
 SET IMPLICIT_TRANSACTIONS OFF;
@@ -1595,13 +1508,13 @@ WHERE [Id] = @p0;
         await base.Discriminator_type_is_handled_correctly();
 
         AssertSql(
-"""
+            """
 SELECT [p].[Id], [p].[Discriminator], [p].[Name]
 FROM [Products] AS [p]
 WHERE [p].[Discriminator] = 1
 """,
-                //
-                """
+            //
+            """
 SELECT [p].[Id], [p].[Discriminator], [p].[Name]
 FROM [Products] AS [p]
 WHERE [p].[Discriminator] = 1
@@ -1624,13 +1537,13 @@ FROM [Posts] AS [p]
         await base.Enum_has_flag_applies_explicit_cast_for_constant();
 
         AssertSql(
-"""
+            """
 SELECT [e].[Id], [e].[Permission], [e].[PermissionByte], [e].[PermissionShort]
 FROM [Entities] AS [e]
 WHERE [e].[Permission] & CAST(17179869184 AS bigint) = CAST(17179869184 AS bigint)
 """,
-                //
-                """
+            //
+            """
 SELECT [e].[Id], [e].[Permission], [e].[PermissionByte], [e].[PermissionShort]
 FROM [Entities] AS [e]
 WHERE [e].[PermissionShort] & CAST(4 AS smallint) = CAST(4 AS smallint)
@@ -1642,43 +1555,16 @@ WHERE [e].[PermissionShort] & CAST(4 AS smallint) = CAST(4 AS smallint)
         await base.Enum_has_flag_does_not_apply_explicit_cast_for_non_constant();
 
         AssertSql(
-"""
+            """
 SELECT [e].[Id], [e].[Permission], [e].[PermissionByte], [e].[PermissionShort]
 FROM [Entities] AS [e]
 WHERE [e].[Permission] & [e].[Permission] = [e].[Permission]
 """,
-                //
-                """
+            //
+            """
 SELECT [e].[Id], [e].[Permission], [e].[PermissionByte], [e].[PermissionShort]
 FROM [Entities] AS [e]
 WHERE [e].[PermissionByte] & [e].[PermissionByte] = [e].[PermissionByte]
-""");
-    }
-
-    public override async Task Select_nested_projection()
-    {
-        await base.Select_nested_projection();
-
-        AssertSql(
-"""
-SELECT [c].[Id], [c].[Name]
-FROM [Customers] AS [c]
-""",
-                //
-                """
-@__id_0='1'
-
-SELECT TOP(2) [c].[Id], [c].[Name]
-FROM [Customers] AS [c]
-WHERE [c].[Id] = @__id_0
-""",
-                //
-                """
-@__id_0='2'
-
-SELECT TOP(2) [c].[Id], [c].[Name]
-FROM [Customers] AS [c]
-WHERE [c].[Id] = @__id_0
 """);
     }
 
@@ -1687,39 +1573,39 @@ WHERE [c].[Id] = @__id_0
         await base.Variable_from_closure_is_parametrized();
 
         AssertSql(
-"""
+            """
 @__id_0='1'
 
 SELECT [e].[Id], [e].[Name]
 FROM [Entities] AS [e]
 WHERE [e].[Id] = @__id_0
 """,
-                //
-                """
+            //
+            """
 @__id_0='2'
 
 SELECT [e].[Id], [e].[Name]
 FROM [Entities] AS [e]
 WHERE [e].[Id] = @__id_0
 """,
-                //
-                """
+            //
+            """
 @__id_0='1'
 
 SELECT [e].[Id], [e].[Name]
 FROM [Entities] AS [e]
 WHERE [e].[Id] = @__id_0
 """,
-                //
-                """
+            //
+            """
 @__id_0='2'
 
 SELECT [e].[Id], [e].[Name]
 FROM [Entities] AS [e]
 WHERE [e].[Id] = @__id_0
 """,
-                //
-                """
+            //
+            """
 @__id_0='1'
 
 SELECT [e].[Id], [e].[Name]
@@ -1730,8 +1616,8 @@ WHERE [e].[Id] IN (
     WHERE [e0].[Id] = @__id_0
 )
 """,
-                //
-                """
+            //
+            """
 @__id_0='2'
 
 SELECT [e].[Id], [e].[Name]
@@ -1749,15 +1635,15 @@ WHERE [e].[Id] IN (
         await base.Relational_command_cache_creates_new_entry_when_parameter_nullability_changes();
 
         AssertSql(
-"""
+            """
 @__name_0='A' (Size = 4000)
 
 SELECT [e].[Id], [e].[Name]
 FROM [Entities] AS [e]
 WHERE [e].[Name] = @__name_0
 """,
-                //
-                """
+            //
+            """
 SELECT [e].[Id], [e].[Name]
 FROM [Entities] AS [e]
 WHERE [e].[Name] IS NULL
@@ -1776,7 +1662,7 @@ WHERE [e].[Name] IS NULL
         await base.Explicitly_compiled_query_does_not_add_cache_entry();
 
         AssertSql(
-"""
+            """
 SELECT TOP(2) [e].[Id], [e].[Name]
 FROM [Entities] AS [e]
 WHERE [e].[Id] = 1
@@ -1788,7 +1674,7 @@ WHERE [e].[Id] = 1
         await base.Conditional_expression_with_conditions_does_not_collapse_if_nullable_bool();
 
         AssertSql(
-"""
+            """
 SELECT CASE
     WHEN [c0].[Id] IS NOT NULL THEN CASE
         WHEN [c0].[Processed] = CAST(0 AS bit) THEN CAST(1 AS bit)
@@ -1812,12 +1698,78 @@ FROM [Bases] AS [b]
 """);
     }
 
+    public override async Task Average_with_cast()
+    {
+        await base.Average_with_cast();
+
+        AssertSql(
+            """
+SELECT [p].[Id], [p].[DecimalColumn], [p].[DoubleColumn], [p].[FloatColumn], [p].[IntColumn], [p].[LongColumn], [p].[NullableDecimalColumn], [p].[NullableDoubleColumn], [p].[NullableFloatColumn], [p].[NullableIntColumn], [p].[NullableLongColumn], [p].[Price]
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT AVG([p].[Price])
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT AVG(CAST([p].[IntColumn] AS float))
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT AVG(CAST([p].[NullableIntColumn] AS float))
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT AVG(CAST([p].[LongColumn] AS float))
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT AVG(CAST([p].[NullableLongColumn] AS float))
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT CAST(AVG([p].[FloatColumn]) AS real)
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT CAST(AVG([p].[NullableFloatColumn]) AS real)
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT AVG([p].[DoubleColumn])
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT AVG([p].[NullableDoubleColumn])
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT AVG([p].[DecimalColumn])
+FROM [Prices] AS [p]
+""",
+            //
+            """
+SELECT AVG([p].[NullableDecimalColumn])
+FROM [Prices] AS [p]
+""");
+    }
+
     public override async Task Parameterless_ctor_on_inner_DTO_gets_called_for_every_row()
     {
         await base.Parameterless_ctor_on_inner_DTO_gets_called_for_every_row();
 
         AssertSql(
-"""
+            """
 SELECT [e].[Id], [e].[Name]
 FROM [Entities] AS [e]
 """);
@@ -1828,7 +1780,7 @@ FROM [Entities] AS [e]
         await base.Union_and_insert_works_correctly_together();
 
         AssertSql(
-"""
+            """
 @__id1_0='1'
 @__id2_1='2'
 
@@ -1836,12 +1788,12 @@ SELECT [t].[Id]
 FROM [Tables1] AS [t]
 WHERE [t].[Id] = @__id1_0
 UNION
-SELECT [t1].[Id]
-FROM [Tables2] AS [t1]
-WHERE [t1].[Id] = @__id2_1
+SELECT [t0].[Id]
+FROM [Tables2] AS [t0]
+WHERE [t0].[Id] = @__id2_1
 """,
-                //
-                """
+            //
+            """
 SET NOCOUNT ON;
 INSERT INTO [Tables1]
 OUTPUT INSERTED.[Id]
@@ -1863,7 +1815,7 @@ DEFAULT VALUES;
         await base.Repeated_parameters_in_generated_query_sql();
 
         AssertSql(
-"""
+            """
 @__k_0='1'
 
 SELECT TOP(1) [a].[Id], [a].[Name]
@@ -1891,60 +1843,12 @@ WHERE ([a].[Id] = @__entity_equality_a_0_Id AND [a0].[Id] = @__entity_equality_b
 """);
     }
 
-    public override async Task Nested_queries_does_not_cause_concurrency_exception_sync(bool tracking)
-    {
-        await base.Nested_queries_does_not_cause_concurrency_exception_sync(tracking);
-
-        AssertSql(
-"""
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-                //
-                """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-                //
-                """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-                //
-                """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-                //
-                """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""",
-                //
-                """
-SELECT [r].[Id], [r].[Name]
-FROM [Repos] AS [r]
-WHERE [r].[Id] > 0
-ORDER BY [r].[Id]
-""");
-    }
-
     public override async Task Operators_combine_nullability_of_entity_shapers()
     {
         await base.Operators_combine_nullability_of_entity_shapers();
 
         AssertSql(
-"""
+            """
 SELECT [a].[Id], [a].[a], [a].[a1], [a].[forkey], [b].[Id] AS [Id0], [b].[b], [b].[b1], [b].[forkey] AS [forkey0]
 FROM [As] AS [a]
 LEFT JOIN [Bs] AS [b] ON [a].[forkey] = [b].[forkey]
@@ -1954,8 +1858,8 @@ FROM [Bs] AS [b0]
 LEFT JOIN [As] AS [a0] ON [b0].[forkey] = [a0].[forkey]
 WHERE [a0].[Id] IS NULL
 """,
-                //
-                """
+            //
+            """
 SELECT [a].[Id], [a].[a], [a].[a1], [a].[forkey], [b].[Id] AS [Id0], [b].[b], [b].[b1], [b].[forkey] AS [forkey0]
 FROM [As] AS [a]
 LEFT JOIN [Bs] AS [b] ON [a].[forkey] = [b].[forkey]
@@ -1965,8 +1869,8 @@ FROM [Bs] AS [b0]
 LEFT JOIN [As] AS [a0] ON [b0].[forkey] = [a0].[forkey]
 WHERE [a0].[Id] IS NULL
 """,
-                //
-                """
+            //
+            """
 SELECT [a].[Id], [a].[a], [a].[a1], [a].[forkey], [b].[Id] AS [Id0], [b].[b], [b].[b1], [b].[forkey] AS [forkey0]
 FROM [As] AS [a]
 LEFT JOIN [Bs] AS [b] ON [a].[forkey] = [b].[forkey]
@@ -1975,8 +1879,8 @@ SELECT [a0].[Id], [a0].[a], [a0].[a1], [a0].[forkey], [b0].[Id] AS [Id0], [b0].[
 FROM [Bs] AS [b0]
 LEFT JOIN [As] AS [a0] ON [b0].[forkey] = [a0].[forkey]
 """,
-                //
-                """
+            //
+            """
 SELECT [a].[Id], [a].[a], [a].[a1], [a].[forkey], [b].[Id] AS [Id0], [b].[b], [b].[b1], [b].[forkey] AS [forkey0]
 FROM [As] AS [a]
 LEFT JOIN [Bs] AS [b] ON [a].[forkey] = [b].[forkey]
@@ -1992,19 +1896,19 @@ LEFT JOIN [As] AS [a0] ON [b0].[forkey] = [a0].[forkey]
         await base.Shadow_property_with_inheritance();
 
         AssertSql(
-"""
+            """
 SELECT [c].[Id], [c].[Discriminator], [c].[IsPrimary], [c].[UserName], [c].[EmployerId], [c].[ServiceOperatorId]
 FROM [Contacts] AS [c]
 """,
-                //
-                """
+            //
+            """
 SELECT [c].[Id], [c].[Discriminator], [c].[IsPrimary], [c].[UserName], [c].[ServiceOperatorId], [s].[Id]
 FROM [Contacts] AS [c]
 INNER JOIN [ServiceOperators] AS [s] ON [c].[ServiceOperatorId] = [s].[Id]
 WHERE [c].[Discriminator] = N'ServiceOperatorContact'
 """,
-                //
-                """
+            //
+            """
 SELECT [c].[Id], [c].[Discriminator], [c].[IsPrimary], [c].[UserName], [c].[ServiceOperatorId]
 FROM [Contacts] AS [c]
 WHERE [c].[Discriminator] = N'ServiceOperatorContact'
@@ -2016,7 +1920,7 @@ WHERE [c].[Discriminator] = N'ServiceOperatorContact'
         await base.Inlined_dbcontext_is_not_leaking();
 
         AssertSql(
-"""
+            """
 SELECT [b].[Id]
 FROM [Blogs] AS [b]
 """);
@@ -2027,57 +1931,57 @@ FROM [Blogs] AS [b]
         await base.GroupJoin_Anonymous_projection_GroupBy_Aggregate_join_elimination();
 
         AssertSql(
-"""
-SELECT [t0].[AnotherEntity11818_Name] AS [Key], COUNT(*) + 5 AS [cnt]
+            """
+SELECT [t1].[AnotherEntity11818_Name] AS [Key], COUNT(*) + 5 AS [cnt]
 FROM [Table] AS [t]
 LEFT JOIN (
-    SELECT [t1].[Id], [t1].[Exists], [t1].[AnotherEntity11818_Name]
-    FROM [Table] AS [t1]
-    WHERE [t1].[Exists] IS NOT NULL
-) AS [t0] ON [t].[Id] = CASE
-    WHEN [t0].[Exists] IS NOT NULL THEN [t0].[Id]
+    SELECT [t0].[Id], [t0].[Exists], [t0].[AnotherEntity11818_Name]
+    FROM [Table] AS [t0]
+    WHERE [t0].[Exists] IS NOT NULL
+) AS [t1] ON [t].[Id] = CASE
+    WHEN [t1].[Exists] IS NOT NULL THEN [t1].[Id]
 END
-GROUP BY [t0].[AnotherEntity11818_Name]
+GROUP BY [t1].[AnotherEntity11818_Name]
 """,
-                //
-                """
-SELECT [t0].[AnotherEntity11818_Name] AS [MyKey], COUNT(*) + 5 AS [cnt]
+            //
+            """
+SELECT [t1].[AnotherEntity11818_Name] AS [MyKey], COUNT(*) + 5 AS [cnt]
 FROM [Table] AS [t]
 LEFT JOIN (
-    SELECT [t1].[Id], [t1].[Exists], [t1].[AnotherEntity11818_Name]
-    FROM [Table] AS [t1]
-    WHERE [t1].[Exists] IS NOT NULL
-) AS [t0] ON [t].[Id] = CASE
-    WHEN [t0].[Exists] IS NOT NULL THEN [t0].[Id]
+    SELECT [t0].[Id], [t0].[Exists], [t0].[AnotherEntity11818_Name]
+    FROM [Table] AS [t0]
+    WHERE [t0].[Exists] IS NOT NULL
+) AS [t1] ON [t].[Id] = CASE
+    WHEN [t1].[Exists] IS NOT NULL THEN [t1].[Id]
 END
 LEFT JOIN (
-    SELECT [t3].[Id], [t3].[MaumarEntity11818_Exists], [t3].[MaumarEntity11818_Name]
-    FROM [Table] AS [t3]
-    WHERE [t3].[MaumarEntity11818_Exists] IS NOT NULL
-) AS [t2] ON [t].[Id] = CASE
-    WHEN [t2].[MaumarEntity11818_Exists] IS NOT NULL THEN [t2].[Id]
+    SELECT [t2].[Id], [t2].[MaumarEntity11818_Exists], [t2].[MaumarEntity11818_Name]
+    FROM [Table] AS [t2]
+    WHERE [t2].[MaumarEntity11818_Exists] IS NOT NULL
+) AS [t3] ON [t].[Id] = CASE
+    WHEN [t3].[MaumarEntity11818_Exists] IS NOT NULL THEN [t3].[Id]
 END
-GROUP BY [t0].[AnotherEntity11818_Name], [t2].[MaumarEntity11818_Name]
+GROUP BY [t1].[AnotherEntity11818_Name], [t3].[MaumarEntity11818_Name]
 """,
-                //
-                """
-SELECT TOP(1) [t0].[AnotherEntity11818_Name] AS [MyKey], [t2].[MaumarEntity11818_Name] AS [cnt]
+            //
+            """
+SELECT TOP(1) [t1].[AnotherEntity11818_Name] AS [MyKey], [t3].[MaumarEntity11818_Name] AS [cnt]
 FROM [Table] AS [t]
 LEFT JOIN (
-    SELECT [t1].[Id], [t1].[Exists], [t1].[AnotherEntity11818_Name]
-    FROM [Table] AS [t1]
-    WHERE [t1].[Exists] IS NOT NULL
-) AS [t0] ON [t].[Id] = CASE
-    WHEN [t0].[Exists] IS NOT NULL THEN [t0].[Id]
+    SELECT [t0].[Id], [t0].[Exists], [t0].[AnotherEntity11818_Name]
+    FROM [Table] AS [t0]
+    WHERE [t0].[Exists] IS NOT NULL
+) AS [t1] ON [t].[Id] = CASE
+    WHEN [t1].[Exists] IS NOT NULL THEN [t1].[Id]
 END
 LEFT JOIN (
-    SELECT [t3].[Id], [t3].[MaumarEntity11818_Exists], [t3].[MaumarEntity11818_Name]
-    FROM [Table] AS [t3]
-    WHERE [t3].[MaumarEntity11818_Exists] IS NOT NULL
-) AS [t2] ON [t].[Id] = CASE
-    WHEN [t2].[MaumarEntity11818_Exists] IS NOT NULL THEN [t2].[Id]
+    SELECT [t2].[Id], [t2].[MaumarEntity11818_Exists], [t2].[MaumarEntity11818_Name]
+    FROM [Table] AS [t2]
+    WHERE [t2].[MaumarEntity11818_Exists] IS NOT NULL
+) AS [t3] ON [t].[Id] = CASE
+    WHEN [t3].[MaumarEntity11818_Exists] IS NOT NULL THEN [t3].[Id]
 END
-GROUP BY [t0].[AnotherEntity11818_Name], [t2].[MaumarEntity11818_Name]
+GROUP BY [t1].[AnotherEntity11818_Name], [t3].[MaumarEntity11818_Name]
 """);
     }
 
@@ -2086,7 +1990,7 @@ GROUP BY [t0].[AnotherEntity11818_Name], [t2].[MaumarEntity11818_Name]
         await base.Left_join_with_missing_key_values_on_both_sides(async);
 
         AssertSql(
-"""
+            """
 SELECT [c].[CustomerID], [c].[CustomerName], CASE
     WHEN [p].[PostcodeID] IS NULL THEN ''
     ELSE [p].[TownName]
@@ -2130,7 +2034,7 @@ WHERE [i].[Taste] = 1
         await base.Comparing_byte_column_to_enum_in_vb_creating_double_cast(async);
 
         AssertSql(
-"""
+            """
 SELECT [f].[Id], [f].[Taste]
 FROM [Foods] AS [f]
 WHERE [f].[Taste] = CAST(1 AS tinyint)
@@ -2142,7 +2046,7 @@ WHERE [f].[Taste] = CAST(1 AS tinyint)
         await base.Null_check_removal_in_ternary_maintain_appropriate_cast(async);
 
         AssertSql(
-"""
+            """
 SELECT CAST([f].[Taste] AS tinyint) AS [Bar]
 FROM [Foods] AS [f]
 """);
@@ -2153,7 +2057,7 @@ FROM [Foods] AS [f]
         await base.SaveChangesAsync_accepts_changes_with_ConfigureAwait_true();
 
         AssertSql(
-"""
+            """
 SET IMPLICIT_TRANSACTIONS OFF;
 SET NOCOUNT ON;
 INSERT INTO [ObservableThings]
@@ -2271,14 +2175,11 @@ FROM [Users] AS [u]
 SELECT [o].[Id], [o].[CancellationDate], [o].[OrderId], [o].[ShippingDate]
 FROM [OrderItems] AS [o]
 INNER JOIN (
-    SELECT [o0].[OrderId] AS [Key], MAX(CASE
-        WHEN [o0].[ShippingDate] IS NULL AND [o0].[CancellationDate] IS NULL THEN [o0].[OrderId]
-        ELSE [o0].[OrderId] - 10000000
-    END) AS [IsPending]
+    SELECT [o0].[OrderId] AS [Key]
     FROM [OrderItems] AS [o0]
     WHERE [o0].[OrderId] = @__orderId_0
     GROUP BY [o0].[OrderId]
-) AS [t] ON [o].[OrderId] = [t].[Key]
+) AS [o1] ON [o].[OrderId] = [o1].[Key]
 WHERE [o].[OrderId] = @__orderId_0
 ORDER BY [o].[OrderId]
 """);
@@ -2289,14 +2190,14 @@ ORDER BY [o].[OrderId]
         await base.Enum_with_value_converter_matching_take_value(async);
 
         AssertSql(
-"""
+            """
 @__orderItemType_1='MyType1' (Nullable = false) (Size = 4000)
 @__p_0='1'
 
 SELECT [o1].[Id], COALESCE((
-    SELECT TOP(1) [o2].[Price]
-    FROM [OrderItems] AS [o2]
-    WHERE [o1].[Id] = [o2].[OrderId] AND [o2].[Type] = @__orderItemType_1), 0.0E0) AS [SpecialSum]
+    SELECT TOP(1) [o3].[Price]
+    FROM [OrderItems] AS [o3]
+    WHERE [o1].[Id] = [o3].[OrderId] AND [o3].[Type] = @__orderItemType_1), 0.0E0) AS [SpecialSum]
 FROM (
     SELECT TOP(@__p_0) [o].[Id]
     FROM [Orders] AS [o]
@@ -2305,9 +2206,9 @@ FROM (
         FROM [OrderItems] AS [o0]
         WHERE [o].[Id] = [o0].[OrderId])
     ORDER BY [o].[Id]
-) AS [t]
-INNER JOIN [Orders] AS [o1] ON [t].[Id] = [o1].[Id]
-ORDER BY [t].[Id]
+) AS [o2]
+INNER JOIN [Orders] AS [o1] ON [o2].[Id] = [o1].[Id]
+ORDER BY [o2].[Id]
 """);
     }
 
@@ -2359,7 +2260,7 @@ GROUP BY [o].[CustomerId], [o].[Number]
         await base.Aggregate_over_subquery_in_group_by_projection_2(async);
 
         AssertSql(
-"""
+            """
 SELECT [t].[Value] AS [A], (
     SELECT MAX([t0].[Id])
     FROM [Tables] AS [t0]
@@ -2374,7 +2275,7 @@ GROUP BY [t].[Value]
         await base.Group_by_aggregate_in_subquery_projection_after_group_by(async);
 
         AssertSql(
-"""
+            """
 SELECT [t].[Value] AS [A], COALESCE(SUM([t].[Id]), 0) AS [B], COALESCE((
     SELECT TOP(1) COALESCE(SUM([t].[Id]), 0) + COALESCE(SUM([t0].[Id]), 0)
     FROM [Tables] AS [t0]
@@ -2390,7 +2291,7 @@ GROUP BY [t].[Value]
         await base.Subquery_first_member_compared_to_null(async);
 
         AssertSql(
-"""
+            """
 SELECT (
     SELECT TOP(1) [c1].[SomeOtherNullableDateTime]
     FROM [Child] AS [c1]
@@ -2413,19 +2314,19 @@ WHERE EXISTS (
         await base.SelectMany_where_Select(async);
 
         AssertSql(
-"""
-SELECT [t0].[SomeNullableDateTime]
+            """
+SELECT [c1].[SomeNullableDateTime]
 FROM [Parents] AS [p]
 INNER JOIN (
-    SELECT [t].[ParentId], [t].[SomeNullableDateTime], [t].[SomeOtherNullableDateTime]
+    SELECT [c0].[ParentId], [c0].[SomeNullableDateTime], [c0].[SomeOtherNullableDateTime]
     FROM (
         SELECT [c].[ParentId], [c].[SomeNullableDateTime], [c].[SomeOtherNullableDateTime], ROW_NUMBER() OVER(PARTITION BY [c].[ParentId] ORDER BY [c].[SomeInteger]) AS [row]
         FROM [Child] AS [c]
         WHERE [c].[SomeNullableDateTime] IS NULL
-    ) AS [t]
-    WHERE [t].[row] <= 1
-) AS [t0] ON [p].[Id] = [t0].[ParentId]
-WHERE [t0].[SomeOtherNullableDateTime] IS NOT NULL
+    ) AS [c0]
+    WHERE [c0].[row] <= 1
+) AS [c1] ON [p].[Id] = [c1].[ParentId]
+WHERE [c1].[SomeOtherNullableDateTime] IS NOT NULL
 """);
     }
 
@@ -2434,7 +2335,7 @@ WHERE [t0].[SomeOtherNullableDateTime] IS NOT NULL
         await base.Flattened_GroupJoin_on_interface_generic(async);
 
         AssertSql(
-"""
+            """
 SELECT [c].[Id], [c].[ParentId], [c].[SomeInteger], [c].[SomeNullableDateTime], [c].[SomeOtherNullableDateTime]
 FROM [Parents] AS [p]
 LEFT JOIN [Child] AS [c] ON [p].[Id] = [c].[Id]
@@ -2468,7 +2369,7 @@ WHERE [dbo].[ModifyDate]([m].[SomeDate]) = @__date_0
         await base.Pushdown_does_not_add_grouping_key_to_projection_when_distinct_is_applied(async);
 
         AssertSql(
-"""
+            """
 @__p_0='123456'
 
 SELECT TOP(@__p_0) [t].[JSON]
@@ -2479,7 +2380,7 @@ INNER JOIN (
     WHERE [i].[Parcel] = N'some condition'
     GROUP BY [i].[Parcel], [i].[RowId]
     HAVING COUNT(*) = 1
-) AS [t0] ON [t].[ParcelNumber] = [t0].[Parcel]
+) AS [i0] ON [t].[ParcelNumber] = [i0].[Parcel]
 WHERE [t].[TableId] = 123
 ORDER BY [t].[ParcelNumber]
 """);

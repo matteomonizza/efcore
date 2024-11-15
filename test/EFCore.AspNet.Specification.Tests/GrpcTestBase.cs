@@ -118,13 +118,8 @@ public abstract class GrpcTestBase<TFixture> : IClassFixture<TFixture>
         Assert.Same(post, post.TagsInPostData.Skip(1).First().PostsInTagData.First());
     }
 
-    public class GrpcContext : PoolableDbContext
+    public class GrpcContext(DbContextOptions options) : PoolableDbContext(options)
     {
-        public GrpcContext(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             var timeStampConverter = new ValueConverter<Timestamp, DateTime>(
@@ -142,7 +137,7 @@ public abstract class GrpcTestBase<TFixture> : IClassFixture<TFixture>
         protected override string StoreName
             => "GrpcTest";
 
-        protected override void Seed(GrpcContext context)
+        protected override Task SeedAsync(GrpcContext context)
         {
             var post = new Post
             {
@@ -158,7 +153,7 @@ public abstract class GrpcTestBase<TFixture> : IClassFixture<TFixture>
 
             context.Add(post);
 
-            context.SaveChanges();
+            return context.SaveChangesAsync();
         }
     }
 }

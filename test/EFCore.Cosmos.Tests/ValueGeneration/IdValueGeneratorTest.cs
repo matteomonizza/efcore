@@ -29,10 +29,9 @@ public class IdValueGeneratorTest
             Create(new IntClassEntity { Id = new IntClass(2) }),
             Create(new IntStructEntity { Id = new IntStruct(1) }),
             Create(new IntStructEntity { Id = new IntStruct(2) }),
-            Create(new BytesStructEntity { Id = new BytesStruct(null) }),
-            Create(new BytesStructEntity { Id = new BytesStruct(new byte[0]) }),
-            Create(new BytesStructEntity { Id = new BytesStruct(new byte[] { 1 }) }),
-            Create(new BytesStructEntity { Id = new BytesStruct(new byte[] { 2, 2 }) }),
+            Create(new BytesStructEntity { Id = new BytesStruct([]) }),
+            Create(new BytesStructEntity { Id = new BytesStruct([1]) }),
+            Create(new BytesStructEntity { Id = new BytesStruct([2, 2]) }),
         };
 
         Assert.Equal(ids.Count, new HashSet<string>(ids.Concat(ids)).Count);
@@ -60,15 +59,10 @@ public class IdValueGeneratorTest
         public IntClass Id { get; set; }
     }
 
-    private class IntClass
+    private class IntClass(int value)
     {
         public static readonly ValueConverter<IntClass, int> Converter
             = new(v => v.Value, v => new IntClass(v));
-
-        public IntClass(int value)
-        {
-            Value = value;
-        }
 
         private bool Equals(IntClass other)
             => other != null && Value == other.Value;
@@ -81,7 +75,7 @@ public class IdValueGeneratorTest
         public override int GetHashCode()
             => Value;
 
-        public int Value { get; }
+        public int Value { get; } = value;
     }
 
     private class IntStructEntity
@@ -89,17 +83,12 @@ public class IdValueGeneratorTest
         public IntStruct Id { get; set; }
     }
 
-    private struct IntStruct
+    private struct IntStruct(int value)
     {
         public static readonly ValueConverter<IntStruct, int> Converter
             = new(v => v.Value, v => new IntStruct(v));
 
-        public IntStruct(int value)
-        {
-            Value = value;
-        }
-
-        public int Value { get; }
+        public int Value { get; } = value;
     }
 
     private class BytesStructEntity
@@ -107,17 +96,12 @@ public class IdValueGeneratorTest
         public BytesStruct Id { get; set; }
     }
 
-    private struct BytesStruct
+    private struct BytesStruct(byte[] value)
     {
         public static readonly ValueConverter<BytesStruct, byte[]> Converter
             = new(v => v.Value, v => new BytesStruct(v));
 
-        public BytesStruct(byte[] value)
-        {
-            Value = value;
-        }
-
-        public byte[] Value { get; }
+        public byte[] Value { get; } = value;
 
         public bool Equals(BytesStruct other)
             => Value == null

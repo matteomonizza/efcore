@@ -5,7 +5,9 @@ using Microsoft.EntityFrameworkCore.TestModels.GearsOfWarModel;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
-public abstract class GearsOfWarQueryRelationalFixture : GearsOfWarQueryFixtureBase
+#nullable disable
+
+public abstract class GearsOfWarQueryRelationalFixture : GearsOfWarQueryFixtureBase, ITestSqlLoggerFactory
 {
     public override Dictionary<(Type, string), Func<object, object>> GetShadowPropertyMappings()
     {

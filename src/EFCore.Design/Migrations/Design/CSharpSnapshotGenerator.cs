@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Text;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Migrations.Design;
@@ -18,17 +19,17 @@ public class CSharpSnapshotGenerator : ICSharpSnapshotGenerator
     private static readonly MethodInfo HasAnnotationMethodInfo
         = typeof(ModelBuilder).GetRuntimeMethod(
             nameof(ModelBuilder.HasAnnotation),
-            new[] { typeof(string), typeof(string) })!;
+            [typeof(string), typeof(string)])!;
 
     private static readonly MethodInfo HasPropertyAnnotationMethodInfo
         = typeof(ComplexPropertyBuilder).GetRuntimeMethod(
             nameof(ComplexPropertyBuilder.HasPropertyAnnotation),
-            new[] { typeof(string), typeof(string) })!;
+            [typeof(string), typeof(string)])!;
 
     private static readonly MethodInfo HasTypeAnnotationMethodInfo
         = typeof(ComplexPropertyBuilder).GetRuntimeMethod(
             nameof(ComplexPropertyBuilder.HasTypeAnnotation),
-            new[] { typeof(string), typeof(string) })!;
+            [typeof(string), typeof(string)])!;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="CSharpSnapshotGenerator" /> class.
@@ -124,13 +125,18 @@ public class CSharpSnapshotGenerator : ICSharpSnapshotGenerator
     {
         var ownership = entityType.FindOwnership();
         var ownerNavigation = ownership?.PrincipalToDependent!.Name;
-
         var entityTypeName = entityType.Name;
         if (ownerNavigation != null
-            && entityType.HasSharedClrType
-            && entityTypeName == ownership!.PrincipalEntityType.GetOwnedName(entityType.ClrType.ShortDisplayName(), ownerNavigation))
+            && entityType.HasSharedClrType)
         {
-            entityTypeName = entityType.ClrType.DisplayName();
+            if (entityTypeName == ownership!.PrincipalEntityType.GetOwnedName(entityType.ClrType.ShortDisplayName(), ownerNavigation))
+            {
+                entityTypeName = entityType.ClrType.DisplayName();
+            }
+            else if (entityTypeName == ownership!.PrincipalEntityType.GetOwnedName(entityType.ShortName(), ownerNavigation))
+            {
+                entityTypeName = entityType.ShortName();
+            }
         }
 
         var entityTypeBuilderName = GenerateNestedBuilderName(builderName);
@@ -387,6 +393,21 @@ public class CSharpSnapshotGenerator : ICSharpSnapshotGenerator
                 .Append(".IsCyclic()");
         }
 
+        if (sequence.IsCached != Sequence.DefaultIsCached)
+        {
+            stringBuilder
+                .AppendLine()
+                .Append(".UseNoCache()");
+        }
+        else if (sequence.CacheSize != Sequence.DefaultCacheSize)
+        {
+            stringBuilder
+                .AppendLine()
+                .Append(".UseCache(")
+                .Append(Code.Literal(sequence.CacheSize))
+                .Append(")");
+        }
+
         GenerateSequenceAnnotations(sequenceBuilderName, sequence, stringBuilder);
     }
 
@@ -436,8 +457,8 @@ public class CSharpSnapshotGenerator : ICSharpSnapshotGenerator
         IProperty property,
         IndentedStringBuilder stringBuilder)
     {
-        var clrType = FindValueConverter(property)?.ProviderClrType.MakeNullable(property.IsNullable)
-            ?? property.ClrType;
+        var clrType = (FindValueConverter(property)?.ProviderClrType ?? property.ClrType)
+            .MakeNullable(property.IsNullable);
 
         var propertyBuilderName = $"{entityTypeBuilderName}.Property<{Code.Reference(clrType)}>({Code.Literal(property.Name)})";
 
@@ -527,8 +548,7 @@ public class CSharpSnapshotGenerator : ICSharpSnapshotGenerator
     }
 
     private ValueConverter? FindValueConverter(IProperty property)
-        => property.GetValueConverter()
-            ?? property.GetTypeMapping().Converter;
+        => property.GetTypeMapping().Converter;
 
     /// <summary>
     ///     Generates code for <see cref="IComplexProperty" /> objects.

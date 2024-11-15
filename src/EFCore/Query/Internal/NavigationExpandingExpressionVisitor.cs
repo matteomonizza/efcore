@@ -15,24 +15,6 @@ namespace Microsoft.EntityFrameworkCore.Query.Internal;
 /// </summary>
 public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
 {
-    /// <summary>
-    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-    ///     any release. You should only use it directly in your code with extreme caution and knowing that
-    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-    /// </summary>
-    public static readonly bool UseOldBehavior32217 =
-        AppContext.TryGetSwitch("Microsoft.EntityFrameworkCore.Issue32217", out var enabled32217) && enabled32217;
-
-    /// <summary>
-    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
-    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
-    ///     any release. You should only use it directly in your code with extreme caution and knowing that
-    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
-    /// </summary>
-    public static readonly bool UseOldBehavior32312 =
-        AppContext.TryGetSwitch("Microsoft.EntityFrameworkCore.Issue32312", out var enabled32312) && enabled32312;
-
     private static readonly PropertyInfo QueryContextContextPropertyInfo
         = typeof(QueryContext).GetTypeInfo().GetDeclaredProperty(nameof(QueryContext.Context))!;
 
@@ -46,8 +28,8 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
         { QueryableMethods.LastOrDefaultWithPredicate, QueryableMethods.LastOrDefaultWithoutPredicate }
     };
 
-    private static readonly List<MethodInfo> SupportedFilteredIncludeOperations = new()
-    {
+    private static readonly List<MethodInfo> SupportedFilteredIncludeOperations =
+    [
         QueryableMethods.Where,
         QueryableMethods.OrderBy,
         QueryableMethods.OrderByDescending,
@@ -56,7 +38,7 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
         QueryableMethods.Skip,
         QueryableMethods.Take,
         QueryableMethods.AsQueryable
-    };
+    ];
 
     private readonly QueryTranslationPreprocessor _queryTranslationPreprocessor;
     private readonly QueryCompilationContext _queryCompilationContext;
@@ -66,8 +48,8 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
     private readonly ReducingExpressionVisitor _reducingExpressionVisitor;
     private readonly EntityReferenceOptionalMarkingExpressionVisitor _entityReferenceOptionalMarkingExpressionVisitor;
     private readonly RemoveRedundantNavigationComparisonExpressionVisitor _removeRedundantNavigationComparisonExpressionVisitor;
-    private readonly HashSet<string> _parameterNames = new();
-    private readonly ParameterExtractingExpressionVisitor _parameterExtractingExpressionVisitor;
+    private readonly HashSet<string> _parameterNames = [];
+    private readonly ExpressionTreeFuncletizer _funcletizer;
     private readonly INavigationExpansionExtensibilityHelper _extensibilityHelper;
     private readonly HashSet<IEntityType> _nonCyclicAutoIncludeEntityTypes;
 
@@ -98,16 +80,14 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
         _entityReferenceOptionalMarkingExpressionVisitor = new EntityReferenceOptionalMarkingExpressionVisitor();
         _removeRedundantNavigationComparisonExpressionVisitor = new RemoveRedundantNavigationComparisonExpressionVisitor(
             queryCompilationContext.Logger);
-        _parameterExtractingExpressionVisitor = new ParameterExtractingExpressionVisitor(
-            evaluatableExpressionFilter,
-            _parameters,
-            _queryCompilationContext.ContextType,
+        _funcletizer = new ExpressionTreeFuncletizer(
             _queryCompilationContext.Model,
-            _queryCompilationContext.Logger,
-            parameterize: false,
-            generateContextAccessors: true);
+            evaluatableExpressionFilter,
+            _queryCompilationContext.ContextType,
+            generateContextAccessors: true,
+            _queryCompilationContext.Logger);
 
-        _nonCyclicAutoIncludeEntityTypes = !_queryCompilationContext.IgnoreAutoIncludes ? new HashSet<IEntityType>() : null!;
+        _nonCyclicAutoIncludeEntityTypes = !_queryCompilationContext.IgnoreAutoIncludes ? [] : null!;
     }
 
     /// <summary>
@@ -228,8 +208,8 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
                     // Apply defining query only when it is not custom query root
                     && entityQueryRootExpression.GetType() == typeof(EntityQueryRootExpression))
                 {
-                    var processedDefiningQueryBody =
-                        _parameterExtractingExpressionVisitor.ExtractParameters(definingQuery.Body, clearEvaluatedValues: false);
+                    var processedDefiningQueryBody = _funcletizer.ExtractParameters(
+                        definingQuery.Body, _parameters, parameterize: false, clearParameterizedValues: false);
                     processedDefiningQueryBody = _queryTranslationPreprocessor.NormalizeQueryableMethod(processedDefiningQueryBody);
                     processedDefiningQueryBody = _nullCheckRemovingExpressionVisitor.Visit(processedDefiningQueryBody);
                     processedDefiningQueryBody =
@@ -951,10 +931,7 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
         source = (NavigationExpansionExpression)_pendingSelectorExpandingExpressionVisitor.Visit(source);
         var queryable = Reduce(source);
 
-        if (!UseOldBehavior32217)
-        {
-            item = Visit(item);
-        }
+        item = Visit(item);
 
         return Expression.Call(QueryableMethods.Contains.MakeGenericMethod(queryable.Type.GetSequenceType()), queryable, item);
     }
@@ -999,10 +976,7 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
         MethodInfo genericMethod,
         Expression count)
     {
-        if (!UseOldBehavior32312)
-        {
-            count = Visit(count);
-        }
+        count = Visit(count);
 
         source.UpdateSource(Expression.Call(genericMethod.MakeGenericMethod(source.SourceElementType), source.Source, count));
 
@@ -1042,10 +1016,7 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
             source.ApplySelector(Expression.Convert(source.PendingSelector, returnType));
         }
 
-        if (!UseOldBehavior32312)
-        {
-            index = Visit(index);
-        }
+        index = Visit(index);
 
         source.ConvertToSingleResult(genericMethod, index);
 
@@ -1132,7 +1103,7 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
 
             if (expression is ConstantExpression { Value: string navigationChain })
             {
-                var navigationPaths = navigationChain.Split(new[] { "." }, StringSplitOptions.None);
+                var navigationPaths = navigationChain.Split(["."], StringSplitOptions.None);
                 var includeTreeNodes = new Queue<IncludeTreeNode>();
                 includeTreeNodes.Enqueue(entityReference.IncludePaths);
                 foreach (var navigationName in navigationPaths)
@@ -1610,10 +1581,7 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
         MethodInfo genericMethod,
         Expression count)
     {
-        if (!UseOldBehavior32312)
-        {
-            count = Visit(count);
-        }
+        count = Visit(count);
 
         groupBySource.UpdateSource(
             Expression.Call(genericMethod.MakeGenericMethod(groupBySource.SourceElementType), groupBySource.Source, count));
@@ -1784,8 +1752,8 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
                 if (!_parameterizedQueryFilterPredicateCache.TryGetValue(rootEntityType, out var filterPredicate))
                 {
                     filterPredicate = queryFilter;
-                    filterPredicate = (LambdaExpression)_parameterExtractingExpressionVisitor.ExtractParameters(
-                        filterPredicate, clearEvaluatedValues: false);
+                    filterPredicate = (LambdaExpression)_funcletizer.ExtractParameters(
+                        filterPredicate, _parameters, parameterize: false, clearParameterizedValues: false);
                     filterPredicate = (LambdaExpression)_queryTranslationPreprocessor.NormalizeQueryableMethod(filterPredicate);
 
                     // We need to do entity equality, but that requires a full method call on a query root to properly flow the
@@ -1868,7 +1836,7 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
     {
         var genericTypeArguments = queryableMethod.IsGenericMethod
             ? queryableMethod.GetGenericArguments()
-            : Array.Empty<Type>();
+            : [];
 
         var enumerableArguments = arguments.Select(
             arg => arg is UnaryExpression { NodeType: ExpressionType.Quote, Operand: LambdaExpression } unaryExpression
@@ -2133,7 +2101,7 @@ public partial class NavigationExpandingExpressionVisitor : ExpressionVisitor
         if (!_queryCompilationContext.IgnoreAutoIncludes
             && !_nonCyclicAutoIncludeEntityTypes.Contains(entityType))
         {
-            VerifyNoAutoIncludeCycles(entityType, new HashSet<IEntityType>(), new List<INavigationBase>());
+            VerifyNoAutoIncludeCycles(entityType, [], []);
         }
 
         var outboundNavigations = GetOutgoingEagerLoadedNavigations(entityType);

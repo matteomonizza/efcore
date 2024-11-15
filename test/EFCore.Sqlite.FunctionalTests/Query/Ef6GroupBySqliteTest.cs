@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore.Sqlite.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public class Ef6GroupBySqliteTest : Ef6GroupByTestBase<Ef6GroupBySqliteTest.Ef6GroupBySqliteFixture>
 {
     public Ef6GroupBySqliteTest(Ef6GroupBySqliteFixture fixture, ITestOutputHelper testOutputHelper)
@@ -33,37 +35,13 @@ public class Ef6GroupBySqliteTest : Ef6GroupByTestBase<Ef6GroupBySqliteTest.Ef6G
                 () => base.Min_Grouped_from_LINQ_101(async))).Message);
 
     public override async Task Whats_new_2021_sample_3(bool async)
-#if DEBUG
-        // GroupBy debug assert. Issue #26104.
-        => Assert.StartsWith(
-            "Missing alias in the list",
-            (await Assert.ThrowsAsync<InvalidOperationException>(
-                () => base.Whats_new_2021_sample_3(async))).Message);
-#else
         => await base.Whats_new_2021_sample_3(async);
-#endif
 
     public override async Task Whats_new_2021_sample_5(bool async)
-#if DEBUG
-        // GroupBy debug assert. Issue #26104.
-        => Assert.StartsWith(
-            "Missing alias in the list",
-            (await Assert.ThrowsAsync<InvalidOperationException>(
-                () => base.Whats_new_2021_sample_5(async))).Message);
-#else
         => await base.Whats_new_2021_sample_5(async);
-#endif
 
     public override async Task Whats_new_2021_sample_6(bool async)
-#if DEBUG
-        // GroupBy debug assert. Issue #26104.
-        => Assert.StartsWith(
-            "Missing alias in the list",
-            (await Assert.ThrowsAsync<InvalidOperationException>(
-                () => base.Whats_new_2021_sample_6(async))).Message);
-#else
         => await base.Whats_new_2021_sample_6(async);
-#endif
 
     public override async Task Group_Join_from_LINQ_101(bool async)
         => Assert.Equal(
@@ -71,7 +49,7 @@ public class Ef6GroupBySqliteTest : Ef6GroupByTestBase<Ef6GroupBySqliteTest.Ef6G
             (await Assert.ThrowsAsync<InvalidOperationException>(
                 () => base.Group_Join_from_LINQ_101(async))).Message);
 
-    public class Ef6GroupBySqliteFixture : Ef6GroupByFixtureBase
+    public class Ef6GroupBySqliteFixture : Ef6GroupByFixtureBase, ITestSqlLoggerFactory
     {
         public TestSqlLoggerFactory TestSqlLoggerFactory
             => (TestSqlLoggerFactory)ListLoggerFactory;

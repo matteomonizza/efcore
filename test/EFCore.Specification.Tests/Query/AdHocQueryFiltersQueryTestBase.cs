@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
 {
     protected override string StoreName
@@ -13,32 +15,27 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
     [ConditionalFact]
     public virtual async Task Query_filter_with_contains_evaluates_correctly()
     {
-        var contextFactory = await InitializeAsync<Context10295>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context10295>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
         var result = context.Entities.ToList();
         Assert.Single(result);
     }
 
-    protected class Context10295 : DbContext
+    protected class Context10295(DbContextOptions options) : DbContext(options)
     {
-        private readonly List<int> _ids = new() { 1, 7 };
+        private readonly List<int> _ids = [1, 7];
 
         public DbSet<MyEntity10295> Entities { get; set; }
-
-        public Context10295(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<MyEntity10295>().HasQueryFilter(x => !_ids.Contains(x.Id));
 
-        public void Seed()
+        public Task SeedAsync()
         {
             var e1 = new MyEntity10295 { Name = "Name1" };
             var e2 = new MyEntity10295 { Name = "Name2" };
             Entities.AddRange(e1, e2);
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class MyEntity10295
@@ -55,7 +52,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
     [ConditionalFact]
     public virtual async Task MultiContext_query_filter_test()
     {
-        var contextFactory = await InitializeAsync<FilterContext10301>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<FilterContext10301>(seed: c => c.SeedAsync());
 
         using (var context = contextFactory.CreateContext())
         {
@@ -69,21 +66,16 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    protected class FilterContextBase10301 : DbContext
+    protected class FilterContextBase10301(DbContextOptions options) : DbContext(options)
     {
         public int Tenant { get; set; }
-
-        public FilterContextBase10301(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         public DbSet<Blog10301> Blogs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<Blog10301>().HasQueryFilter(e => e.SomeValue == Tenant);
 
-        public void Seed()
+        public Task SeedAsync()
         {
             AddRange(
                 new Blog10301 { SomeValue = 1 },
@@ -91,7 +83,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
                 new Blog10301 { SomeValue = 2 }
             );
 
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class Blog10301
@@ -101,13 +93,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    protected class FilterContext10301 : FilterContextBase10301
-    {
-        public FilterContext10301(DbContextOptions options)
-            : base(options)
-        {
-        }
-    }
+    protected class FilterContext10301(DbContextOptions options) : FilterContextBase10301(options);
 
     #endregion
 
@@ -123,15 +109,10 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         Assert.False(result);
     }
 
-    protected class Context12170 : DbContext
+    protected class Context12170(DbContextOptions options) : DbContext(options)
     {
         public virtual DbSet<Definition12170> Definitions { get; set; }
         public virtual DbSet<DefinitionHistory12170> DefinitionHistories { get; set; }
-
-        public Context12170(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -182,7 +163,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
     [ConditionalFact]
     public virtual async Task Query_filter_with_pk_fk_optimization()
     {
-        var contextFactory = await InitializeAsync<Context13517>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context13517>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
         context.Entities.Select(
             s =>
@@ -196,7 +177,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
                 }).Single(p => p.Id == 1);
     }
 
-    protected class Context13517 : DbContext
+    protected class Context13517(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Entity13517> Entities { get; set; }
         public DbSet<RefEntity13517> RefEntities { get; set; }
@@ -204,17 +185,12 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<RefEntity13517>().HasQueryFilter(f => f.Public);
 
-        public Context13517(DbContextOptions options)
-            : base(options)
-        {
-        }
-
-        public void Seed()
+        public Task SeedAsync()
         {
             var refEntity = new RefEntity13517 { Public = false };
             RefEntities.Add(refEntity);
             Entities.Add(new Entity13517 { RefEntity = refEntity });
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class Entity13517
@@ -251,7 +227,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
     [ConditionalFact]
     public virtual async Task Self_reference_in_query_filter_works()
     {
-        var contextFactory = await InitializeAsync<Context17253>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context17253>(seed: c => c.SeedAsync());
 
         using (var context = contextFactory.CreateContext())
         {
@@ -266,19 +242,19 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    protected class Context17253 : DbContext
+    protected class Context17253(DbContextOptions options) : DbContext(options)
     {
         public DbSet<EntityWithQueryFilterSelfReference17253> EntitiesWithQueryFilterSelfReference { get; set; }
-        public DbSet<EntityReferencingEntityWithQueryFilterSelfReference17253> EntitiesReferencingEntityWithQueryFilterSelfReference { get; set; }
+
+        public DbSet<EntityReferencingEntityWithQueryFilterSelfReference17253> EntitiesReferencingEntityWithQueryFilterSelfReference
+        {
+            get;
+            set;
+        }
 
         public DbSet<EntityWithQueryFilterCycle17253_1> EntitiesWithQueryFilterCycle1 { get; set; }
         public DbSet<EntityWithQueryFilterCycle17253_2> EntitiesWithQueryFilterCycle2 { get; set; }
         public DbSet<EntityWithQueryFilterCycle17253_3> EntitiesWithQueryFilterCycle3 { get; set; }
-
-        public Context17253(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -291,18 +267,21 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
             modelBuilder.Entity<EntityWithQueryFilterCycle17253_3>().HasQueryFilter(e => EntitiesWithQueryFilterCycle1.Any());
         }
 
-        public void Seed()
+        public Task SeedAsync()
         {
             EntitiesWithQueryFilterSelfReference.Add(
                 new EntityWithQueryFilterSelfReference17253 { Name = "EntityWithQueryFilterSelfReference" });
             EntitiesReferencingEntityWithQueryFilterSelfReference.Add(
-                new EntityReferencingEntityWithQueryFilterSelfReference17253 { Name = "EntityReferencingEntityWithQueryFilterSelfReference" });
+                new EntityReferencingEntityWithQueryFilterSelfReference17253
+                {
+                    Name = "EntityReferencingEntityWithQueryFilterSelfReference"
+                });
 
             EntitiesWithQueryFilterCycle1.Add(new EntityWithQueryFilterCycle17253_1 { Name = "EntityWithQueryFilterCycle1_1" });
             EntitiesWithQueryFilterCycle2.Add(new EntityWithQueryFilterCycle17253_2 { Name = "EntityWithQueryFilterCycle2_1" });
             EntitiesWithQueryFilterCycle3.Add(new EntityWithQueryFilterCycle17253_3 { Name = "EntityWithQueryFilterCycle3_1" });
 
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class EntityWithQueryFilterSelfReference17253
@@ -343,7 +322,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
     [ConditionalFact]
     public virtual async Task Invoke_inside_query_filter_gets_correctly_evaluated_during_translation()
     {
-        var contextFactory = await InitializeAsync<Context18510>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context18510>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
         context.TenantId = 1;
 
@@ -355,16 +334,11 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         Assert.True(query2.All(x => x.TenantId == 2));
     }
 
-    protected class Context18510 : DbContext
+    protected class Context18510(DbContextOptions options) : DbContext(options)
     {
         public DbSet<MyEntity18510> Entities { get; set; }
 
         public int TenantId { get; set; }
-
-        public Context18510(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -390,7 +364,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
             entityType.SetQueryFilter(updatedQueryFilter);
         }
 
-        public void Seed()
+        public Task SeedAsync()
         {
             var e1 = new MyEntity18510 { Name = "e1", TenantId = 1 };
             var e2 = new MyEntity18510 { Name = "e2", TenantId = 2 };
@@ -398,7 +372,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
             var e4 = new MyEntity18510 { Name = "Foo", TenantId = 2 };
 
             Entities.AddRange(e1, e2, e3, e4);
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         public class MyEntity18510
@@ -422,17 +396,12 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         var people = context.People.ToList();
     }
 
-    protected class Context18759 : DbContext
+    protected class Context18759(DbContextOptions options) : DbContext(options)
     {
         public DbSet<Person18759> People { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
             => modelBuilder.Entity<Person18759>().HasQueryFilter(p => p.UserDelete != null);
-
-        public Context18759(DbContextOptions options)
-            : base(options)
-        {
-        }
 
         public class Person18759
         {
@@ -453,7 +422,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
     [ConditionalFact]
     public virtual async Task GroupJoin_SelectMany_gets_flattened()
     {
-        var contextFactory = await InitializeAsync<Context19708>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context19708>(seed: c => c.SeedAsync());
         using (var context = contextFactory.CreateContext())
         {
             var query = context.CustomerFilters.ToList();
@@ -485,13 +454,8 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         }
     }
 
-    protected class Context19708 : DbContext
+    protected class Context19708(DbContextOptions options) : DbContext(options)
     {
-        public Context19708(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<Customer19708> Customers { get; set; }
         public DbSet<CustomerMembership19708> CustomerMemberships { get; set; }
         public DbSet<CustomerFilter19708> CustomerFilters { get; set; }
@@ -514,7 +478,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
 #pragma warning restore CS0618 // Type or member is obsolete
         }
 
-        public void Seed()
+        public Task SeedAsync()
         {
             var customer1 = new Customer19708 { Name = "First" };
             var customer2 = new Customer19708 { Name = "Second" };
@@ -527,7 +491,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
             AddRange(customer1, customer2, customer3);
             AddRange(customerMembership1, customerMembership2, customerMembership3);
 
-            SaveChanges();
+            return SaveChangesAsync();
         }
 
         private Expression<Func<IQueryable<CustomerView19708>>> Build_Customers_Sql_View_InMemory()
@@ -587,7 +551,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task IsDeleted_query_filter_with_conversion_to_int_works(bool async)
     {
-        var contextFactory = await InitializeAsync<Context26428>(seed: c => c.Seed());
+        var contextFactory = await InitializeAsync<Context26428>(seed: c => c.SeedAsync());
         using var context = contextFactory.CreateContext();
 
         var query = context.Suppliers.Include(s => s.Location).OrderBy(s => s.Name);
@@ -600,13 +564,8 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
         Assert.Single(suppliers.Where(e => e.Location != null));
     }
 
-    protected class Context26428 : DbContext
+    protected class Context26428(DbContextOptions options) : DbContext(options)
     {
-        public Context26428(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<Supplier> Suppliers
             => Set<Supplier>();
 
@@ -622,7 +581,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
             modelBuilder.Entity<Location>().HasQueryFilter(l => !l.IsDeleted);
         }
 
-        public void Seed()
+        public Task SeedAsync()
         {
             var activeAddress = new Location { Address = "Active address", IsDeleted = false };
             var deletedAddress = new Location { Address = "Deleted address", IsDeleted = true };
@@ -645,7 +604,7 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
             AddRange(activeAddress, deletedAddress);
             AddRange(activeSupplier1, activeSupplier2, activeSupplier3, deletedSupplier);
 
-            SaveChanges();
+            return SaveChangesAsync();
         }
     }
 
@@ -724,13 +683,8 @@ public abstract class AdHocQueryFiltersQueryTestBase : NonSharedModelTestBase
             : query.ToList();
     }
 
-    protected class Context27163 : DbContext
+    protected class Context27163(DbContextOptions options) : DbContext(options)
     {
-        public Context27163(DbContextOptions options)
-            : base(options)
-        {
-        }
-
         public DbSet<Parent> Parents { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

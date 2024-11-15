@@ -126,8 +126,8 @@
   <data name="CannotTranslateNonConstantNewArrayExpression" xml:space="preserve">
     <value>The query contained a new array expression containing non-constant elements, which could not be translated: '{newArrayExpression}'.</value>
   </data>
-  <data name="ConnectionStringConflictingConfiguration" xml:space="preserve">
-    <value>Both the connection string and CredentialToken, account key or account endpoint were specified. Specify only one set of connection details.</value>
+  <data name="ConnectionInfoMissing" xml:space="preserve">
+    <value>None of connection string, CredentialToken, account key or account endpoint were specified. Specify a set of connection details.</value>
   </data>
   <data name="ContainerContainingPropertyConflict" xml:space="preserve">
     <value>The entity type '{entityType}' is mapped to the container '{container}' but it is also configured as being contained in property '{property}'.</value>
@@ -186,6 +186,10 @@
   <data name="LogExecutingSqlQuery" xml:space="preserve">
     <value>Executing SQL query for container '{containerId}' in partition '{partitionKey}' [Parameters=[{parameters}]]{newLine}{commandText}</value>
     <comment>Information CosmosEventId.ExecutingSqlQuery string string? string string string</comment>
+  </data>
+  <data name="LogSyncNotSupported" xml:space="preserve">
+    <value>Azure Cosmos DB does not support synchronous I/O. Make sure to use and correctly await only async methods when using Entity Framework Core to access Azure Cosmos DB. See https://aka.ms/ef-cosmos-nosync for more information.</value>
+    <comment>Error CosmosEventId.SyncNotSupported</comment>
   </data>
   <data name="MissingOrderingInSelectExpression" xml:space="preserve">
     <value>'Reverse' could not be translated to the server because there is no ordering on the server side.</value>
@@ -258,9 +262,6 @@
   </data>
   <data name="PartitionKeyStoreNameMismatch" xml:space="preserve">
     <value>The partition key property '{property1}' on '{entityType1}' is mapped as '{storeName1}', but the partition key property '{property2}' on '{entityType2}' is mapped as '{storeName2}'. All partition key properties need to be mapped to the same store property for entity types mapped to the same container.</value>
-  </data>
-  <data name="PrimitiveCollectionsNotSupported" xml:space="preserve">
-    <value>The property '{entityType}.{property}' is configured as an EF8 primitive collection. Primitive collections in a Cosmos model are discovered by convention.</value>
   </data>
   <data name="ResourceIdMissing" xml:space="preserve">
     <value>Unable to execute a 'ReadItem' query since the 'id' value is missing and cannot be generated.</value>

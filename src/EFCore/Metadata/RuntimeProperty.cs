@@ -31,7 +31,6 @@ public class RuntimeProperty : RuntimePropertyBase, IProperty
     private ValueComparer? _providerValueComparer;
     private readonly JsonValueReaderWriter? _jsonValueReaderWriter;
     private CoreTypeMapping? _typeMapping;
-    private IComparer<IUpdateEntry>? _currentValueComparer;
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -240,19 +239,11 @@ public class RuntimeProperty : RuntimePropertyBase, IProperty
     }
 
     /// <inheritdoc />
-    [DebuggerStepThrough]
-    IComparer<IUpdateEntry> IProperty.GetCurrentValueComparer()
+    public virtual ValueComparer GetValueComparer()
         => NonCapturingLazyInitializer.EnsureInitialized(
-            ref _currentValueComparer, this, static property =>
-                new CurrentValueComparerFactory().Create(property));
-
-    private ValueComparer GetValueComparer()
-        => (GetValueComparer(null) ?? TypeMapping.Comparer)
-            .ToNullableComparer(ClrType)!;
-
-    private ValueComparer GetKeyValueComparer()
-        => (GetKeyValueComparer(null) ?? TypeMapping.KeyComparer)
-            .ToNullableComparer(ClrType)!;
+            ref _valueComparer, this,
+            static property => (property.GetValueComparer(null) ?? property.TypeMapping.Comparer)
+                .ToNullableComparer(property.ClrType)!);
 
     private ValueComparer? GetValueComparer(HashSet<IReadOnlyProperty>? checkedProperties)
     {
@@ -269,7 +260,7 @@ public class RuntimeProperty : RuntimePropertyBase, IProperty
 
         if (checkedProperties == null)
         {
-            checkedProperties = new HashSet<IReadOnlyProperty>();
+            checkedProperties = [];
         }
         else if (checkedProperties.Contains(this))
         {
@@ -279,6 +270,13 @@ public class RuntimeProperty : RuntimePropertyBase, IProperty
         checkedProperties.Add(this);
         return principal.GetValueComparer(checkedProperties);
     }
+
+    /// <inheritdoc />
+    public virtual ValueComparer GetKeyValueComparer()
+        => NonCapturingLazyInitializer.EnsureInitialized(
+            ref _keyValueComparer, this,
+            static property => (property.GetKeyValueComparer(null) ?? property.TypeMapping.KeyComparer)
+                .ToNullableComparer(property.ClrType)!);
 
     private ValueComparer? GetKeyValueComparer(HashSet<IReadOnlyProperty>? checkedProperties)
     {
@@ -295,7 +293,7 @@ public class RuntimeProperty : RuntimePropertyBase, IProperty
 
         if (checkedProperties == null)
         {
-            checkedProperties = new HashSet<IReadOnlyProperty>();
+            checkedProperties = [];
         }
         else if (checkedProperties.Contains(this))
         {
@@ -430,30 +428,12 @@ public class RuntimeProperty : RuntimePropertyBase, IProperty
     /// <inheritdoc />
     [DebuggerStepThrough]
     ValueComparer? IReadOnlyProperty.GetValueComparer()
-        => NonCapturingLazyInitializer.EnsureInitialized(
-            ref _valueComparer, this,
-            static property => property.GetValueComparer());
-
-    /// <inheritdoc />
-    [DebuggerStepThrough]
-    ValueComparer IProperty.GetValueComparer()
-        => NonCapturingLazyInitializer.EnsureInitialized(
-            ref _valueComparer, this,
-            static property => property.GetValueComparer());
+        => GetValueComparer();
 
     /// <inheritdoc />
     [DebuggerStepThrough]
     ValueComparer? IReadOnlyProperty.GetKeyValueComparer()
-        => NonCapturingLazyInitializer.EnsureInitialized(
-            ref _keyValueComparer, this,
-            static property => property.GetKeyValueComparer());
-
-    /// <inheritdoc />
-    [DebuggerStepThrough]
-    ValueComparer IProperty.GetKeyValueComparer()
-        => NonCapturingLazyInitializer.EnsureInitialized(
-            ref _keyValueComparer, this,
-            static property => property.GetKeyValueComparer());
+        => GetKeyValueComparer();
 
     /// <inheritdoc />
     [DebuggerStepThrough]

@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFixture>
     where TFixture : NorthwindQueryFixtureBase<NoopModelCustomizer>, new()
 {
@@ -1426,16 +1428,10 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
             ss => ss.Set<Customer>().Select(c => new CustomerListItem(c.CustomerID, c.City)).OrderBy(c => c.City),
             assertOrder: true);
 
-    protected class CustomerListItem
+    protected class CustomerListItem(string id, string city)
     {
-        public CustomerListItem(string id, string city)
-        {
-            Id = id;
-            City = city;
-        }
-
-        public string Id { get; }
-        public string City { get; }
+        public string Id { get; } = id;
+        public string City { get; } = city;
 
         public override bool Equals(object obj)
             => obj != null
@@ -1608,15 +1604,10 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
             elementSorter: e => e.Customer.CustomerID,
             elementAsserter: (e, a) => Assert.Equal(e.Customer, a.Customer));
 
-    private class CustomerWrapper
+    private class CustomerWrapper(Customer customer)
     {
-        public CustomerWrapper(Customer customer)
-        {
-            Customer = customer;
-        }
-
         public string City { get; set; }
-        public Customer Customer { get; }
+        public Customer Customer { get; } = customer;
     }
 
     [ConditionalTheory]
@@ -2261,32 +2252,18 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
                 Assert.Equal(e.OrderCount, a.OrderCount);
             });
 
-    private class CustomerDetailsWithCount
+    private class CustomerDetailsWithCount(string customerID, string city, List<OrderInfo> orderInfos, int orderCount)
     {
-        public CustomerDetailsWithCount(string customerID, string city, List<OrderInfo> orderInfos, int orderCount)
-        {
-            CustomerID = customerID;
-            City = city;
-            OrderInfos = orderInfos;
-            OrderCount = orderCount;
-        }
-
-        public string CustomerID { get; }
-        public string City { get; }
-        public List<OrderInfo> OrderInfos { get; }
-        public int OrderCount { get; }
+        public string CustomerID { get; } = customerID;
+        public string City { get; } = city;
+        public List<OrderInfo> OrderInfos { get; } = orderInfos;
+        public int OrderCount { get; } = orderCount;
     }
 
-    private class OrderInfo
+    private class OrderInfo(int orderID, DateTime? orderDate)
     {
-        public OrderInfo(int orderID, DateTime? orderDate)
-        {
-            OrderID = orderID;
-            OrderDate = orderDate;
-        }
-
-        public int OrderID { get; }
-        public DateTime? OrderDate { get; }
+        public int OrderID { get; } = orderID;
+        public DateTime? OrderDate { get; } = orderDate;
     }
 
     [ConditionalTheory]
@@ -2338,9 +2315,7 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
                 AssertCollection(e.Collection, a.Collection, ordered: true);
             });
 
-    private class OrderDto
-    {
-    }
+    private class OrderDto;
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
@@ -2454,14 +2429,9 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
             elementSorter: e => e.Id,
             elementAsserter: (e, a) => Assert.Equal(e.Id, a.Id));
 
-    public class CustomerDtoWithEntityInCtor
+    public class CustomerDtoWithEntityInCtor(Customer customer)
     {
-        public CustomerDtoWithEntityInCtor(Customer customer)
-        {
-            Id = customer.CustomerID;
-        }
-
-        public string Id { get; }
+        public string Id { get; } = customer.CustomerID;
     }
 
     [ConditionalTheory]

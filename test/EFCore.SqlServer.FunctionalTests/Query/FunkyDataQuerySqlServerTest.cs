@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public class FunkyDataQuerySqlServerTest : FunkyDataQueryTestBase<FunkyDataQuerySqlServerTest.FunkyDataQuerySqlServerFixture>
 {
     public FunkyDataQuerySqlServerTest(FunkyDataQuerySqlServerFixture fixture, ITestOutputHelper testOutputHelper)
@@ -12,12 +14,9 @@ public class FunkyDataQuerySqlServerTest : FunkyDataQueryTestBase<FunkyDataQuery
         Fixture.TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
     }
 
-    protected virtual bool CanExecuteQueryString
-        => true;
-
     protected override QueryAsserter CreateQueryAsserter(FunkyDataQuerySqlServerFixture fixture)
         => new RelationalQueryAsserter(
-            fixture, RewriteExpectedQueryExpression, RewriteServerQueryExpression, canExecuteQueryString: CanExecuteQueryString);
+            fixture, RewriteExpectedQueryExpression, RewriteServerQueryExpression);
 
     public override async Task String_contains_on_argument_with_wildcard_constant(bool async)
     {
@@ -602,7 +601,7 @@ WHERE [f].[FirstName] LIKE @__s_0_contains ESCAPE N'\' OR [f].[LastName] LIKE @_
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 
-    public class FunkyDataQuerySqlServerFixture : FunkyDataQueryFixtureBase
+    public class FunkyDataQuerySqlServerFixture : FunkyDataQueryFixtureBase, ITestSqlLoggerFactory
     {
         public TestSqlLoggerFactory TestSqlLoggerFactory
             => (TestSqlLoggerFactory)ListLoggerFactory;

@@ -50,7 +50,7 @@ public class DbContextOperationsTest
             rootNamespace: null,
             language: "C#",
             nullable: false,
-            args: Array.Empty<string>(),
+            args: [],
             new TestAppServiceProviderFactory(assembly));
 
         var baseContext = Assert.IsType<BaseContext>(operations.CreateContext(nameof(BaseContext)));
@@ -168,7 +168,7 @@ public class DbContextOperationsTest
             rootNamespace: null,
             language: "C#",
             nullable: false,
-            /* args: */ Array.Empty<string>(),
+            /* args: */ [],
             new TestAppServiceProviderFactory(assembly));
     }
 
@@ -206,26 +206,15 @@ public class DbContextOperationsTest
         }
     }
 
-    private class BaseContext : DbContext
+    private class BaseContext(string factoryUsed) : DbContext
     {
-        public BaseContext(string factoryUsed)
-        {
-            FactoryUsed = factoryUsed;
-        }
-
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseInMemoryDatabase(GetType().Name);
 
-        public string FactoryUsed { get; }
+        public string FactoryUsed { get; } = factoryUsed;
     }
 
-    private class DerivedContext : BaseContext
-    {
-        public DerivedContext(string factoryUsed)
-            : base(factoryUsed)
-        {
-        }
-    }
+    private class DerivedContext(string factoryUsed) : BaseContext(factoryUsed);
 
     private class HierarchyContextFactory : IDesignTimeDbContextFactory<BaseContext>, IDesignTimeDbContextFactory<DerivedContext>
     {

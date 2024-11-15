@@ -94,6 +94,10 @@ public abstract class RelationalOptionsExtension : IDbContextOptionsExtension
         var clone = Clone();
 
         clone._connectionString = connectionString;
+        if (connectionString is not null)
+        {
+            clone._connection = null;
+        }
 
         return clone;
     }
@@ -136,6 +140,10 @@ public abstract class RelationalOptionsExtension : IDbContextOptionsExtension
 
         clone._connection = connection;
         clone._connectionOwned = owned;
+        if (connection is not null)
+        {
+            clone._connectionString = null;
+        }
 
         return clone;
     }
@@ -154,7 +162,7 @@ public abstract class RelationalOptionsExtension : IDbContextOptionsExtension
     /// <returns>A new instance with the option changed.</returns>
     public virtual RelationalOptionsExtension WithCommandTimeout(int? commandTimeout)
     {
-        if (commandTimeout is <= 0)
+        if (commandTimeout is < 0)
         {
             throw new InvalidOperationException(RelationalStrings.InvalidCommandTimeout(commandTimeout));
         }
@@ -273,7 +281,7 @@ public abstract class RelationalOptionsExtension : IDbContextOptionsExtension
         => _migrationsAssembly;
 
     /// <summary>
-    ///     The Assembly that contains migrations, or <see langword="null" /> if none has been set.
+    ///     The assembly that contains migrations, or <see langword="null" /> if none has been set.
     /// </summary>
     public virtual Assembly? MigrationsAssemblyObject
         => _migrationsAssemblyObject;

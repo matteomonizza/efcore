@@ -11,6 +11,20 @@ namespace Microsoft.EntityFrameworkCore.Infrastructure;
 
 public class SqlServerModelValidatorTest : RelationalModelValidatorTest
 {
+    [ConditionalFact]
+    public virtual void Passes_on_TPT_with_nested_owned_types()
+    {
+        var modelBuilder = base.CreateConventionModelBuilder();
+
+        modelBuilder.Entity<BaseEntity>().UseTptMappingStrategy();
+        modelBuilder.Entity<ChildA>();
+        modelBuilder.Entity<ChildB>();
+        modelBuilder.Entity<ChildC>();
+        modelBuilder.Entity<ChildD>();
+
+        Validate(modelBuilder);
+    }
+
     public override void Detects_duplicate_columns_in_derived_types_with_different_types()
     {
         var modelBuilder = CreateConventionModelBuilder();
@@ -56,6 +70,55 @@ public class SqlServerModelValidatorTest : RelationalModelValidatorTest
         var keyProperty = modelBuilder.Model.FindEntityType(typeof(Animal))!.FindProperty(nameof(Animal.Id))!;
         Assert.Equal(ValueGenerated.OnAdd, keyProperty.ValueGenerated);
         Assert.Equal(SqlServerValueGenerationStrategy.Sequence, keyProperty.GetValueGenerationStrategy());
+    }
+
+    [ConditionalFact]
+    public virtual void Throws_for_identity_on_bad_type()
+    {
+        var modelBuilder = CreateConventionModelBuilder();
+
+        modelBuilder.Entity<Animal>(
+            b =>
+            {
+                b.Property(e => e.Name).UseIdentityColumn();
+            });
+
+        VerifyError(
+            SqlServerStrings.IdentityBadType(nameof(LivingBeing.Name), nameof(Animal), "string"),
+            modelBuilder);
+    }
+
+    [ConditionalFact]
+    public virtual void Throws_for_sequence_on_bad_type()
+    {
+        var modelBuilder = CreateConventionModelBuilder();
+
+        modelBuilder.Entity<Animal>(
+            b =>
+            {
+                b.Property(e => e.Name).UseSequence();
+            });
+
+        VerifyError(
+            SqlServerStrings.SequenceBadType(nameof(LivingBeing.Name), nameof(Animal), "string"),
+            modelBuilder);
+    }
+
+
+    [ConditionalFact]
+    public virtual void Throws_for_sequence_HiLo_on_bad_type()
+    {
+        var modelBuilder = CreateConventionModelBuilder();
+
+        modelBuilder.Entity<Animal>(
+            b =>
+            {
+                b.Property(e => e.Name).UseHiLo();
+            });
+
+        VerifyError(
+            SqlServerStrings.SequenceBadType(nameof(LivingBeing.Name), nameof(Animal), "string"),
+            modelBuilder);
     }
 
     [ConditionalFact]
@@ -750,13 +813,12 @@ public class SqlServerModelValidatorTest : RelationalModelValidatorTest
         ConfigureProperty(propertyBuilder.Metadata, "DefaultValue", "2");
 
         VerifyWarnings(
-            new[]
-            {
+            [
                 SqlServerResources.LogConflictingValueGenerationStrategies(new TestLogger<SqlServerLoggingDefinitions>())
                     .GenerateMessage(sqlServerValueGenerationStrategy.ToString(), "DefaultValue", "Id", nameof(Dog)),
                 RelationalResources.LogKeyHasDefaultValue(new TestLogger<SqlServerLoggingDefinitions>())
                     .GenerateMessage("Id", nameof(Dog))
-            },
+            ],
             modelBuilder);
     }
 

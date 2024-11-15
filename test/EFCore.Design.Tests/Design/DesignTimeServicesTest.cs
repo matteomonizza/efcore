@@ -286,13 +286,7 @@ public class UserMigrationsIdGenerator : IMigrationsIdGenerator
             => throw new NotImplementedException();
     }
 
-    public class MyContext : DbContext
-    {
-        public MyContext(DbContextOptions<MyContext> options)
-            : base(options)
-        {
-        }
-    }
+    public class MyContext(DbContextOptions<MyContext> options) : DbContext(options);
 
     private ServiceProvider CreateDesignServiceProvider(
         string assemblyCode,
@@ -305,7 +299,7 @@ public class UserMigrationsIdGenerator : IMigrationsIdGenerator
             : Compile(startupAssemblyCode);
 
         var reporter = new TestOperationReporter();
-        var servicesBuilder = new DesignTimeServicesBuilder(assembly, startupAssembly, reporter, new string[0]);
+        var servicesBuilder = new DesignTimeServicesBuilder(assembly, startupAssembly, reporter, []);
 
         return (context == null
                 ? servicesBuilder

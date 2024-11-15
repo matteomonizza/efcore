@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using Microsoft.EntityFrameworkCore.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Metadata.Internal;
 
@@ -218,7 +219,7 @@ public abstract class InternalTypeBaseBuilder : AnnotatableBuilder<TypeBase, Int
 
             propertyType ??= existingProperty.ClrType;
 
-            propertiesToDetach = new List<Property> { existingProperty };
+            propertiesToDetach = [existingProperty];
         }
         else
         {
@@ -249,7 +250,7 @@ public abstract class InternalTypeBaseBuilder : AnnotatableBuilder<TypeBase, Int
                 var derivedProperty = derivedType.FindDeclaredProperty(propertyName);
                 if (derivedProperty != null)
                 {
-                    propertiesToDetach ??= new List<Property>();
+                    propertiesToDetach ??= [];
 
                     propertiesToDetach.Add(derivedProperty);
                 }
@@ -705,7 +706,7 @@ public abstract class InternalTypeBaseBuilder : AnnotatableBuilder<TypeBase, Int
         {
             foreach (var relationship in propertyToDetach.GetContainingForeignKeys().ToList())
             {
-                detachedRelationships ??= new List<RelationshipSnapshot>();
+                detachedRelationships ??= [];
 
                 detachedRelationships.Add(InternalEntityTypeBuilder.DetachRelationship(relationship));
             }
@@ -719,7 +720,7 @@ public abstract class InternalTypeBaseBuilder : AnnotatableBuilder<TypeBase, Int
         {
             foreach (var referencingForeignKey in key.GetReferencingForeignKeys().ToList())
             {
-                detachedRelationships ??= new List<RelationshipSnapshot>();
+                detachedRelationships ??= [];
 
                 detachedRelationships.Add(InternalEntityTypeBuilder.DetachRelationship(referencingForeignKey));
             }
@@ -1049,7 +1050,7 @@ public abstract class InternalTypeBaseBuilder : AnnotatableBuilder<TypeBase, Int
             collection ??= existingComplexProperty.IsCollection;
             complexType ??= existingComplexType.ClrType;
 
-            propertiesToDetach = new List<ComplexProperty> { existingComplexProperty };
+            propertiesToDetach = [existingComplexProperty];
         }
         else
         {
@@ -1093,7 +1094,7 @@ public abstract class InternalTypeBaseBuilder : AnnotatableBuilder<TypeBase, Int
                 var derivedProperty = derivedType.FindDeclaredComplexProperty(propertyName);
                 if (derivedProperty != null)
                 {
-                    propertiesToDetach ??= new List<ComplexProperty>();
+                    propertiesToDetach ??= [];
 
                     propertiesToDetach.Add(derivedProperty);
                 }

@@ -4,8 +4,6 @@
 using System.ComponentModel;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
-#nullable enable
-
 namespace Microsoft.EntityFrameworkCore.TestUtilities;
 
 public class ModelAsserter
@@ -71,6 +69,10 @@ public class ModelAsserter
         {
             expectedEntityTypes = expectedEntityTypes.OrderBy(p => p.Name);
             actualEntityTypes = actualEntityTypes.OrderBy(p => p.Name);
+        }
+        else
+        {
+            expectedEntityTypes = expectedEntityTypes.Select(x => x);
         }
 
         Assert.Equal(expectedEntityTypes, actualEntityTypes,
@@ -214,6 +216,10 @@ public class ModelAsserter
             expectedProperties = expectedProperties.OrderBy(p => p.Name);
             actualProperties = actualProperties.OrderBy(p => p.Name);
         }
+        else
+        {
+            expectedProperties = expectedProperties.Select(x => x);
+        }
 
         Assert.Equal(expectedProperties, actualProperties,
             (expected, actual) =>
@@ -279,6 +285,10 @@ public class ModelAsserter
         {
             expectedProperties = expectedProperties.OrderBy(p => p.Name);
             actualProperties = actualProperties.OrderBy(p => p.Name);
+        }
+        else
+        {
+            expectedProperties = expectedProperties.Select(x => x);
         }
 
         Assert.Equal(expectedProperties, actualProperties,
@@ -407,6 +417,10 @@ public class ModelAsserter
             expectedProperties = expectedProperties.OrderBy(p => p.Name);
             actualProperties = actualProperties.OrderBy(p => p.Name);
         }
+        else
+        {
+            expectedProperties = expectedProperties.Select(x => x);
+        }
 
         Assert.Equal(expectedProperties, actualProperties,
             (expected, actual) =>
@@ -464,6 +478,10 @@ public class ModelAsserter
         {
             expectedNavigations = expectedNavigations.OrderBy(p => p.Name);
             actualNavigations = actualNavigations.OrderBy(p => p.Name);
+        }
+        else
+        {
+            expectedNavigations = expectedNavigations.Select(x => x);
         }
 
         Assert.Equal(expectedNavigations, actualNavigations,
@@ -540,6 +558,10 @@ public class ModelAsserter
             expectedNavigations = expectedNavigations.OrderBy(p => p.Name);
             actualNavigations = actualNavigations.OrderBy(p => p.Name);
         }
+        else
+        {
+            expectedNavigations = expectedNavigations.Select(x => x);
+        }
 
         Assert.Equal(expectedNavigations, actualNavigations,
             (expected, actual) =>
@@ -615,6 +637,10 @@ public class ModelAsserter
             expectedKeys = expectedKeys.Order(KeyComparer.Instance);
             actualKeys = actualKeys.Order(KeyComparer.Instance);
         }
+        else
+        {
+            expectedKeys = expectedKeys.Select(x => x);
+        }
 
         Assert.Equal(expectedKeys, actualKeys,
             (expected, actual) =>
@@ -688,6 +714,10 @@ public class ModelAsserter
         {
             expectedForeignKey = expectedForeignKey.Order(ForeignKeyComparer.Instance);
             actualForeignKey = actualForeignKey.Order(ForeignKeyComparer.Instance);
+        }
+        else
+        {
+            expectedForeignKey = expectedForeignKey.Select(x => x);
         }
 
         Assert.Equal(expectedForeignKey, actualForeignKey,
@@ -776,6 +806,10 @@ public class ModelAsserter
         {
             expectedIndex = expectedIndex.Order(IndexComparer.Instance);
             actualIndex = actualIndex.Order(IndexComparer.Instance);
+        }
+        else
+        {
+            expectedIndex = expectedIndex.Select(x => x);
         }
 
         Assert.Equal(expectedIndex, actualIndex,

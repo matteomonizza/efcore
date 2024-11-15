@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore.TestModels.Northwind;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestBase<TFixture>
     where TFixture : NorthwindQueryFixtureBase<NoopModelCustomizer>, new()
 {
@@ -147,15 +149,10 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
         context.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;
     }
 
-    protected class Repository<T>
+    protected class Repository<T>(NorthwindContext bloggingContext)
         where T : class
     {
-        private readonly NorthwindContext _context;
-
-        public Repository(NorthwindContext bloggingContext)
-        {
-            _context = bloggingContext;
-        }
+        private readonly NorthwindContext _context = bloggingContext;
 
         public IQueryable<T> Find()
             => _context.Set<T>();
@@ -1709,7 +1706,8 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
         => AssertQuery(
             async,
             ss => from e1 in ss.Set<Employee>()
-                  where ss.Set<Employee>().OrderBy(e2 => e2.EmployeeID).SingleOrDefault(e2 => e2.EmployeeID != e1.ReportsTo) == new Employee { EmployeeID = 1 }
+                  where ss.Set<Employee>().OrderBy(e2 => e2.EmployeeID).SingleOrDefault(e2 => e2.EmployeeID != e1.ReportsTo)
+                      == new Employee { EmployeeID = 1 }
                   select e1,
             ss => from e1 in ss.Set<Employee>()
                   where ss.Set<Employee>().OrderBy(e2 => e2.EmployeeID).FirstOrDefault(e2 => e2.EmployeeID != e1.ReportsTo).EmployeeID == 1
@@ -2860,6 +2858,16 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
         products = (IQueryable<Product>)products.Provider.CreateQuery(products.Expression);
     }
 
+    [ConditionalFact]
+    public virtual async Task IQueryable_captured_variable()
+    {
+        await using var context = CreateContext();
+
+        IQueryable<Order> nestedOrdersQuery = context.Orders;
+
+        _ = await context.Customers.CountAsync(c => nestedOrdersQuery.Count() == 2);
+    }
+
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Select_Subquery_Single(bool async)
@@ -2941,17 +2949,17 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
     public virtual async Task Throws_on_concurrent_query_list(bool async)
     {
         using var context = CreateContext();
-        context.Database.EnsureCreatedResiliently();
+        await context.Database.EnsureCreatedResilientlyAsync();
 
         using var synchronizationEvent = new ManualResetEventSlim(false);
         using var blockingSemaphore = new SemaphoreSlim(0);
         var blockingTask = Task.Run(
-            () =>
+            async () =>
             {
                 try
                 {
-                    context.Customers.Select(
-                        c => Process(c, synchronizationEvent, blockingSemaphore)).ToList();
+                    await context.Customers.Select(
+                        c => Process(c, synchronizationEvent, blockingSemaphore)).ToListAsync();
                 }
                 finally
                 {
@@ -2982,17 +2990,17 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
     public virtual async Task Throws_on_concurrent_query_first(bool async)
     {
         using var context = CreateContext();
-        context.Database.EnsureCreatedResiliently();
+        await context.Database.EnsureCreatedResilientlyAsync();
 
         using var synchronizationEvent = new ManualResetEventSlim(false);
         using var blockingSemaphore = new SemaphoreSlim(0);
         var blockingTask = Task.Run(
-            () =>
+            async () =>
             {
                 try
                 {
-                    context.Customers.Select(
-                        c => Process(c, synchronizationEvent, blockingSemaphore)).ToList();
+                    await context.Customers.Select(
+                        c => Process(c, synchronizationEvent, blockingSemaphore)).ToListAsync();
                 }
                 finally
                 {
@@ -3875,7 +3883,7 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
             async,
             ss => ss.Set<Order>().Where(e => dates.Contains(e.OrderDate.Value.Date)));
 
-        dates = new[] { new DateTime(1996, 07, 04) };
+        dates = [new DateTime(1996, 07, 04)];
 
         await AssertQuery(
             async,
@@ -4798,9 +4806,9 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
     public virtual Task OrderBy_object_type_server_evals(bool async)
     {
         Expression<Func<Order, object>>[] orderingExpressions =
-        {
+        [
             o => o.OrderID, o => o.OrderDate, o => o.Customer.CustomerID, o => o.Customer.City
-        };
+        ];
 
         return AssertQuery(
             async,
@@ -5085,14 +5093,9 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
             elementAsserter: (e, a) => Assert.Equal(e.CustomerID, a.CustomerID));
     }
 
-    private class Dto
+    private class Dto(string value)
     {
-        public Dto(string value)
-        {
-            Value = value;
-        }
-
-        public string Value { get; }
+        public string Value { get; } = value;
         public string CustomerID { get; set; }
         public Dto NestedDto { get; set; }
     }
@@ -5429,6 +5432,26 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
                 .Select(e => e.Orders.OrderBy(o => o.OrderID).Skip(0).Take(0).Any()),
             assertOrder: true);
 
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Skip_1_Take_0_works_when_constant(bool async)
+        => AssertQueryScalar(
+            async,
+            ss => ss.Set<Customer>().Where(c => c.CustomerID.StartsWith("F"))
+                .OrderBy(c => c.CustomerID)
+                .Select(e => e.Orders.OrderBy(o => o.OrderID).Skip(1).Take(0).Any()),
+            assertOrder: true);
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Take_0_works_when_constant(bool async)
+        => AssertQueryScalar(
+            async,
+            ss => ss.Set<Customer>().Where(c => c.CustomerID.StartsWith("F"))
+                .OrderBy(c => c.CustomerID)
+                .Select(e => e.Orders.OrderBy(o => o.OrderID).Take(0).Any()),
+            assertOrder: true);
+
     [ConditionalFact]
     public virtual async Task ToListAsync_can_be_canceled()
     {
@@ -5674,7 +5697,7 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
                 .Select(g => new { g.Key, MaxTimestamp = g.Select(e => e.Order.OrderDate).Max() })
                 .OrderBy(x => x.MaxTimestamp)
                 .Select(x => x));
-	}
+    }
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
@@ -5691,7 +5714,7 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_over_concatenated_column_and_constant(bool async)
     {
-        var data = new[] { "ALFKI" + "SomeConstant", "ANATR" + "SomeConstant",  "ALFKI" + "X"};
+        var data = new[] { "ALFKI" + "SomeConstant", "ANATR" + "SomeConstant", "ALFKI" + "X" };
 
         return AssertQuery(
             async,
@@ -5702,7 +5725,7 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_over_concatenated_column_and_parameter(bool async)
     {
-        var data = new[] { "ALFKI" + "SomeVariable", "ANATR" + "SomeVariable",  "ALFKI" + "X" };
+        var data = new[] { "ALFKI" + "SomeVariable", "ANATR" + "SomeVariable", "ALFKI" + "X" };
         var someVariable = "SomeVariable";
 
         return AssertQuery(
@@ -5726,7 +5749,7 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Contains_over_concatenated_columns_both_fixed_length(bool async)
     {
-        var data = new[] { "ALFKIALFKI", "ALFKI", "ANATR" + "Ana Trujillo Emparedados y helados", "ANATR" + "ANATR"};
+        var data = new[] { "ALFKIALFKI", "ALFKI", "ANATR" + "Ana Trujillo Emparedados y helados", "ANATR" + "ANATR" };
 
         return AssertQuery(
             async,
@@ -5756,4 +5779,14 @@ public abstract class NorthwindMiscellaneousQueryTestBase<TFixture> : QueryTestB
         public string CustomerId { get; set; }
         public string City { get; set; }
     }
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Static_member_access_gets_parameterized_within_larger_evaluatable(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<Customer>().Where(c => c.CustomerID == StaticProperty + "KI"));
+
+    private static string StaticProperty
+        => "ALF";
 }

@@ -5,16 +5,13 @@ using Identity30.Data;
 using Microsoft.EntityFrameworkCore.TestModels.AspNetIdentity;
 using ModelSnapshot22;
 
+#nullable disable
+
 namespace Microsoft.EntityFrameworkCore.Migrations
 {
-    public class MigrationsInfrastructureSqliteTest
-        : MigrationsInfrastructureTestBase<MigrationsInfrastructureSqliteTest.MigrationsInfrastructureSqliteFixture>
+    public class MigrationsInfrastructureSqliteTest(MigrationsInfrastructureSqliteTest.MigrationsInfrastructureSqliteFixture fixture)
+        : MigrationsInfrastructureTestBase<MigrationsInfrastructureSqliteTest.MigrationsInfrastructureSqliteFixture>(fixture)
     {
-        public MigrationsInfrastructureSqliteTest(MigrationsInfrastructureSqliteFixture fixture)
-            : base(fixture)
-        {
-        }
-
         public override void Can_generate_migration_from_initial_database_to_initial()
         {
             base.Can_generate_migration_from_initial_database_to_initial();
@@ -64,7 +61,8 @@ BEGIN TRANSACTION;
 
 CREATE TABLE "Table1" (
     "Id" INTEGER NOT NULL CONSTRAINT "PK_Table1" PRIMARY KEY,
-    "Foo" INTEGER NOT NULL
+    "Foo" INTEGER NOT NULL,
+    "Description" TEXT NOT NULL
 );
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
@@ -92,6 +90,44 @@ BEGIN TRANSACTION;
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('00000000000004_Migration4', '7.0.0-test');
+
+COMMIT;
+
+BEGIN TRANSACTION;
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-1, 3, 'Value With
+
+Empty Lines')
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('00000000000005_Migration5', '7.0.0-test');
+
+COMMIT;
+
+BEGIN TRANSACTION;
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-2, 4, 'GO
+Value With
+
+Empty Lines')
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('00000000000006_Migration6', '7.0.0-test');
+
+COMMIT;
+
+BEGIN TRANSACTION;
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-3, 5, 'GO
+Value With
+
+GO
+
+Empty Lines
+GO')
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('00000000000007_Migration7', '7.0.0-test');
 
 COMMIT;
 
@@ -114,7 +150,8 @@ CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
 
 CREATE TABLE "Table1" (
     "Id" INTEGER NOT NULL CONSTRAINT "PK_Table1" PRIMARY KEY,
-    "Foo" INTEGER NOT NULL
+    "Foo" INTEGER NOT NULL,
+    "Description" TEXT NOT NULL
 );
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
@@ -130,6 +167,32 @@ VALUES ('00000000000003_Migration3', '7.0.0-test');
 
 INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('00000000000004_Migration4', '7.0.0-test');
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-1, 3, 'Value With
+
+Empty Lines')
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('00000000000005_Migration5', '7.0.0-test');
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-2, 4, 'GO
+Value With
+
+Empty Lines')
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('00000000000006_Migration6', '7.0.0-test');
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-3, 5, 'GO
+Value With
+
+GO
+
+Empty Lines
+GO')
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('00000000000007_Migration7', '7.0.0-test');
 
 
 """,

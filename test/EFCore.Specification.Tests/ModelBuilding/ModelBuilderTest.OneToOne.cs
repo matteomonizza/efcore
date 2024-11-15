@@ -7,15 +7,12 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.ModelBuilding;
 
+#nullable disable
+
 public abstract partial class ModelBuilderTest
 {
-    public abstract class OneToOneTestBase : ModelBuilderTestBase
+    public abstract class OneToOneTestBase(ModelBuilderFixtureBase fixture) : ModelBuilderTestBase(fixture)
     {
-        public OneToOneTestBase(ModelBuilderFixtureBase fixture)
-            : base(fixture)
-        {
-        }
-
         [ConditionalFact]
         public virtual void Finds_existing_navigations_and_uses_associated_FK()
         {

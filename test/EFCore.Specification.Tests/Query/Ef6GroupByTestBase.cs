@@ -3,6 +3,8 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class Ef6GroupByTestBase<TFixture> : QueryTestBase<TFixture>
     where TFixture : Ef6GroupByTestBase<TFixture>.Ef6GroupByFixtureBase, new()
 {
@@ -77,7 +79,7 @@ public abstract class Ef6GroupByTestBase<TFixture> : QueryTestBase<TFixture>
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
-    public virtual Task GroupBy_is_optimized_when_filerting_and_projecting_anonymous_type_with_group_key_and_function_aggregate(
+    public virtual Task GroupBy_is_optimized_when_filtering_and_projecting_anonymous_type_with_group_key_and_function_aggregate(
         bool async)
         => AssertQuery(
             async,
@@ -795,8 +797,20 @@ public abstract class Ef6GroupByTestBase<TFixture> : QueryTestBase<TFixture>
                 });
         }
 
-        protected override void Seed(ArubaContext context)
-            => new ArubaData(context);
+        protected override Task SeedAsync(ArubaContext context)
+        {
+            var data = new ArubaData();
+            context.AddRange(data.ArubaOwners);
+            context.AddRange(data.NumbersForLinq);
+            context.AddRange(data.ProductsForLinq);
+            context.AddRange(data.CustomersForLinq);
+            context.AddRange(data.OrdersForLinq);
+            context.AddRange(data.People);
+            context.AddRange(data.Feet);
+            context.AddRange(data.Shoes);
+
+            return context.SaveChangesAsync();
+        }
 
         public virtual ISetSource GetExpectedData()
         {
@@ -903,13 +917,7 @@ public abstract class Ef6GroupByTestBase<TFixture> : QueryTestBase<TFixture>
         }.ToDictionary(e => e.Key, e => (object)e.Value);
     }
 
-    public class ArubaContext : PoolableDbContext
-    {
-        public ArubaContext(DbContextOptions options)
-            : base(options)
-        {
-        }
-    }
+    public class ArubaContext(DbContextOptions options) : PoolableDbContext(options);
 
     public class ArubaOwner
     {
@@ -919,17 +927,11 @@ public abstract class Ef6GroupByTestBase<TFixture> : QueryTestBase<TFixture>
         public string Alias { get; set; }
     }
 
-    public class NumberForLinq
+    public class NumberForLinq(int value, string name)
     {
-        public NumberForLinq(int value, string name)
-        {
-            Value = value;
-            Name = name;
-        }
-
         public int Id { get; set; }
-        public int Value { get; set; }
-        public string Name { get; set; }
+        public int Value { get; set; } = value;
+        public string Name { get; set; } = name;
     }
 
     public class ProductForLinq
@@ -941,9 +943,7 @@ public abstract class Ef6GroupByTestBase<TFixture> : QueryTestBase<TFixture>
         public int UnitsInStock { get; set; }
     }
 
-    public class FeaturedProductForLinq : ProductForLinq
-    {
-    }
+    public class FeaturedProductForLinq : ProductForLinq;
 
     public class CustomerForLinq
     {
@@ -998,7 +998,7 @@ public abstract class Ef6GroupByTestBase<TFixture> : QueryTestBase<TFixture>
         public IReadOnlyList<Feet> Feet { get; }
         public IReadOnlyList<Shoes> Shoes { get; }
 
-        public ArubaData(ArubaContext context = null)
+        public ArubaData()
         {
             ArubaOwners = CreateArubaOwners();
             NumbersForLinq = CreateNumbersForLinq();
@@ -1008,19 +1008,6 @@ public abstract class Ef6GroupByTestBase<TFixture> : QueryTestBase<TFixture>
             People = CreatePeople();
             Feet = CreateFeet(People);
             Shoes = CreateShoes(People);
-
-            if (context != null)
-            {
-                context.AddRange(ArubaOwners);
-                context.AddRange(NumbersForLinq);
-                context.AddRange(ProductsForLinq);
-                context.AddRange(CustomersForLinq);
-                context.AddRange(OrdersForLinq);
-                context.AddRange(People);
-                context.AddRange(Feet);
-                context.AddRange(Shoes);
-                context.SaveChanges();
-            }
         }
 
         public IQueryable<TEntity> Set<TEntity>()

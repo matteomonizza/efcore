@@ -259,7 +259,7 @@ public class EventSourceTest
 
     private static double CompiledQueryCacheInfoCalculateAndReset()
         => (double)_compiledQueryCacheInfoCalculateAndReset.Invoke(
-            _compiledQueryCacheInfo.GetValue(EntityFrameworkEventSource.Log), Array.Empty<object>());
+            _compiledQueryCacheInfo.GetValue(EntityFrameworkEventSource.Log), []);
 
     private static void ResetCacheInfo()
         => _resetCacheInfo.Invoke(EntityFrameworkEventSource.Log, null);
@@ -285,6 +285,4 @@ public class EventSourceTest
 }
 
 [CollectionDefinition("EventSourceTest", DisableParallelization = true)]
-public class EventSourceTestCollection
-{
-}
+public class EventSourceTestCollection;

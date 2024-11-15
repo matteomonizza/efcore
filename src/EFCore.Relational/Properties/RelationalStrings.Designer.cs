@@ -68,6 +68,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 complexType);
 
         /// <summary>
+        ///     Join expressions have no aliases; set the alias on the enclosed table expression.
+        /// </summary>
+        public static string CannotSetAliasOnJoin
+            => GetString("CannotSetAliasOnJoin");
+
+        /// <summary>
         ///     The query contained a new array expression containing non-constant elements, which could not be translated: '{newArrayExpression}'.
         /// </summary>
         public static string CannotTranslateNonConstantNewArrayExpression(object? newArrayExpression)
@@ -1340,6 +1346,14 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
             => GetString("NoActiveTransaction");
 
         /// <summary>
+        ///     No alias is defined on table: '{table}'
+        /// </summary>
+        public static string NoAliasOnTable(object? table)
+            => string.Format(
+                GetString("NoAliasOnTable", nameof(table)),
+                table);
+
+        /// <summary>
         ///     Cannot create a DbCommand for a non-relational query.
         /// </summary>
         public static string NoDbCommand
@@ -1536,6 +1550,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
             => string.Format(
                 GetString("SelectExpressionNonTphWithCustomTable", nameof(entityType)),
                 entityType);
+
+        /// <summary>
+        ///     SelectExpression.Update() is not supported while the expression is in mutable state.
+        /// </summary>
+        public static string SelectExpressionUpdateNotSupportedWhileMutable
+            => GetString("SelectExpressionUpdateNotSupportedWhileMutable");
 
         /// <summary>
         ///     Set operations over different entity or complex types are not supported ('{type1}' and '{type2}').
@@ -1866,14 +1886,6 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
             => string.Format(
                 GetString("SubqueryOverComplexTypesNotSupported", nameof(complexType)),
                 complexType);
-
-        /// <summary>
-        ///     Expression type '{expressionType}' does not implement proper cloning logic. Every expression derived from '{tableExpressionBase}' must implement '{clonableTableExpressionBase}' interface or have it's cloning logic added to the '{cloningExpressionVisitor}' inside '{selectExpression}'.
-        /// </summary>
-        public static string TableExpressionBaseWithoutCloningLogic(object? expressionType, object? tableExpressionBase, object? clonableTableExpressionBase, object? cloningExpressionVisitor, object? selectExpression)
-            => string.Format(
-                GetString("TableExpressionBaseWithoutCloningLogic", nameof(expressionType), nameof(tableExpressionBase), nameof(clonableTableExpressionBase), nameof(cloningExpressionVisitor), nameof(selectExpression)),
-                expressionType, tableExpressionBase, clonableTableExpressionBase, cloningExpressionVisitor, selectExpression);
 
         /// <summary>
         ///     The entity type '{entityType}' is not mapped to the store object '{table}'.

@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore.Sqlite.Internal;
 // ReSharper disable ParameterOnlyUsedForPreconditionCheck.Local
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public class BuiltInDataTypesSqliteTest : BuiltInDataTypesTestBase<BuiltInDataTypesSqliteTest.BuiltInDataTypesSqliteFixture>
 {
     public BuiltInDataTypesSqliteTest(BuiltInDataTypesSqliteFixture fixture, ITestOutputHelper testOutputHelper)
@@ -70,7 +72,7 @@ public class BuiltInDataTypesSqliteTest : BuiltInDataTypesTestBase<BuiltInDataTy
             Real = 84.4,
             SomeString = "don't",
             Text = "G",
-            Blob = new byte[] { 86 }
+            Blob = [86]
         };
 
     [ConditionalFact]
@@ -108,7 +110,7 @@ public class BuiltInDataTypesSqliteTest : BuiltInDataTypesTestBase<BuiltInDataTy
             Real = 84.4,
             SomeString = "don't",
             Text = "G",
-            Blob = new byte[] { 86 }
+            Blob = [86]
         };
 
     [ConditionalFact]
@@ -169,7 +171,7 @@ public class BuiltInDataTypesSqliteTest : BuiltInDataTypesTestBase<BuiltInDataTy
         {
             Id = id,
             Nvarchar = "Into",
-            Binary = new byte[] { 10, 11, 12, 13 }
+            Binary = [10, 11, 12, 13]
         };
 
     [ConditionalFact]
@@ -289,7 +291,7 @@ public class BuiltInDataTypesSqliteTest : BuiltInDataTypesTestBase<BuiltInDataTy
             Real = 84.4,
             SomeString = "don't",
             Text = "G",
-            Blob = new byte[] { 86 }
+            Blob = [86]
         };
 
     [ConditionalFact]
@@ -328,7 +330,7 @@ public class BuiltInDataTypesSqliteTest : BuiltInDataTypesTestBase<BuiltInDataTy
             Real = 84.4,
             SomeString = "don't",
             Text = "G",
-            Blob = new byte[] { 86 }
+            Blob = [86]
         };
 
     [ConditionalFact]
@@ -390,7 +392,7 @@ public class BuiltInDataTypesSqliteTest : BuiltInDataTypesTestBase<BuiltInDataTy
         {
             AltId = id,
             Nvarchar = "Into",
-            Binary = new byte[] { 10, 11, 12, 13 }
+            Binary = [10, 11, 12, 13]
         };
 
     [ConditionalFact]
@@ -1626,9 +1628,9 @@ FROM "ObjectBackedDataTypes" AS "o"
         Assert.Equal(expectedResults, results);
     }
 
-    public override void Object_to_string_conversion()
+    public override async Task Object_to_string_conversion()
     {
-        base.Object_to_string_conversion();
+        await base.Object_to_string_conversion();
 
         AssertSql(
             """
@@ -1835,7 +1837,7 @@ ORDER BY "b"."Id", "b0"."Id"
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);
 
-    public class BuiltInDataTypesSqliteFixture : BuiltInDataTypesFixtureBase
+    public class BuiltInDataTypesSqliteFixture : BuiltInDataTypesFixtureBase, ITestSqlLoggerFactory
     {
         public override bool StrictEquality
             => false;

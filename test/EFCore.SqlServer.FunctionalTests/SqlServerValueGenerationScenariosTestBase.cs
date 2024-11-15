@@ -9,6 +9,8 @@ using NetTopologySuite.Geometries;
 
 namespace Microsoft.EntityFrameworkCore;
 
+#nullable disable
+
 public abstract class SqlServerValueGenerationScenariosTestBase
 {
     protected static readonly GeometryFactory GeometryFactory = NtsGeometryServices.Instance.CreateGeometryFactory(srid: 4326);
@@ -30,9 +32,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     // Positive cases
 
     [ConditionalFact]
-    public void Insert_with_Identity_column()
+    public async Task Insert_with_Identity_column()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextIdentity(testStore.Name, OnModelCreating))
         {
             context.Database.EnsureCreatedResiliently();
@@ -51,18 +53,12 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextIdentity : ContextBase
-    {
-        public BlogContextIdentity(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-    }
+    public class BlogContextIdentity(string databaseName, Action<ModelBuilder> modelBuilder) : ContextBase(databaseName, modelBuilder);
 
     [ConditionalFact]
-    public void Insert_with_sequence_HiLo()
+    public async Task Insert_with_sequence_HiLo()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextHiLo(testStore.Name, OnModelCreating))
         {
             context.Database.EnsureCreatedResiliently();
@@ -83,13 +79,8 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextHiLo : ContextBase
+    public class BlogContextHiLo(string databaseName, Action<ModelBuilder> modelBuilder) : ContextBase(databaseName, modelBuilder)
     {
-        public BlogContextHiLo(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -107,9 +98,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_with_key_sequence()
+    public async Task Insert_with_key_sequence()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextKeySequence(testStore.Name, OnModelCreating))
         {
             context.Database.EnsureCreatedResiliently();
@@ -130,13 +121,8 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextKeySequence : ContextBase
+    public class BlogContextKeySequence(string databaseName, Action<ModelBuilder> modelBuilder) : ContextBase(databaseName, modelBuilder)
     {
-        public BlogContextKeySequence(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -154,9 +140,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_with_non_key_sequence()
+    public async Task Insert_with_non_key_sequence()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextNonKeySequence(testStore.Name, OnModelCreating))
         {
             context.Database.EnsureCreatedResiliently();
@@ -177,13 +163,8 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextNonKeySequence : ContextBase
+    public class BlogContextNonKeySequence(string databaseName, Action<ModelBuilder> modelBuilder) : ContextBase(databaseName, modelBuilder)
     {
-        public BlogContextNonKeySequence(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -198,9 +179,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_with_default_value_from_sequence()
+    public async Task Insert_with_default_value_from_sequence()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextDefaultValue(testStore.Name, OnModelCreating))
         {
             context.Database.EnsureCreatedResiliently();
@@ -236,13 +217,8 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextDefaultValue : ContextBase
+    public class BlogContextDefaultValue(string databaseName, Action<ModelBuilder> modelBuilder) : ContextBase(databaseName, modelBuilder)
     {
-        public BlogContextDefaultValue(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -258,13 +234,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextDefaultValueNoMigrations : ContextBase
+    public class BlogContextDefaultValueNoMigrations(string databaseName, Action<ModelBuilder> modelBuilder)
+        : ContextBase(databaseName, modelBuilder)
     {
-        public BlogContextDefaultValueNoMigrations(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -277,9 +249,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_with_default_string_value_from_sequence()
+    public async Task Insert_with_default_string_value_from_sequence()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextStringDefaultValue(testStore.Name, OnModelCreating, StringSentinel))
         {
             context.Database.EnsureCreatedResiliently();
@@ -300,15 +272,10 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextStringDefaultValue : ContextBase
+    public class BlogContextStringDefaultValue(string databaseName, Action<ModelBuilder> modelBuilder, string stringSentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly string _stringSentinel;
-
-        public BlogContextStringDefaultValue(string databaseName, Action<ModelBuilder> modelBuilder, string stringSentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _stringSentinel = stringSentinel;
-        }
+        private readonly string _stringSentinel = stringSentinel;
 
         public DbSet<BlogWithStringKey> StringyBlogs { get; set; }
 
@@ -335,9 +302,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_with_key_default_value_from_sequence()
+    public async Task Insert_with_key_default_value_from_sequence()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextKeyColumnWithDefaultValue(testStore.Name, OnModelCreating))
         {
             context.Database.EnsureCreatedResiliently();
@@ -356,13 +323,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextKeyColumnWithDefaultValue : ContextBase
+    public class BlogContextKeyColumnWithDefaultValue(string databaseName, Action<ModelBuilder> modelBuilder)
+        : ContextBase(databaseName, modelBuilder)
     {
-        public BlogContextKeyColumnWithDefaultValue(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -380,9 +343,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_uint_to_Identity_column_using_value_converter()
+    public async Task Insert_uint_to_Identity_column_using_value_converter()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextUIntToIdentityUsingValueConverter(testStore.Name, OnModelCreating, UIntSentinel))
         {
             context.Database.EnsureCreatedResiliently();
@@ -403,15 +366,10 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextUIntToIdentityUsingValueConverter : ContextBase
+    public class BlogContextUIntToIdentityUsingValueConverter(string databaseName, Action<ModelBuilder> modelBuilder, uint uintSentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly uint _uintSentinel;
-
-        public BlogContextUIntToIdentityUsingValueConverter(string databaseName, Action<ModelBuilder> modelBuilder, uint uintSentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _uintSentinel = uintSentinel;
-        }
+        private readonly uint _uintSentinel = uintSentinel;
 
         public DbSet<BlogWithUIntKey> UnsignedBlogs { get; set; }
 
@@ -434,9 +392,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_int_enum_to_Identity_column()
+    public async Task Insert_int_enum_to_Identity_column()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextIntEnumToIdentity(testStore.Name, OnModelCreating, IntKeySentinel))
         {
             context.Database.EnsureCreatedResiliently();
@@ -457,15 +415,10 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextIntEnumToIdentity : ContextBase
+    public class BlogContextIntEnumToIdentity(string databaseName, Action<ModelBuilder> modelBuilder, IntKey sentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly IntKey _sentinel;
-
-        public BlogContextIntEnumToIdentity(string databaseName, Action<ModelBuilder> modelBuilder, IntKey sentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _sentinel = sentinel;
-        }
+        private readonly IntKey _sentinel = sentinel;
 
         public DbSet<BlogWithIntEnumKey> EnumBlogs { get; set; }
 
@@ -495,9 +448,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_ulong_enum_to_Identity_column()
+    public async Task Insert_ulong_enum_to_Identity_column()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextULongEnumToIdentity(testStore.Name, OnModelCreating, ULongKeySentinel))
         {
             context.Database.EnsureCreatedResiliently();
@@ -518,15 +471,10 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextULongEnumToIdentity : ContextBase
+    public class BlogContextULongEnumToIdentity(string databaseName, Action<ModelBuilder> modelBuilder, ULongKey sentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly ULongKey _sentinel;
-
-        public BlogContextULongEnumToIdentity(string databaseName, Action<ModelBuilder> modelBuilder, ULongKey sentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _sentinel = sentinel;
-        }
+        private readonly ULongKey _sentinel = sentinel;
 
         public DbSet<BlogWithULongEnumKey> EnumBlogs { get; set; }
 
@@ -555,9 +503,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_string_to_Identity_column_using_value_converter()
+    public async Task Insert_string_to_Identity_column_using_value_converter()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextStringToIdentityUsingValueConverter(testStore.Name, OnModelCreating, StringSentinel))
         {
             context.Database.EnsureCreatedResiliently();
@@ -578,15 +526,10 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextStringToIdentityUsingValueConverter : ContextBase
+    public class BlogContextStringToIdentityUsingValueConverter(string databaseName, Action<ModelBuilder> modelBuilder, string sentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly string _sentinel;
-
-        public BlogContextStringToIdentityUsingValueConverter(string databaseName, Action<ModelBuilder> modelBuilder, string sentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _sentinel = sentinel;
-        }
+        private readonly string _sentinel = sentinel;
 
         public DbSet<BlogWithStringKey> StringyBlogs { get; set; }
 
@@ -610,9 +553,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_with_explicit_non_default_keys()
+    public async Task Insert_with_explicit_non_default_keys()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextNoKeyGeneration(testStore.Name, OnModelCreating))
         {
             context.Database.EnsureCreatedResiliently();
@@ -632,13 +575,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextNoKeyGeneration : ContextBase
+    public class BlogContextNoKeyGeneration(string databaseName, Action<ModelBuilder> modelBuilder)
+        : ContextBase(databaseName, modelBuilder)
     {
-        public BlogContextNoKeyGeneration(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -651,9 +590,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_with_explicit_with_default_keys()
+    public async Task Insert_with_explicit_with_default_keys()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextNoKeyGenerationNullableKey(testStore.Name, OnModelCreating, NullableIntSentinel))
         {
             context.Database.EnsureCreatedResiliently();
@@ -674,15 +613,10 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextNoKeyGenerationNullableKey : ContextBase
+    public class BlogContextNoKeyGenerationNullableKey(string databaseName, Action<ModelBuilder> modelBuilder, int? sentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly int? _sentinel;
-
-        public BlogContextNoKeyGenerationNullableKey(string databaseName, Action<ModelBuilder> modelBuilder, int? sentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _sentinel = sentinel;
-        }
+        private readonly int? _sentinel = sentinel;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -697,9 +631,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_with_non_key_default_value()
+    public async Task Insert_with_non_key_default_value()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
 
         using (var context = new BlogContextNonKeyDefaultValue(testStore.Name, OnModelCreating))
         {
@@ -767,9 +701,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
 
     [ConditionalFact]
     [SqlServerCondition(SqlServerCondition.SupportsSqlClr)]
-    public void Insert_with_non_key_default_spatial_value()
+    public async Task Insert_with_non_key_default_spatial_value()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
 
         using (var context = new BlogContextNonKeyDefaultSpatialValue(testStore.Name, OnModelCreating))
         {
@@ -788,7 +722,7 @@ public abstract class SqlServerValueGenerationScenariosTestBase
                     Id = IntSentinel,
                     Name = "Two Unicorns",
                     GeometryCollection = GeometryFactory.CreateGeometryCollection(
-                        new Geometry[] { GeometryFactory.CreatePoint(new Coordinate(1, 3)) })
+                        [GeometryFactory.CreatePoint(new Coordinate(1, 3))])
                 }
             };
 
@@ -835,13 +769,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextNonKeyDefaultValue : ContextBase
+    public class BlogContextNonKeyDefaultValue(string databaseName, Action<ModelBuilder> modelBuilder)
+        : ContextBase(databaseName, modelBuilder)
     {
-        public BlogContextNonKeyDefaultValue(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -863,13 +793,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextNonKeyDefaultSpatialValue : ContextBase
+    public class BlogContextNonKeyDefaultSpatialValue(string databaseName, Action<ModelBuilder> modelBuilder)
+        : ContextBase(databaseName, modelBuilder)
     {
-        public BlogContextNonKeyDefaultSpatialValue(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -885,16 +811,16 @@ public abstract class SqlServerValueGenerationScenariosTestBase
                             Id = 9979,
                             Name = "W Unicorns",
                             GeometryCollection = GeometryFactory.CreateGeometryCollection(
-                                new Geometry[] { GeometryFactory.CreatePoint(new Coordinate(1, 2)) })
+                                [GeometryFactory.CreatePoint(new Coordinate(1, 2))])
                         });
                 });
         }
     }
 
     [ConditionalFact]
-    public void Insert_with_non_key_default_value_readonly()
+    public async Task Insert_with_non_key_default_value_readonly()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextNonKeyReadOnlyDefaultValue(testStore.Name, OnModelCreating, IntSentinel, DateTimeSentinel))
         {
             context.Database.EnsureCreatedResiliently();
@@ -944,21 +870,14 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextNonKeyReadOnlyDefaultValue : ContextBase
+    public class BlogContextNonKeyReadOnlyDefaultValue(
+        string databaseName,
+        Action<ModelBuilder> modelBuilder,
+        int intSentinel,
+        DateTime dateTimeSentinel) : ContextBase(databaseName, modelBuilder)
     {
-        private readonly int _intSentinel;
-        private readonly DateTime _dateTimeSentinel;
-
-        public BlogContextNonKeyReadOnlyDefaultValue(
-            string databaseName,
-            Action<ModelBuilder> modelBuilder,
-            int intSentinel,
-            DateTime dateTimeSentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _intSentinel = intSentinel;
-            _dateTimeSentinel = dateTimeSentinel;
-        }
+        private readonly int _intSentinel = intSentinel;
+        private readonly DateTime _dateTimeSentinel = dateTimeSentinel;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -976,9 +895,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
     }
 
     [ConditionalFact]
-    public void Insert_and_update_with_computed_column()
+    public async Task Insert_and_update_with_computed_column()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextComputedColumn(testStore.Name, OnModelCreating, IntSentinel, StringSentinel))
         {
             context.Database.EnsureCreatedResiliently();
@@ -1011,17 +930,11 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextComputedColumn : ContextBase
+    public class BlogContextComputedColumn(string databaseName, Action<ModelBuilder> modelBuilder, int intSentinel, string stringSentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly int _intSentinel;
-        private readonly string _stringSentinel;
-
-        public BlogContextComputedColumn(string databaseName, Action<ModelBuilder> modelBuilder, int intSentinel, string stringSentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _intSentinel = intSentinel;
-            _stringSentinel = stringSentinel;
-        }
+        private readonly int _intSentinel = intSentinel;
+        private readonly string _stringSentinel = stringSentinel;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1043,17 +956,12 @@ public abstract class SqlServerValueGenerationScenariosTestBase
         }
     }
 
-    public class BlogContextComputedColumnWithTriggerMetadata : BlogContextComputedColumn
+    public class BlogContextComputedColumnWithTriggerMetadata(
+        string databaseName,
+        Action<ModelBuilder> modelBuilder,
+        int intSentinel,
+        string stringSentinel) : BlogContextComputedColumn(databaseName, modelBuilder, intSentinel, stringSentinel)
     {
-        public BlogContextComputedColumnWithTriggerMetadata(
-            string databaseName,
-            Action<ModelBuilder> modelBuilder,
-            int intSentinel,
-            string stringSentinel)
-            : base(databaseName, modelBuilder, intSentinel, stringSentinel)
-        {
-        }
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -1064,9 +972,9 @@ public abstract class SqlServerValueGenerationScenariosTestBase
 
     // #6044
     [ConditionalFact]
-    public void Insert_and_update_with_computed_column_with_function()
+    public async Task Insert_and_update_with_computed_column_with_function()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextComputedColumnWithFunction(testStore.Name, OnModelCreating, IntSentinel, StringSentinel))
         {
             context.Database.ExecuteSqlRaw
@@ -1108,21 +1016,14 @@ RETURNS NVARCHAR(MAX) WITH SCHEMABINDING AS BEGIN RETURN @First + @Second END");
         }
     }
 
-    public class BlogContextComputedColumnWithFunction : ContextBase
+    public class BlogContextComputedColumnWithFunction(
+        string databaseName,
+        Action<ModelBuilder> modelBuilder,
+        int intSentinel,
+        string stringSentinel) : ContextBase(databaseName, modelBuilder)
     {
-        private readonly int _intSentinel;
-        private readonly string _stringSentinel;
-
-        public BlogContextComputedColumnWithFunction(
-            string databaseName,
-            Action<ModelBuilder> modelBuilder,
-            int intSentinel,
-            string stringSentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _intSentinel = intSentinel;
-            _stringSentinel = stringSentinel;
-        }
+        private readonly int _intSentinel = intSentinel;
+        private readonly string _stringSentinel = stringSentinel;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1146,20 +1047,21 @@ RETURNS NVARCHAR(MAX) WITH SCHEMABINDING AS BEGIN RETURN @First + @Second END");
 
     // #6044
     [ConditionalFact]
-    public void Insert_and_update_with_computed_column_with_querying_function()
+    public async Task Insert_and_update_with_computed_column_with_querying_function()
     {
         SqlServerTestStore testStore = null;
         try
         {
-            testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
-        using (var context = new BlogContextComputedColumnWithTriggerMetadata(testStore.Name, OnModelCreating, IntSentinel, StringSentinel))
-        {
-            context.GetService<IRelationalDatabaseCreator>().CreateTables();
+            testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
+            using (var context = new BlogContextComputedColumnWithTriggerMetadata(
+                       testStore.Name, OnModelCreating, IntSentinel, StringSentinel))
+            {
+                context.GetService<IRelationalDatabaseCreator>().CreateTables();
 
-            context.Database.ExecuteSqlRaw("ALTER TABLE dbo.FullNameBlogs DROP COLUMN FullName;");
+                context.Database.ExecuteSqlRaw("ALTER TABLE dbo.FullNameBlogs DROP COLUMN FullName;");
 
-            context.Database.ExecuteSqlRaw(
-                @"CREATE FUNCTION [dbo].[GetFullName](@Id int)
+                context.Database.ExecuteSqlRaw(
+                    @"CREATE FUNCTION [dbo].[GetFullName](@Id int)
 RETURNS nvarchar(max) WITH SCHEMABINDING AS
 BEGIN
     DECLARE @FullName nvarchar(max);
@@ -1167,8 +1069,8 @@ BEGIN
     RETURN @FullName
 END");
 
-            context.Database.ExecuteSqlRaw("ALTER TABLE dbo.FullNameBlogs ADD FullName AS [dbo].[GetFullName]([Id]); ");
-        }
+                context.Database.ExecuteSqlRaw("ALTER TABLE dbo.FullNameBlogs ADD FullName AS [dbo].[GetFullName]([Id]); ");
+            }
 
             using (var context = new BlogContextComputedColumnWithTriggerMetadata(
                        testStore.Name, OnModelCreating, IntSentinel, StringSentinel))
@@ -1242,7 +1144,7 @@ END");
     [MemberData(nameof(IsAsyncData))]
     public async Task Insert_with_computed_column_with_function_without_metadata_configuration(bool async)
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextComputedColumn(testStore.Name, OnModelCreating, IntSentinel, StringSentinel))
         {
             context.GetService<IRelationalDatabaseCreator>().CreateTables();
@@ -1292,7 +1194,7 @@ END");
     {
         // Execute an insert against a table which has a trigger, but which haven't identified as such in our metadata.
         // This causes a specialized exception to be thrown, directing users to the relevant docs.
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextComputedColumn(testStore.Name, OnModelCreating, IntSentinel, StringSentinel))
         {
             context.GetService<IRelationalDatabaseCreator>().CreateTables();
@@ -1331,9 +1233,9 @@ END");
     }
 
     [ConditionalFact]
-    public void Insert_with_client_generated_GUID_key()
+    public async Task Insert_with_client_generated_GUID_key()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         Guid afterSave;
         using (var context = new BlogContextClientGuidKey(testStore.Name, OnModelCreating, GuidSentinel))
         {
@@ -1368,15 +1270,10 @@ END");
         }
     }
 
-    public class BlogContextClientGuidKey : ContextBase
+    public class BlogContextClientGuidKey(string databaseName, Action<ModelBuilder> modelBuilder, Guid sentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly Guid _sentinel;
-
-        public BlogContextClientGuidKey(string databaseName, Action<ModelBuilder> modelBuilder, Guid sentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _sentinel = sentinel;
-        }
+        private readonly Guid _sentinel = sentinel;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1394,9 +1291,9 @@ END");
 
     [ConditionalFact]
     [SqlServerCondition(SqlServerCondition.IsNotSqlAzure)]
-    public void Insert_with_ValueGeneratedOnAdd_GUID_nonkey_property_throws()
+    public async Task Insert_with_ValueGeneratedOnAdd_GUID_nonkey_property_throws()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using var context = new BlogContextClientGuidNonKey(testStore.Name, OnModelCreating, GuidSentinel);
         context.Database.EnsureCreatedResiliently();
 
@@ -1415,15 +1312,10 @@ END");
         Assert.Single(updateException.Entries);
     }
 
-    public class BlogContextClientGuidNonKey : ContextBase
+    public class BlogContextClientGuidNonKey(string databaseName, Action<ModelBuilder> modelBuilder, Guid sentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly Guid _sentinel;
-
-        public BlogContextClientGuidNonKey(string databaseName, Action<ModelBuilder> modelBuilder, Guid sentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _sentinel = sentinel;
-        }
+        private readonly Guid _sentinel = sentinel;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1439,9 +1331,9 @@ END");
     }
 
     [ConditionalFact]
-    public void Insert_with_server_generated_GUID_key()
+    public async Task Insert_with_server_generated_GUID_key()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         Guid afterSave;
         using (var context = new BlogContextServerGuidKey(testStore.Name, OnModelCreating, GuidSentinel))
         {
@@ -1478,15 +1370,10 @@ END");
         }
     }
 
-    public class BlogContextServerGuidKey : ContextBase
+    public class BlogContextServerGuidKey(string databaseName, Action<ModelBuilder> modelBuilder, Guid sentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly Guid _sentinel;
-
-        public BlogContextServerGuidKey(string databaseName, Action<ModelBuilder> modelBuilder, Guid sentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _sentinel = sentinel;
-        }
+        private readonly Guid _sentinel = sentinel;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1504,9 +1391,9 @@ END");
 
     // Negative cases
     [ConditionalFact]
-    public void Insert_with_explicit_non_default_keys_by_default()
+    public async Task Insert_with_explicit_non_default_keys_by_default()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using var context = new BlogContext(testStore.Name, OnModelCreating);
         context.Database.EnsureCreatedResiliently();
 
@@ -1521,9 +1408,9 @@ END");
     }
 
     [ConditionalFact]
-    public void Insert_with_explicit_default_keys()
+    public async Task Insert_with_explicit_default_keys()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using var context = new BlogContext(testStore.Name, OnModelCreating);
         context.Database.EnsureCreatedResiliently();
 
@@ -1538,18 +1425,12 @@ END");
         Assert.Single(updateException.Entries);
     }
 
-    public class BlogContext : ContextBase
-    {
-        public BlogContext(string databaseName, Action<ModelBuilder> modelBuilder)
-            : base(databaseName, modelBuilder)
-        {
-        }
-    }
+    public class BlogContext(string databaseName, Action<ModelBuilder> modelBuilder) : ContextBase(databaseName, modelBuilder);
 
     [ConditionalFact]
-    public void Insert_with_implicit_default_keys()
+    public async Task Insert_with_implicit_default_keys()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextSpecifyKeysUsingDefault(testStore.Name, OnModelCreating, IntSentinel))
         {
             context.Database.EnsureCreatedResiliently();
@@ -1569,15 +1450,10 @@ END");
         }
     }
 
-    public class BlogContextSpecifyKeysUsingDefault : ContextBase
+    public class BlogContextSpecifyKeysUsingDefault(string databaseName, Action<ModelBuilder> modelBuilder, int sentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly int _sentinel;
-
-        public BlogContextSpecifyKeysUsingDefault(string databaseName, Action<ModelBuilder> modelBuilder, int sentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _sentinel = sentinel;
-        }
+        private readonly int _sentinel = sentinel;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1592,9 +1468,9 @@ END");
     }
 
     [ConditionalFact]
-    public void Insert_explicit_value_throws_when_readonly_sequence_before_save()
+    public async Task Insert_explicit_value_throws_when_readonly_sequence_before_save()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using var context = new BlogContextReadOnlySequenceKeyColumnWithDefaultValue(testStore.Name, OnModelCreating, IntSentinel);
         context.Database.EnsureCreatedResiliently();
 
@@ -1608,15 +1484,10 @@ END");
             Assert.Throws<InvalidOperationException>(() => context.SaveChanges()).Message);
     }
 
-    public class BlogContextReadOnlySequenceKeyColumnWithDefaultValue : ContextBase
+    public class BlogContextReadOnlySequenceKeyColumnWithDefaultValue(string databaseName, Action<ModelBuilder> modelBuilder, int sentinel)
+        : ContextBase(databaseName, modelBuilder)
     {
-        private readonly int _sentinel;
-
-        public BlogContextReadOnlySequenceKeyColumnWithDefaultValue(string databaseName, Action<ModelBuilder> modelBuilder, int sentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _sentinel = sentinel;
-        }
+        private readonly int _sentinel = sentinel;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1635,9 +1506,9 @@ END");
     }
 
     [ConditionalFact]
-    public void Insert_explicit_value_throws_when_readonly_before_save()
+    public async Task Insert_explicit_value_throws_when_readonly_before_save()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using var context = new BlogContextNonKeyReadOnlyDefaultValue(testStore.Name, OnModelCreating, IntSentinel, DateTimeSentinel);
         context.Database.EnsureCreatedResiliently();
 
@@ -1663,9 +1534,9 @@ END");
     }
 
     [ConditionalFact]
-    public void Insert_explicit_value_into_computed_column()
+    public async Task Insert_explicit_value_into_computed_column()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using var context = new BlogContextComputedColumn(testStore.Name, OnModelCreating, IntSentinel, StringSentinel);
         context.Database.EnsureCreatedResiliently();
 
@@ -1686,9 +1557,9 @@ END");
     }
 
     [ConditionalFact]
-    public void Update_explicit_value_in_computed_column()
+    public async Task Update_explicit_value_in_computed_column()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using (var context = new BlogContextComputedColumn(testStore.Name, OnModelCreating, IntSentinel, StringSentinel))
         {
             context.Database.EnsureCreatedResiliently();
@@ -1721,9 +1592,9 @@ END");
 
     // Concurrency
     [ConditionalFact]
-    public void Resolve_concurrency()
+    public async Task Resolve_concurrency()
     {
-        using var testStore = SqlServerTestStore.CreateInitialized(DatabaseName);
+        using var testStore = await SqlServerTestStore.CreateInitializedAsync(DatabaseName);
         using var context = new BlogContextConcurrencyWithRowversion(testStore.Name, OnModelCreating, IntSentinel, TimestampSentinel);
         context.Database.EnsureCreatedResiliently();
 
@@ -1762,21 +1633,14 @@ END");
         }
     }
 
-    public class BlogContextConcurrencyWithRowversion : ContextBase
+    public class BlogContextConcurrencyWithRowversion(
+        string databaseName,
+        Action<ModelBuilder> modelBuilder,
+        int intSentinel,
+        byte[] timestampSentinel) : ContextBase(databaseName, modelBuilder)
     {
-        private readonly int _intSentinel;
-        private readonly byte[] _timestampSentinel;
-
-        public BlogContextConcurrencyWithRowversion(
-            string databaseName,
-            Action<ModelBuilder> modelBuilder,
-            int intSentinel,
-            byte[] timestampSentinel)
-            : base(databaseName, modelBuilder)
-        {
-            _intSentinel = intSentinel;
-            _timestampSentinel = timestampSentinel;
-        }
+        private readonly int _intSentinel = intSentinel;
+        private readonly byte[] _timestampSentinel = timestampSentinel;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -1828,14 +1692,9 @@ END");
         public GeometryCollection GeometryCollection { get; set; }
     }
 
-    public class NeedsConverter
+    public class NeedsConverter(int value)
     {
-        public NeedsConverter(int value)
-        {
-            Value = value;
-        }
-
-        public int Value { get; }
+        public int Value { get; } = value;
 
         public override bool Equals(object obj)
             => throw new InvalidOperationException();
@@ -1914,5 +1773,5 @@ END");
                     b => b.UseNetTopologySuite().ApplyConfiguration());
     }
 
-    public static IEnumerable<object[]> IsAsyncData = new[] { new object[] { false }, new object[] { true } };
+    public static IEnumerable<object[]> IsAsyncData = new object[][] { [false], [true] };
 }

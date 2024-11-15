@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Resources;
 using System.Threading;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Logging;
 
@@ -482,12 +481,28 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 type, entityType, propertyName, elementType);
 
         /// <summary>
+        ///     More than a single DbContextModelAttribute was found in the assembly '{assemblyName}' corresponding to the context type '{contextType}'
+        /// </summary>
+        public static string CompiledModelDuplicateAttribute(object? assemblyName, object? contextType)
+            => string.Format(
+                GetString("CompiledModelDuplicateAttribute", nameof(assemblyName), nameof(contextType)),
+                assemblyName, contextType);
+
+        /// <summary>
         ///     The type mapping used is incompatible with a compiled model. The mapping type must have a 'public static readonly {typeMapping} {typeMapping}.Default' property.
         /// </summary>
         public static string CompiledModelIncompatibleTypeMapping(object? typeMapping)
             => string.Format(
                 GetString("CompiledModelIncompatibleTypeMapping", nameof(typeMapping)),
                 typeMapping);
+
+        /// <summary>
+        ///     '{modelType}' must declare a static property named 'Instance' that returns 'IModel'.
+        /// </summary>
+        public static string CompiledModelMissingInstance(object? modelType)
+            => string.Format(
+                GetString("CompiledModelMissingInstance", nameof(modelType)),
+                modelType);
 
         /// <summary>
         ///     The compiled query '{queryExpression}' was executed with a different model than it was compiled against. Compiled queries can only be used with a single model.
@@ -627,8 +642,8 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         ///     The property '{entityType}.{property}' participates in several relationship chains that have conflicting conversions: '{valueConversion}' and '{conflictingValueConversion}'.
         /// </summary>
         public static string ConflictingRelationshipConversions(object? entityType, object? property, object? valueConversion, object? conflictingValueConversion)
-        => string.Format(
-            GetString("ConflictingRelationshipConversions", nameof(entityType), nameof(property), nameof(valueConversion), nameof(conflictingValueConversion)),
+            => string.Format(
+                GetString("ConflictingRelationshipConversions", nameof(entityType), nameof(property), nameof(valueConversion), nameof(conflictingValueConversion)),
                 entityType, property, valueConversion, conflictingValueConversion);
 
         /// <summary>
@@ -982,8 +997,8 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         /// <summary>
         ///     The EF.Constant&lt;T&gt; method may only be used with an argument that can be evaluated client-side and does not contain any reference to database-side entities.
         /// </summary>
-        public static string EFConstantWithNonEvaluableArgument
-            => GetString("EFConstantWithNonEvaluableArgument");
+        public static string EFConstantWithNonEvaluatableArgument
+            => GetString("EFConstantWithNonEvaluatableArgument");
 
         /// <summary>
         ///     The EF.Parameter&lt;T&gt; method may only be used within Entity Framework LINQ queries.
@@ -994,8 +1009,8 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
         /// <summary>
         ///     The EF.Parameter&lt;T&gt; method may only be used with an argument that can be evaluated client-side and does not contain any reference to database-side entities.
         /// </summary>
-        public static string EFParameterWithNonEvaluableArgument
-            => GetString("EFParameterWithNonEvaluableArgument");
+        public static string EFParameterWithNonEvaluatableArgument
+            => GetString("EFParameterWithNonEvaluatableArgument");
 
         /// <summary>
         ///     Complex type '{complexType}' has no properties defines. Configure at least one property or don't include this type in the model.
@@ -1004,6 +1019,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
             => string.Format(
                 GetString("EmptyComplexType", nameof(complexType)),
                 complexType);
+
+        /// <summary>
+        ///     The empty string is not valid JSON.
+        /// </summary>
+        public static string EmptyJsonString
+            => GetString("EmptyJsonString");
 
         /// <summary>
         ///     Cannot translate '{comparisonOperator}' on a subquery expression of entity type '{entityType}' because it has a composite primary key. See https://go.microsoft.com/fwlink/?linkid=2141942 for information on how to rewrite your query.
@@ -1767,6 +1788,18 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
                 entityType, navigation);
 
         /// <summary>
+        ///     EF Core does not support MemberListBinding: 'new Blog { Posts = { new Post(), new Post() } }'.
+        /// </summary>
+        public static string MemberListBindingNotSupported
+            => GetString("MemberListBindingNotSupported");
+
+        /// <summary>
+        ///     EF Core does not support MemberMemberBinding: 'new Blog { Data = { Name = "hello world" } }'.
+        /// </summary>
+        public static string MemberMemberBindingNotSupported
+            => GetString("MemberMemberBindingNotSupported");
+
+        /// <summary>
         ///     The specified field '{field}' could not be found for property '{2_entityType}.{1_property}'.
         /// </summary>
         public static string MissingBackingField(object? field, object? property, object? entityType)
@@ -1865,6 +1898,12 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
             => string.Format(
                 GetString("NamedIndexWrongType", nameof(indexName), nameof(entityType)),
                 indexName, entityType);
+
+        /// <summary>
+        ///     Design-time DbContext operations are not supported when publishing with NativeAOT.
+        /// </summary>
+        public static string NativeAotDesignTimeModel
+            => GetString("NativeAotDesignTimeModel");
 
         /// <summary>
         ///     Model building is not supported when publishing with NativeAOT. Use a compiled model.
@@ -2565,14 +2604,6 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics
             => string.Format(
                 GetString("QueryUnhandledQueryRootExpression", nameof(type)),
                 type);
-
-        /// <summary>
-        ///     The type '{givenType}' cannot be used as a primitive collection because it is read-only. Read-only collections of primitive types are not supported.
-        /// </summary>
-        public static string ReadOnlyListType(object? givenType)
-            => string.Format(
-                GetString("ReadOnlyListType", nameof(givenType)),
-                givenType);
 
         /// <summary>
         ///     An attempt was made to use the context instance while it is being configured. A DbContext instance cannot be used inside 'OnConfiguring' since it is still being configured at this point. This can happen if a second operation is started on this context instance before a previous operation completed. Any instance members are not guaranteed to be thread safe.
@@ -4205,11 +4236,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics.Internal
         /// </summary>
         public static EventDefinition<string> LogNoEntityTypeConfigurationsWarning(IDiagnosticsLogger logger)
         {
-            var definition = ((LoggingDefinitions)logger.Definitions).NoEntityTypeConfigurationsWarning;
+            var definition = ((LoggingDefinitions)logger.Definitions).LogNoEntityTypeConfigurationsWarning;
             if (definition == null)
             {
                 definition = NonCapturingLazyInitializer.EnsureInitialized(
-                    ref ((LoggingDefinitions)logger.Definitions).NoEntityTypeConfigurationsWarning,
+                    ref ((LoggingDefinitions)logger.Definitions).LogNoEntityTypeConfigurationsWarning,
                     logger,
                     static logger => new EventDefinition<string>(
                         logger.Options,
@@ -4955,11 +4986,11 @@ namespace Microsoft.EntityFrameworkCore.Diagnostics.Internal
         /// </summary>
         public static EventDefinition<string> LogSkippedEntityTypeConfigurationWarning(IDiagnosticsLogger logger)
         {
-            var definition = ((LoggingDefinitions)logger.Definitions).SkippedEntityTypeConfigurationWarning;
+            var definition = ((LoggingDefinitions)logger.Definitions).LogSkippedEntityTypeConfigurationWarning;
             if (definition == null)
             {
                 definition = NonCapturingLazyInitializer.EnsureInitialized(
-                    ref ((LoggingDefinitions)logger.Definitions).SkippedEntityTypeConfigurationWarning,
+                    ref ((LoggingDefinitions)logger.Definitions).LogSkippedEntityTypeConfigurationWarning,
                     logger,
                     static logger => new EventDefinition<string>(
                         logger.Options,

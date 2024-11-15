@@ -3,13 +3,10 @@
 
 namespace Microsoft.EntityFrameworkCore.TestModels.JsonQuery;
 
-public class JsonQueryContext : DbContext
-{
-    public JsonQueryContext(DbContextOptions options)
-        : base(options)
-    {
-    }
+#nullable disable
 
+public class JsonQueryContext(DbContextOptions options) : DbContext(options)
+{
     public DbSet<EntityBasic> EntitiesBasic { get; set; }
     public DbSet<JsonEntityBasic> JsonEntitiesBasic { get; set; }
     public DbSet<JsonEntityBasicForReference> JsonEntitiesBasicForReference { get; set; }
@@ -20,7 +17,7 @@ public class JsonQueryContext : DbContext
     public DbSet<JsonEntityAllTypes> JsonEntitiesAllTypes { get; set; }
     public DbSet<JsonEntityConverters> JsonEntitiesConverters { get; set; }
 
-    public static void Seed(JsonQueryContext context)
+    public static Task SeedAsync(JsonQueryContext context)
     {
         var jsonEntitiesBasic = JsonQueryData.CreateJsonEntitiesBasic();
         var entitiesBasic = JsonQueryData.CreateEntitiesBasic();
@@ -43,6 +40,6 @@ public class JsonQueryContext : DbContext
         context.JsonEntitiesInheritance.AddRange(jsonEntitiesInheritance);
         context.JsonEntitiesAllTypes.AddRange(jsonEntitiesAllTypes);
         context.JsonEntitiesConverters.AddRange(jsonEntitiesConverters);
-        context.SaveChanges();
+        return context.SaveChangesAsync();
     }
 }

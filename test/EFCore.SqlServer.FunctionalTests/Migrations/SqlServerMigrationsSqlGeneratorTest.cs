@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore.SqlServer.Metadata.Internal;
 
 namespace Microsoft.EntityFrameworkCore.Migrations;
 
+#nullable disable
+
 public class SqlServerMigrationsSqlGeneratorTest : MigrationsSqlGeneratorTestBase
 {
     [ConditionalFact]
@@ -18,7 +20,7 @@ public class SqlServerMigrationsSqlGeneratorTest : MigrationsSqlGeneratorTestBas
                 Name = "IX_People_Name",
                 Table = "People",
                 Schema = "dbo",
-                Columns = new[] { "FirstName", "LastName" },
+                Columns = ["FirstName", "LastName"],
                 IsUnique = true,
                 [SqlServerAnnotationNames.CreatedOnline] = true
             });
@@ -38,7 +40,7 @@ CREATE UNIQUE INDEX [IX_People_Name] ON [dbo].[People] ([FirstName], [LastName])
                 Name = "IX_People_Name",
                 Table = "People",
                 Schema = "dbo",
-                Columns = new[] { "FirstName", "LastName" },
+                Columns = ["FirstName", "LastName"],
                 IsUnique = true,
                 [SqlServerAnnotationNames.SortInTempDb] = true
             });
@@ -61,7 +63,7 @@ CREATE UNIQUE INDEX [IX_People_Name] ON [dbo].[People] ([FirstName], [LastName])
                 Name = "IX_People_Name",
                 Table = "People",
                 Schema = "dbo",
-                Columns = new[] { "FirstName", "LastName" },
+                Columns = ["FirstName", "LastName"],
                 IsUnique = true,
                 [SqlServerAnnotationNames.DataCompression] = dataCompression
             });
@@ -323,7 +325,7 @@ ALTER TABLE [Person] ALTER COLUMN [Name] nvarchar(30) NULL;
             {
                 Name = "IX_Person_Name",
                 Table = "Person",
-                Columns = new[] { "Name" }
+                Columns = ["Name"]
             });
 
         AssertSql(
@@ -365,7 +367,7 @@ CREATE INDEX [IX_Person_Name] ON [Person] ([Name]);
             {
                 Name = "IX_Person_Name",
                 Table = "Person",
-                Columns = new[] { "Name" }
+                Columns = ["Name"]
             });
 
         AssertSql(
@@ -887,7 +889,7 @@ IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'First Name'
             new InsertDataOperation
             {
                 Table = "People",
-                Columns = new[] { "First Name" },
+                Columns = ["First Name"],
                 Values = values
             });
 

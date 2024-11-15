@@ -2337,6 +2337,84 @@ public static class EntityFrameworkQueryableExtensions
 
     #endregion
 
+    #region ToHashSet
+
+    /// <summary>
+    ///     Asynchronously creates a <see cref="HashSet{T}" /> from an <see cref="IQueryable{T}" /> by enumerating it
+    ///     asynchronously.
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         Multiple active operations on the same context instance are not supported. Use <see langword="await" /> to ensure
+    ///         that any asynchronous operations have completed before calling another method on this context.
+    ///         See <see href="https://aka.ms/efcore-docs-threading">Avoiding DbContext threading issues</see> for more information and examples.
+    ///     </para>
+    ///     <para>
+    ///         See <see href="https://aka.ms/efcore-docs-async-linq">Querying data with EF Core</see> for more information and examples.
+    ///     </para>
+    /// </remarks>
+    /// <typeparam name="TSource">The type of the elements of <paramref name="source" />.</typeparam>
+    /// <param name="source">An <see cref="IQueryable{T}" /> to create a set from.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
+    /// <returns>
+    ///     A task that represents the asynchronous operation.
+    ///     The task result contains a <see cref="HashSet{T}" /> that contains elements from the input sequence.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source" /> is <see langword="null" />.</exception>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
+    public static async Task<HashSet<TSource>> ToHashSetAsync<TSource>(
+        this IQueryable<TSource> source,
+        CancellationToken cancellationToken = default)
+    {
+        var set = new HashSet<TSource>();
+        await foreach (var element in source.AsAsyncEnumerable().WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            set.Add(element);
+        }
+
+        return set;
+    }
+
+    /// <summary>
+    ///     Asynchronously creates a <see cref="HashSet{T}" /> from an <see cref="IQueryable{T}" /> by enumerating it
+    ///     asynchronously.
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         Multiple active operations on the same context instance are not supported. Use <see langword="await" /> to ensure
+    ///         that any asynchronous operations have completed before calling another method on this context.
+    ///         See <see href="https://aka.ms/efcore-docs-threading">Avoiding DbContext threading issues</see> for more information and examples.
+    ///     </para>
+    ///     <para>
+    ///         See <see href="https://aka.ms/efcore-docs-async-linq">Querying data with EF Core</see> for more information and examples.
+    ///     </para>
+    /// </remarks>
+    /// <typeparam name="TSource">The type of the elements of <paramref name="source" />.</typeparam>
+    /// <param name="source">An <see cref="IQueryable{T}" /> to create a set from.</param>
+    /// <param name="comparer">The <see cref="IEqualityComparer{T}"/> implementation to use when comparing values in the set, or null to use the default <see cref="EqualityComparer{T}"/> implementation for the set type.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken" /> to observe while waiting for the task to complete.</param>
+    /// <returns>
+    ///     A task that represents the asynchronous operation.
+    ///     The task result contains a <see cref="HashSet{T}" /> that contains elements from the input sequence.
+    /// </returns>
+    /// <exception cref="ArgumentNullException"><paramref name="source" /> is <see langword="null" />.</exception>
+    /// <exception cref="OperationCanceledException">If the <see cref="CancellationToken" /> is canceled.</exception>
+    public static async Task<HashSet<TSource>> ToHashSetAsync<TSource>(
+        this IQueryable<TSource> source,
+        IEqualityComparer<TSource>? comparer,
+        CancellationToken cancellationToken = default)
+    {
+        var set = new HashSet<TSource>(comparer);
+        await foreach (var element in source.AsAsyncEnumerable().WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            set.Add(element);
+        }
+
+        return set;
+    }
+
+    #endregion
+
     #region Include
 
     internal static readonly MethodInfo IncludeMethodInfo
@@ -2392,7 +2470,7 @@ public static class EntityFrameworkQueryableExtensions
                     Expression.Call(
                         instance: null,
                         method: IncludeMethodInfo.MakeGenericMethod(typeof(TEntity), typeof(TProperty)),
-                        arguments: new[] { source.Expression, Expression.Quote(navigationPropertyPath) }))
+                        arguments: [source.Expression, Expression.Quote(navigationPropertyPath)]))
                 : source);
     }
 
@@ -2407,7 +2485,7 @@ public static class EntityFrameworkQueryableExtensions
                     Expression.Call(
                         instance: null,
                         method: NotQuiteIncludeMethodInfo.MakeGenericMethod(typeof(TEntity), typeof(TProperty)),
-                        arguments: new[] { source.Expression, Expression.Quote(navigationPropertyPath) }))
+                        arguments: [source.Expression, Expression.Quote(navigationPropertyPath)]))
                 : source);
 
     internal static readonly MethodInfo ThenIncludeAfterEnumerableMethodInfo
@@ -2455,7 +2533,7 @@ public static class EntityFrameworkQueryableExtensions
                         instance: null,
                         method: ThenIncludeAfterEnumerableMethodInfo.MakeGenericMethod(
                             typeof(TEntity), typeof(TPreviousProperty), typeof(TProperty)),
-                        arguments: new[] { source.Expression, Expression.Quote(navigationPropertyPath) }))
+                        arguments: [source.Expression, Expression.Quote(navigationPropertyPath)]))
                 : source);
 
     /// <summary>
@@ -2484,7 +2562,7 @@ public static class EntityFrameworkQueryableExtensions
                         instance: null,
                         method: ThenIncludeAfterReferenceMethodInfo.MakeGenericMethod(
                             typeof(TEntity), typeof(TPreviousProperty), typeof(TProperty)),
-                        arguments: new[] { source.Expression, Expression.Quote(navigationPropertyPath) }))
+                        arguments: [source.Expression, Expression.Quote(navigationPropertyPath)]))
                 : source);
 
     private sealed class IncludableQueryable<TEntity, TProperty> : IIncludableQueryable<TEntity, TProperty>, IAsyncEnumerable<TEntity>
@@ -2777,13 +2855,13 @@ public static class EntityFrameworkQueryableExtensions
 
     internal static readonly MethodInfo TagWithMethodInfo
         = typeof(EntityFrameworkQueryableExtensions).GetMethod(
-            nameof(TagWith), new[] { typeof(IQueryable<>).MakeGenericType(Type.MakeGenericMethodParameter(0)), typeof(string) })!;
+            nameof(TagWith), [typeof(IQueryable<>).MakeGenericType(Type.MakeGenericMethodParameter(0)), typeof(string)])!;
 
     internal static readonly MethodInfo TagWithCallSiteMethodInfo
         = typeof(EntityFrameworkQueryableExtensions)
             .GetMethod(
                 nameof(TagWithCallSite),
-                new[] { typeof(IQueryable<>).MakeGenericType(Type.MakeGenericMethodParameter(0)), typeof(string), typeof(int) })!;
+                [typeof(IQueryable<>).MakeGenericType(Type.MakeGenericMethodParameter(0)), typeof(string), typeof(int)])!;
 
     /// <summary>
     ///     Adds a tag to the collection of tags associated with an EF LINQ query. Tags are query annotations
@@ -2834,8 +2912,8 @@ public static class EntityFrameworkQueryableExtensions
     /// </exception>
     public static IQueryable<T> TagWithCallSite<T>(
         this IQueryable<T> source,
-        [NotParameterized] [CallerFilePath] string? filePath = null,
-        [NotParameterized] [CallerLineNumber] int lineNumber = 0)
+        [NotParameterized][CallerFilePath] string? filePath = null,
+        [NotParameterized][CallerLineNumber] int lineNumber = 0)
         => source.Provider is EntityQueryProvider
             ? source.Provider.CreateQuery<T>(
                 Expression.Call(
@@ -3164,8 +3242,8 @@ public static class EntityFrameworkQueryableExtensions
                     instance: null,
                     method: operatorMethodInfo,
                     arguments: expression == null
-                        ? new[] { source.Expression }
-                        : new[] { source.Expression, expression }),
+                        ? [source.Expression]
+                        : [source.Expression, expression]),
                 cancellationToken);
         }
 

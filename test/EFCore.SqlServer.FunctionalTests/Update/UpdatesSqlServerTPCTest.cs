@@ -1,22 +1,16 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-#nullable enable
-
 using Microsoft.EntityFrameworkCore.TestModels.UpdatesModel;
 
 namespace Microsoft.EntityFrameworkCore.Update;
 
-public class UpdatesSqlServerTPCTest : UpdatesSqlServerTestBase<UpdatesSqlServerTPCTest.UpdatesSqlServerTPCFixture>
+public class UpdatesSqlServerTPCTest(UpdatesSqlServerTPCTest.UpdatesSqlServerTPCFixture fixture, ITestOutputHelper testOutputHelper)
+    : UpdatesSqlServerTestBase<UpdatesSqlServerTPCTest.UpdatesSqlServerTPCFixture>(fixture, testOutputHelper)
 {
-    public UpdatesSqlServerTPCTest(UpdatesSqlServerTPCFixture fixture, ITestOutputHelper testOutputHelper)
-        : base(fixture, testOutputHelper)
+    public override async Task Save_with_shared_foreign_key()
     {
-    }
-
-    public override void Save_with_shared_foreign_key()
-    {
-        base.Save_with_shared_foreign_key();
+        await base.Save_with_shared_foreign_key();
 
         AssertContainsSql(
             @"@p0=NULL (Size = 8000) (DbType = Binary)
@@ -38,20 +32,20 @@ OUTPUT INSERTED.[Id]
 VALUES (@p0, @p1);");
     }
 
-    public override void Save_replaced_principal()
+    public override async Task Save_replaced_principal()
     {
-        base.Save_replaced_principal();
+        await base.Save_replaced_principal();
 
         AssertSql(
             """
-SELECT TOP(2) [t].[Id], [t].[Name], [t].[PrincipalId], [t].[Discriminator]
+SELECT TOP(2) [u].[Id], [u].[Name], [u].[PrincipalId], [u].[Discriminator]
 FROM (
     SELECT [c].[Id], [c].[Name], [c].[PrincipalId], N'Category' AS [Discriminator]
     FROM [Categories] AS [c]
     UNION ALL
     SELECT [s].[Id], [s].[Name], [s].[PrincipalId], N'SpecialCategory' AS [Discriminator]
     FROM [SpecialCategory] AS [s]
-) AS [t]
+) AS [u]
 """,
             //
             """
@@ -74,14 +68,14 @@ WHERE [Id] = @p1;
 """,
             //
             """
-SELECT TOP(2) [t].[Id], [t].[Name], [t].[PrincipalId], [t].[Discriminator]
+SELECT TOP(2) [u].[Id], [u].[Name], [u].[PrincipalId], [u].[Discriminator]
 FROM (
     SELECT [c].[Id], [c].[Name], [c].[PrincipalId], N'Category' AS [Discriminator]
     FROM [Categories] AS [c]
     UNION ALL
     SELECT [s].[Id], [s].[Name], [s].[PrincipalId], N'SpecialCategory' AS [Discriminator]
     FROM [SpecialCategory] AS [s]
-) AS [t]
+) AS [u]
 """,
             //
             """

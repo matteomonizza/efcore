@@ -27,7 +27,9 @@ public static class ScaffoldingModelExtensions
             var primaryKey = entityType.FindPrimaryKey();
             var properties = entityType.GetProperties().ToList();
             var foreignKeys = entityType.GetForeignKeys().ToList();
+            var referencingForeignKeys = entityType.GetReferencingForeignKeys().ToList();
             if (primaryKey is { Properties.Count: > 1 }
+                && referencingForeignKeys.Count == 0
                 && foreignKeys.Count == 2
                 && primaryKey.Properties.Count == properties.Count
                 && foreignKeys[0].Properties.Count + foreignKeys[1].Properties.Count == properties.Count
@@ -805,6 +807,19 @@ public static class ScaffoldingModelExtensions
             var isCyclic = new FluentApiCodeFragment(nameof(SequenceBuilder.IsCyclic));
 
             root = root?.Chain(isCyclic) ?? isCyclic;
+        }
+
+        if (sequence.IsCached != Sequence.DefaultIsCached)
+        {
+            var useNoCache = new FluentApiCodeFragment(nameof(SequenceBuilder.UseNoCache));
+
+            root = root?.Chain(useNoCache) ?? useNoCache;
+        }
+        else
+        {
+            var useCache = new FluentApiCodeFragment(nameof(SequenceBuilder.UseCache)) { Arguments = { sequence.CacheSize } };
+
+            root = root?.Chain(useCache) ?? useCache;
         }
 
         return root;

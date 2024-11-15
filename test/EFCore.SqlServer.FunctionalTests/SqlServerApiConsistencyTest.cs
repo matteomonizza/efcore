@@ -5,13 +5,10 @@ using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 
 namespace Microsoft.EntityFrameworkCore;
 
-public class SqlServerApiConsistencyTest : ApiConsistencyTestBase<SqlServerApiConsistencyTest.SqlServerApiConsistencyFixture>
-{
-    public SqlServerApiConsistencyTest(SqlServerApiConsistencyFixture fixture)
-        : base(fixture)
-    {
-    }
+#nullable disable
 
+public class SqlServerApiConsistencyTest(SqlServerApiConsistencyTest.SqlServerApiConsistencyFixture fixture) : ApiConsistencyTestBase<SqlServerApiConsistencyTest.SqlServerApiConsistencyFixture>(fixture)
+{
     protected override void AddServices(ServiceCollection serviceCollection)
         => serviceCollection.AddEntityFrameworkSqlServer();
 
@@ -20,8 +17,8 @@ public class SqlServerApiConsistencyTest : ApiConsistencyTestBase<SqlServerApiCo
 
     public class SqlServerApiConsistencyFixture : ApiConsistencyFixtureBase
     {
-        public override HashSet<Type> FluentApiTypes { get; } = new()
-        {
+        public override HashSet<Type> FluentApiTypes { get; } =
+        [
             typeof(SqlServerDbContextOptionsBuilder),
             typeof(SqlServerDbContextOptionsExtensions),
             typeof(SqlServerMigrationBuilderExtensions),
@@ -40,7 +37,7 @@ public class SqlServerApiConsistencyTest : ApiConsistencyTestBase<SqlServerApiCo
             typeof(TemporalPeriodPropertyBuilder),
             typeof(TemporalTableBuilder),
             typeof(TemporalTableBuilder<>)
-        };
+        ];
 
         public override
             Dictionary<Type,

@@ -5,6 +5,8 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 public abstract class NullKeysTestBase<TFixture> : IClassFixture<TFixture>
     where TFixture : NullKeysTestBase<TFixture>.NullKeysFixtureBase, new()
 {
@@ -62,7 +64,7 @@ public abstract class NullKeysTestBase<TFixture> : IClassFixture<TFixture>
             results.Select(e => e.Fk).ToArray());
 
         Assert.Equal(
-            new int?[] { 1, 1, 3 },
+            [1, 1, 3],
             results.Select(e => e.Principal.Id).ToArray());
     }
 
@@ -257,7 +259,7 @@ public abstract class NullKeysTestBase<TFixture> : IClassFixture<TFixture>
                 .Property(e => e.Id).ValueGeneratedNever();
         }
 
-        protected override void Seed(PoolableDbContext context)
+        protected override Task SeedAsync(PoolableDbContext context)
         {
             context.Add(
                 new WithStringKey { Id = "Stereo" });
@@ -338,7 +340,7 @@ public abstract class NullKeysTestBase<TFixture> : IClassFixture<TFixture>
             context.Add(
                 new WithAllNullableIntFk { Id = 6 });
 
-            context.SaveChanges();
+            return context.SaveChangesAsync();
         }
     }
 }

@@ -112,10 +112,10 @@ public class OwnedNavigationBuilder<
     ///     <c>blog => blog.Url</c>).
     /// </param>
     /// <returns>An object that can be used to configure the property.</returns>
-    public virtual PropertyBuilder<TProperty> PrimitiveCollection<TProperty>(
+    public virtual PrimitiveCollectionBuilder<TProperty> PrimitiveCollection<TProperty>(
         Expression<Func<TDependentEntity, TProperty>> propertyExpression)
         => UpdateBuilder(
-            () => new PropertyBuilder<TProperty>(
+            () => new PrimitiveCollectionBuilder<TProperty>(
                 DependentEntityType.Builder.PrimitiveCollection(
                     Check.NotNull(propertyExpression, nameof(propertyExpression)).GetMemberAccess(),
                     ConfigurationSource.Explicit)!.Metadata));
@@ -1104,14 +1104,13 @@ public class OwnedNavigationBuilder<
         where TNewRelatedEntity : class
     {
         var relatedEntityType = FindRelatedEntityType(typeof(TNewRelatedEntity), navigationName);
+        var foreignKey = HasOneBuilder(MemberIdentity.Create(navigationName), relatedEntityType);
 
         return new ReferenceNavigationBuilder<TDependentEntity, TNewRelatedEntity>(
             DependentEntityType,
             relatedEntityType,
             navigationName,
-            DependentEntityType.Builder.HasRelationship(
-                relatedEntityType, navigationName, ConfigurationSource.Explicit,
-                targetIsPrincipal: DependentEntityType == relatedEntityType ? true : null)!.Metadata);
+            foreignKey);
     }
 
     /// <summary>
@@ -1147,16 +1146,15 @@ public class OwnedNavigationBuilder<
             Expression<Func<TDependentEntity, TNewRelatedEntity?>>? navigationExpression = null)
         where TNewRelatedEntity : class
     {
-        var navigation = navigationExpression?.GetMemberAccess();
-        var relatedEntityType = FindRelatedEntityType(typeof(TNewRelatedEntity), navigation?.GetSimpleMemberName());
+        var navigationMember = navigationExpression?.GetMemberAccess();
+        var relatedEntityType = FindRelatedEntityType(typeof(TNewRelatedEntity), navigationMember?.GetSimpleMemberName());
+        var foreignKey = HasOneBuilder(MemberIdentity.Create(navigationMember), relatedEntityType);
 
         return new ReferenceNavigationBuilder<TDependentEntity, TNewRelatedEntity>(
             DependentEntityType,
             relatedEntityType,
-            navigation,
-            DependentEntityType.Builder.HasRelationship(
-                relatedEntityType, navigation, ConfigurationSource.Explicit,
-                targetIsPrincipal: DependentEntityType == relatedEntityType ? true : null)!.Metadata);
+            navigationMember,
+            foreignKey);
     }
 
     /// <summary>

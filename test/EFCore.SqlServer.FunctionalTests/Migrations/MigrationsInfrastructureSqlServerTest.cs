@@ -2,20 +2,24 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Identity30.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore.SqlServer.Storage.Internal;
 using Microsoft.EntityFrameworkCore.TestModels.AspNetIdentity;
+
+#nullable disable
 
 // ReSharper disable InconsistentNaming
 namespace Microsoft.EntityFrameworkCore.Migrations
 {
     [SqlServerCondition(SqlServerCondition.IsNotSqlAzure | SqlServerCondition.IsNotCI)]
-    public class MigrationsInfrastructureSqlServerTest
-        : MigrationsInfrastructureTestBase<MigrationsInfrastructureSqlServerTest.MigrationsInfrastructureSqlServerFixture>
+    public class MigrationsInfrastructureSqlServerTest(MigrationsInfrastructureSqlServerTest.MigrationsInfrastructureSqlServerFixture fixture)
+        : MigrationsInfrastructureTestBase<MigrationsInfrastructureSqlServerTest.MigrationsInfrastructureSqlServerFixture>(fixture)
     {
-        public MigrationsInfrastructureSqlServerTest(MigrationsInfrastructureSqlServerFixture fixture)
-            : base(fixture)
-        {
-        }
+        public override void Can_apply_all_migrations() // Issue #32826
+            => Assert.Throws<SqlException>(() => base.Can_apply_all_migrations());
+
+        public override Task Can_apply_all_migrations_async() // Issue #32826
+            => Assert.ThrowsAsync<SqlException>(() => base.Can_apply_all_migrations_async());
 
         public override void Can_generate_migration_from_initial_database_to_initial()
         {
@@ -83,6 +87,7 @@ GO
 CREATE TABLE [Table1] (
     [Id] int NOT NULL,
     [Foo] int NOT NULL,
+    [Description] nvarchar(max) NOT NULL,
     CONSTRAINT [PK_Table1] PRIMARY KEY ([Id])
 );
 GO
@@ -150,6 +155,57 @@ GO
 
 INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
 VALUES (N'00000000000004_Migration4', N'7.0.0-test');
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-1, 3, 'Value With
+
+Empty Lines')
+GO
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'00000000000005_Migration5', N'7.0.0-test');
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-2, 4, 'GO
+Value With
+
+Empty Lines')
+GO
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'00000000000006_Migration6', N'7.0.0-test');
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-3, 5, 'GO
+Value With
+
+GO
+
+
+Empty Lines
+GO')
+GO
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'00000000000007_Migration7', N'7.0.0-test');
 GO
 
 COMMIT;
@@ -180,6 +236,7 @@ GO
 CREATE TABLE [Table1] (
     [Id] int NOT NULL,
     [Foo] int NOT NULL,
+    [Description] nvarchar(max) NOT NULL,
     CONSTRAINT [PK_Table1] PRIMARY KEY ([Id])
 );
 GO
@@ -229,6 +286,39 @@ GO
 
 INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
 VALUES (N'00000000000004_Migration4', N'7.0.0-test');
+GO
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-1, 3, 'Value With
+
+Empty Lines')
+GO
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'00000000000005_Migration5', N'7.0.0-test');
+GO
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-2, 4, 'GO
+Value With
+
+Empty Lines')
+GO
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'00000000000006_Migration6', N'7.0.0-test');
+GO
+
+INSERT INTO Table1 (Id, Bar, Description) VALUES (-3, 5, 'GO
+Value With
+
+GO
+
+
+Empty Lines
+GO')
+GO
+
+INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+VALUES (N'00000000000007_Migration7', N'7.0.0-test');
 GO
 
 
@@ -314,6 +404,7 @@ BEGIN
     CREATE TABLE [Table1] (
         [Id] int NOT NULL,
         [Foo] int NOT NULL,
+        [Description] nvarchar(max) NOT NULL,
         CONSTRAINT [PK_Table1] PRIMARY KEY ([Id])
     );
 END;
@@ -429,6 +520,99 @@ IF NOT EXISTS (
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
     VALUES (N'00000000000004_Migration4', N'7.0.0-test');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000005_Migration5'
+)
+BEGIN
+    INSERT INTO Table1 (Id, Bar, Description) VALUES (-1, 3, 'Value With
+
+    Empty Lines')
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000005_Migration5'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'00000000000005_Migration5', N'7.0.0-test');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000006_Migration6'
+)
+BEGIN
+    INSERT INTO Table1 (Id, Bar, Description) VALUES (-2, 4, 'GO
+    Value With
+
+    Empty Lines')
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000006_Migration6'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'00000000000006_Migration6', N'7.0.0-test');
+END;
+GO
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000007_Migration7'
+)
+BEGIN
+    INSERT INTO Table1 (Id, Bar, Description) VALUES (-3, 5, 'GO
+    Value With
+
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000007_Migration7'
+)
+BEGIN
+
+    Empty Lines
+    GO')
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000007_Migration7'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'00000000000007_Migration7', N'7.0.0-test');
 END;
 GO
 
@@ -465,6 +649,7 @@ BEGIN
     CREATE TABLE [Table1] (
         [Id] int NOT NULL,
         [Foo] int NOT NULL,
+        [Description] nvarchar(max) NOT NULL,
         CONSTRAINT [PK_Table1] PRIMARY KEY ([Id])
     );
 END;
@@ -562,6 +747,81 @@ IF NOT EXISTS (
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
     VALUES (N'00000000000004_Migration4', N'7.0.0-test');
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000005_Migration5'
+)
+BEGIN
+    INSERT INTO Table1 (Id, Bar, Description) VALUES (-1, 3, 'Value With
+
+    Empty Lines')
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000005_Migration5'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'00000000000005_Migration5', N'7.0.0-test');
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000006_Migration6'
+)
+BEGIN
+    INSERT INTO Table1 (Id, Bar, Description) VALUES (-2, 4, 'GO
+    Value With
+
+    Empty Lines')
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000006_Migration6'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'00000000000006_Migration6', N'7.0.0-test');
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000007_Migration7'
+)
+BEGIN
+    INSERT INTO Table1 (Id, Bar, Description) VALUES (-3, 5, 'GO
+    Value With
+
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000007_Migration7'
+)
+BEGIN
+
+    Empty Lines
+    GO')
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'00000000000007_Migration7'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'00000000000007_Migration7', N'7.0.0-test');
 END;
 GO
 
@@ -742,12 +1002,8 @@ GO
             Assert.True(creator.Exists());
         }
 
-        private class BloggingContext : DbContext
+        private class BloggingContext(DbContextOptions options) : DbContext(options)
         {
-            public BloggingContext(DbContextOptions options)
-                : base(options)
-            {
-            }
 
             // ReSharper disable once UnusedMember.Local
             public DbSet<Blog> Blogs { get; set; }

@@ -124,9 +124,7 @@ public partial class ModelValidatorTest : ModelValidatorTestBase
         public NotComparable Foo { get; set; }
     }
 
-    protected struct NotComparable
-    {
-    }
+    protected struct NotComparable;
 
     [ConditionalFact]
     public virtual void Detects_custom_converter_for_collection_type_without_comparer()
@@ -206,7 +204,7 @@ public partial class ModelValidatorTest : ModelValidatorTestBase
     }
 
     [ConditionalFact]
-    public virtual void Throws_when_mapping_an_IReadOnlyCollection()
+    public virtual void Does_not_throw_when_mapping_an_IReadOnlyCollection()
     {
         var modelBuilder = CreateConventionModelBuilder();
 
@@ -217,9 +215,7 @@ public partial class ModelValidatorTest : ModelValidatorTestBase
                 eb.PrimitiveCollection(e => e.Tags);
             });
 
-        VerifyError(
-            CoreStrings.ReadOnlyListType("IReadOnlyCollection<int>"),
-            modelBuilder, sensitiveDataLoggingEnabled: false);
+        Validate(modelBuilder);
     }
 
     protected class WithReadOnlyCollection
@@ -229,7 +225,7 @@ public partial class ModelValidatorTest : ModelValidatorTestBase
     }
 
     [ConditionalFact]
-    public virtual void Throws_when_mapping_an_IReadOnlyList()
+    public virtual void Does_not_throw_when_mapping_an_IReadOnlyList()
     {
         var modelBuilder = CreateConventionModelBuilder();
 
@@ -240,9 +236,7 @@ public partial class ModelValidatorTest : ModelValidatorTestBase
                 eb.PrimitiveCollection(e => e.Tags);
             });
 
-        VerifyError(
-            CoreStrings.ReadOnlyListType("IReadOnlyList<char>"),
-            modelBuilder, sensitiveDataLoggingEnabled: false);
+        Validate(modelBuilder);
     }
 
     protected class WithReadOnlyList
@@ -268,7 +262,7 @@ public partial class ModelValidatorTest : ModelValidatorTestBase
 
     protected class MyCollection : IList<int>
     {
-        private readonly List<int> _list = new();
+        private readonly List<int> _list = [];
         public IEnumerator<int> GetEnumerator() => _list.GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         public void Add(int item) => _list.Add(item);

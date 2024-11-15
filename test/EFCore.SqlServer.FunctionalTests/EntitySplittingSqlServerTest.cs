@@ -3,13 +3,10 @@
 
 namespace Microsoft.EntityFrameworkCore;
 
-public class EntitySplittingSqlServerTest : EntitySplittingTestBase
-{
-    public EntitySplittingSqlServerTest(ITestOutputHelper testOutputHelper)
-        : base(testOutputHelper)
-    {
-    }
+#nullable disable
 
+public class EntitySplittingSqlServerTest(ITestOutputHelper testOutputHelper) : EntitySplittingTestBase(testOutputHelper)
+{
     [ConditionalFact]
     public virtual async Task Can_roundtrip_with_triggers()
     {
@@ -29,18 +26,15 @@ public class EntitySplittingSqlServerTest : EntitySplittingTestBase
                     });
             },
             sensitiveLogEnabled: false,
-            seed: c =>
-            {
-                c.Database.ExecuteSqlRaw(
-                    @"
+            seed: c => c.Database.ExecuteSqlRawAsync(
+                @"
 CREATE OR ALTER TRIGGER [MeterReadingsDetails_Trigger]
 ON [MeterReadingDetails]
 FOR INSERT, UPDATE, DELETE AS
 BEGIN
 	IF @@ROWCOUNT = 0
 		return
-END");
-            });
+END"));
 
         await using (var context = CreateContext())
         {

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -26,19 +27,37 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking;
 public abstract class ValueComparer : IEqualityComparer, IEqualityComparer<object>
 {
     private static readonly MethodInfo DoubleEqualsMethodInfo
-        = typeof(double).GetRuntimeMethod(nameof(double.Equals), new[] { typeof(double) })!;
+        = typeof(double).GetRuntimeMethod(nameof(double.Equals), [typeof(double)])!;
 
     private static readonly MethodInfo FloatEqualsMethodInfo
-        = typeof(float).GetRuntimeMethod(nameof(float.Equals), new[] { typeof(float) })!;
+        = typeof(float).GetRuntimeMethod(nameof(float.Equals), [typeof(float)])!;
 
     internal static readonly MethodInfo EqualityComparerHashCodeMethod
-        = typeof(IEqualityComparer).GetRuntimeMethod(nameof(IEqualityComparer.GetHashCode), new[] { typeof(object) })!;
+        = typeof(IEqualityComparer).GetRuntimeMethod(nameof(IEqualityComparer.GetHashCode), [typeof(object)])!;
 
     internal static readonly MethodInfo EqualityComparerEqualsMethod
-        = typeof(IEqualityComparer).GetRuntimeMethod(nameof(IEqualityComparer.Equals), new[] { typeof(object), typeof(object) })!;
+        = typeof(IEqualityComparer).GetRuntimeMethod(nameof(IEqualityComparer.Equals), [typeof(object), typeof(object)])!;
 
     internal static readonly MethodInfo ObjectGetHashCodeMethod
         = typeof(object).GetRuntimeMethod(nameof(object.GetHashCode), Type.EmptyTypes)!;
+
+    private static readonly ConcurrentDictionary<Type, MethodInfo> _genericSnapshotMethodMap = new();
+
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    [EntityFrameworkInternal]
+    public static MethodInfo GetGenericSnapshotMethod(Type type)
+        => _genericSnapshotMethodMap.GetOrAdd(type, t =>
+            typeof(ValueComparer<>).MakeGenericType(t).GetGenericMethod(
+                nameof(ValueComparer<object>.Snapshot),
+                genericParameterCount: 0,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly,
+                (a, b) => new[] { a[0] },
+                @override: false)!);
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -48,7 +67,7 @@ public abstract class ValueComparer : IEqualityComparer, IEqualityComparer<objec
     /// </summary>
     [EntityFrameworkInternal]
     protected static readonly MethodInfo HashCodeAddMethod
-        = typeof(ValueComparer).GetRuntimeMethod(nameof(Add), new[] { typeof(HashCode), typeof(int) })!;
+        = typeof(ValueComparer).GetRuntimeMethod(nameof(Add), [typeof(HashCode), typeof(int)])!;
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -235,14 +254,14 @@ public abstract class ValueComparer : IEqualityComparer, IEqualityComparer<objec
             | DynamicallyAccessedMemberTypes.PublicProperties)]
         Type type,
         bool favorStructuralComparisons)
-        => (ValueComparer)CreateDefaultMethod.MakeGenericMethod(type).Invoke(null, new object[] { favorStructuralComparisons })!;
+        => (ValueComparer)CreateDefaultMethod.MakeGenericMethod(type).Invoke(null, [favorStructuralComparisons])!;
 
     private static readonly MethodInfo CreateDefaultMethod = typeof(ValueComparer).GetMethod(
         nameof(CreateDefault),
         genericParameterCount: 1,
         BindingFlags.Static | BindingFlags.Public,
         null,
-        new[] { typeof(bool) },
+        [typeof(bool)],
         null)!;
 
     /// <summary>
@@ -341,7 +360,7 @@ public abstract class ValueComparer : IEqualityComparer, IEqualityComparer<objec
     internal sealed class DefaultDateTimeOffsetValueComparer : DefaultValueComparer<DateTimeOffset>
     {
         private static readonly MethodInfo EqualsExactMethodInfo
-            = typeof(DateTimeOffset).GetRuntimeMethod(nameof(DateTimeOffset.EqualsExact), new[] { typeof(DateTimeOffset) })!;
+            = typeof(DateTimeOffset).GetRuntimeMethod(nameof(DateTimeOffset.EqualsExact), [typeof(DateTimeOffset)])!;
 
         // In .NET, two DateTimeOffset instances are considered equal if they represent the same point in time but with different
         // time zone offsets. This comparer uses EqualsExact, which considers such DateTimeOffset as non-equal.

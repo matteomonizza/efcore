@@ -6,6 +6,8 @@ using Xunit.Sdk;
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
+#nullable disable
+
 /// <summary>
 ///     Runs all primitive collection tests with SQL Server compatibility level 120 (SQL Server 2014), which doesn't support OPENJSON.
 ///     This exercises the older translation paths for e.g. Contains, to make sure things work for providers with no queryable constant/
@@ -301,15 +303,39 @@ WHERE (
     public override Task Parameter_collection_Count(bool async)
         => AssertCompatibilityLevelTooLow(() => base.Parameter_collection_Count(async));
 
-    public override async Task Parameter_collection_of_ints_Contains(bool async)
+    public override async Task Parameter_collection_of_ints_Contains_int(bool async)
     {
-        await base.Parameter_collection_of_ints_Contains(async);
+        await base.Parameter_collection_of_ints_Contains_int(async);
 
         AssertSql(
             """
 SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE [p].[Int] IN (10, 999)
+""",
+            //
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[Int] NOT IN (10, 999)
+""");
+    }
+
+    public override async Task Parameter_collection_of_ints_Contains_nullable_int(bool async)
+    {
+        await base.Parameter_collection_of_ints_Contains_nullable_int(async);
+
+        AssertSql(
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableInt] IN (10, 999)
+""",
+            //
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableInt] NOT IN (10, 999) OR [p].[NullableInt] IS NULL
 """);
     }
 
@@ -322,6 +348,12 @@ WHERE [p].[Int] IN (10, 999)
 SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE [p].[Int] IN (10, 999)
+""",
+            //
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[Int] NOT IN (10, 999)
 """);
     }
 
@@ -334,18 +366,30 @@ WHERE [p].[Int] IN (10, 999)
 SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE [p].[NullableInt] IS NULL OR [p].[NullableInt] = 999
+""",
+            //
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableInt] IS NOT NULL AND [p].[NullableInt] <> 999
 """);
     }
 
-    public override async Task Parameter_collection_of_strings_Contains_non_nullable_string(bool async)
+    public override async Task Parameter_collection_of_strings_Contains_string(bool async)
     {
-        await base.Parameter_collection_of_strings_Contains_non_nullable_string(async);
+        await base.Parameter_collection_of_strings_Contains_string(async);
 
         AssertSql(
             """
 SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
 FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE [p].[String] IN (N'10', N'999')
+""",
+            //
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[String] NOT IN (N'10', N'999')
 """);
     }
 
@@ -357,7 +401,49 @@ WHERE [p].[String] IN (N'10', N'999')
             """
 SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
 FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableString] IN (N'10', N'999')
+""",
+            //
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableString] NOT IN (N'10', N'999') OR [p].[NullableString] IS NULL
+""");
+    }
+
+    public override async Task Parameter_collection_of_nullable_strings_Contains_string(bool async)
+    {
+        await base.Parameter_collection_of_nullable_strings_Contains_string(async);
+
+        AssertSql(
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[String] = N'10'
+""",
+            //
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[String] <> N'10'
+""");
+    }
+
+    public override async Task Parameter_collection_of_nullable_strings_Contains_nullable_string(bool async)
+    {
+        await base.Parameter_collection_of_nullable_strings_Contains_nullable_string(async);
+
+        AssertSql(
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
 WHERE [p].[NullableString] IS NULL OR [p].[NullableString] = N'999'
+""",
+            //
+            """
+SELECT [p].[Id], [p].[Bool], [p].[Bools], [p].[DateTime], [p].[DateTimes], [p].[Enum], [p].[Enums], [p].[Int], [p].[Ints], [p].[NullableInt], [p].[NullableInts], [p].[NullableString], [p].[NullableStrings], [p].[String], [p].[Strings]
+FROM [PrimitiveCollectionsEntity] AS [p]
+WHERE [p].[NullableString] IS NOT NULL AND [p].[NullableString] <> N'999'
 """);
     }
 
@@ -504,6 +590,9 @@ WHERE (
 
     public override Task Column_collection_Distinct(bool async)
         => AssertTranslationFailed(() => base.Column_collection_Distinct(async));
+
+    public override Task Column_collection_SelectMany(bool async)
+        => AssertTranslationFailed(() => base.Column_collection_SelectMany(async));
 
     public override async Task Column_collection_projection_from_top_level(bool async)
     {
@@ -703,6 +792,43 @@ ORDER BY [p].[Id]
 """);
     }
 
+    public override async Task Project_inline_collection(bool async)
+    {
+        await base.Project_inline_collection(async);
+
+        AssertSql(
+            """
+SELECT [p].[String]
+FROM [PrimitiveCollectionsEntity] AS [p]
+""");
+    }
+
+    public override async Task Project_inline_collection_with_Union(bool async)
+    {
+        await base.Project_inline_collection_with_Union(async);
+
+        AssertSql(
+            """
+SELECT [p].[Id], [u].[Value]
+FROM [PrimitiveCollectionsEntity] AS [p]
+OUTER APPLY (
+    SELECT [v].[Value]
+    FROM (VALUES ([p].[String])) AS [v]([Value])
+    UNION
+    SELECT [p0].[String] AS [Value]
+    FROM [PrimitiveCollectionsEntity] AS [p0]
+) AS [u]
+ORDER BY [p].[Id]
+""");
+    }
+
+    public override async Task Project_inline_collection_with_Concat(bool async)
+    {
+        await base.Project_inline_collection_with_Concat(async);
+
+        AssertSql();
+    }
+
     public override async Task Nested_contains_with_Lists_and_no_inferred_type_mapping(bool async)
     {
         await base.Nested_contains_with_Lists_and_no_inferred_type_mapping(async);
@@ -746,7 +872,7 @@ END IN (N'one', N'two', N'three')
     private PrimitiveCollectionsContext CreateContext()
         => Fixture.CreateContext();
 
-    public class PrimitiveCollectionsQueryOldSqlServerFixture : PrimitiveCollectionsQueryFixtureBase
+    public class PrimitiveCollectionsQueryOldSqlServerFixture : PrimitiveCollectionsQueryFixtureBase, ITestSqlLoggerFactory
     {
         // Use a different store name to prevent concurrency issues with the non-old PrimitiveCollectionsQuerySqlServerTest
         protected override string StoreName
